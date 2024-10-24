@@ -12,6 +12,9 @@ exporters:
 
 processors:
   - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.111.0
+  - gomod: github.com/honeycombio/opentelemetry-collector-symbolicator/processor v0.0.0
+    name: symbolicatorprocessor
+    path: ./processor
 
 receivers:
   - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.111.0
