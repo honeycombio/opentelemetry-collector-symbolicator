@@ -6,7 +6,7 @@ orbs:
 jobs:
   test:
     docker:
-      - image: cimg/golang:1.22
+      - image: cimg/go:1.22
     steps:
       - checkout
       - run:
