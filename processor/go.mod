@@ -1,6 +1,6 @@
 module github.com/honeycombio/opentelemetry-collector-symbolicator/processor
 
-go 1.22.3
+go 1.22
 
 require (
 	go.opentelemetry.io/collector/component v0.111.0
