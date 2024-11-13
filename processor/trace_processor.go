@@ -19,7 +19,7 @@ var (
 
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
-	symbolicate(ctx context.Context, line, column int64, function, url string) string
+	symbolicate(ctx context.Context, line, column int64, function, url string) (string, error)
 }
 
 // symbolicatorProcessor is a processor that finds and symbolicates stack
@@ -44,6 +44,8 @@ func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Sett
 // processTraces processes the received traces. It is the function configured
 // in the processorhelper.NewTraces call in factory.go
 func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Traces) (ptrace.Traces, error) {
+	sp.logger.Info("Processing traces")
+
 	for i := 0; i < td.ResourceSpans().Len(); i++ {
 		rs := td.ResourceSpans().At(i)
 		sp.processResourceSpans(ctx, rs)
@@ -102,7 +104,13 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	var stack []string
 
 	for i := 0; i < columns.Len(); i++ {
-		stack = append(stack, sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str()))
+		s, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
+
+		if err != nil {
+			stack = append(stack, fmt.Sprintf("Failed to symbolicate: %v", err))
+		} else {
+			stack = append(stack, s)
+		}
 	}
 
 	attributes.PutStr(sp.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
