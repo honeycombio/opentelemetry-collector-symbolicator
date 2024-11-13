@@ -2,14 +2,54 @@ package symbolicatorprocessor
 
 import (
 	"context"
+	"fmt"
+	"math"
 
-	_ "github.com/honeycombio/symbolic-go"
+	"github.com/honeycombio/symbolic-go"
 )
 
-// noopSymbolicator is a symbolicator that does nothing.
-type noopSymbolicator struct{}
+type sourceMapStore interface {
+	GetSourceMap(ctx context.Context, url string) (string, string, error)
+}
+
+type basicSymbolicator struct {
+	store sourceMapStore
+}
+
+func newBasicSymbolicator(store sourceMapStore) *basicSymbolicator {
+	return &basicSymbolicator{store: store}
+}
 
 // symbolicate does nothing and returns an empty string.
-func (ns *noopSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) string {
-	return ""
+func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (string, error) {
+	// TODO: we should look to see if we have already made a SourceMapCache for this URL
+	source, sMap, err := ns.store.GetSourceMap(ctx, url)
+
+	if err != nil {
+		return "", err
+	}
+
+	// Create a new source map cache
+	// TODO: we should cache this
+	smc, err := symbolic.NewSourceMapCache(source, sMap)
+
+	if err != nil {
+		return "", err
+	}
+
+	if column < 0 || column > math.MaxUint32 {
+		return "", fmt.Errorf("column must be uint32: %d", column)
+	}
+
+	if line < 0 || line > math.MaxUint32 {
+		return "", fmt.Errorf("line must be uint32: %d", line)
+	}
+
+	t, err := smc.Lookup(uint32(line), uint32(column), 0)
+
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("at %s(%s:%d:%d)", t.FunctionName, t.Src, t.Line, t.Col), nil
 }
