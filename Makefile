@@ -17,11 +17,3 @@ run: build
 .PHONY: test
 test: build
 	go test ./processor/...
-
-
-
-
-
-
-
-
