@@ -21,6 +21,7 @@ func createDefaultConfig() component.Config {
 		LinesAttributeKey:     "exception.structured_stacktrace.lines",
 		UrlsAttributeKey:      "exception.structured_stacktrace.urls",
 		OutputStackTraceKey:   "exception.stacktrace",
+		SourceMapFilePath:     ".",
 	}
 }
 
