@@ -21,6 +21,10 @@ type Config struct {
 	// OutputStackTraceKey is the attribute key that the symbolicated stack trace
 	// will be written to.
 	OutputStackTraceKey string `mapstructure:"output_stack_trace_key"`
+
+	// SourceMapFilePath is a file path to where the minified source and source
+	// maps are stored on disk
+	SourceMapFilePath string `mapstructure:"source_map_file_path"`
 }
 
 // Validate checks the configuration for any issues.
