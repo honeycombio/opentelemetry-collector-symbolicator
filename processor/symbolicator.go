@@ -22,6 +22,14 @@ func newBasicSymbolicator(store sourceMapStore) *basicSymbolicator {
 
 // symbolicate does nothing and returns an empty string.
 func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (string, error) {
+	if column < 0 || column > math.MaxUint32 {
+		return "", fmt.Errorf("column must be uint32: %d", column)
+	}
+
+	if line < 0 || line > math.MaxUint32 {
+		return "", fmt.Errorf("line must be uint32: %d", line)
+	}
+
 	// TODO: we should look to see if we have already made a SourceMapCache for this URL
 	source, sMap, err := ns.store.GetSourceMap(ctx, url)
 
@@ -35,14 +43,6 @@ func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64
 
 	if err != nil {
 		return "", err
-	}
-
-	if column < 0 || column > math.MaxUint32 {
-		return "", fmt.Errorf("column must be uint32: %d", column)
-	}
-
-	if line < 0 || line > math.MaxUint32 {
-		return "", fmt.Errorf("line must be uint32: %d", line)
 	}
 
 	t, err := smc.Lookup(uint32(line), uint32(column), 0)
