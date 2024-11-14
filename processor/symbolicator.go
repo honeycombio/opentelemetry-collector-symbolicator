@@ -20,7 +20,7 @@ func newBasicSymbolicator(store sourceMapStore) *basicSymbolicator {
 	return &basicSymbolicator{store: store}
 }
 
-// symbolicate does nothing and returns an empty string.
+// symbolicate takes a line, column, function name, and URL and returns a string
 func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (string, error) {
 	if column < 0 || column > math.MaxUint32 {
 		return "", fmt.Errorf("column must be uint32: %d", column)
@@ -38,7 +38,9 @@ func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64
 	}
 
 	// Create a new source map cache
-	// TODO: we should cache this
+	// TODO: we should cache this but they are not thread safe
+	// so we need to lock around them
+	// TODO: we should also have a way to evict old source maps
 	smc, err := symbolic.NewSourceMapCache(source, sMap)
 
 	if err != nil {
