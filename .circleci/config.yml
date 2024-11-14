@@ -1,0 +1,50 @@
+version: 2.1
+
+orbs:
+  go: circleci/go@1.12.0
+
+jobs:
+  test:
+    docker:
+      - image: cimg/go:1.22
+    steps:
+      - checkout
+      - run:
+          name: Run unit tests
+          command: make test
+  publish_github:
+    docker:
+      - image: cibuilds/github:0.13.0
+    steps:
+      - run:
+          name: "Publish Release on GitHub"
+          command: |
+            echo "Creating GitHub release for tag ${CIRCLE_TAG}"
+            ghr -draft -n ${CIRCLE_TAG} -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG}
+workflows:
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - main
+    jobs:
+      - test
+
+  build:
+    jobs:
+      - test:
+          filters:
+            tags:
+              only: /.*/
+      - publish_github:
+          context: Honeycomb Secrets for Public Repos
+          requires:
+            - test
+          filters:
+            tags:
+              only: /^v[0-9].*/
+            branches:
+              ignore: /.*/
