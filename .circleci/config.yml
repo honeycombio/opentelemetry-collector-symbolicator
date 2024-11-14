@@ -12,6 +12,8 @@ jobs:
       - run:
           name: Run unit tests
           command: make test
+          environment:
+            GOPRIVATE: github.com/honeycombio/symbolic-go
   publish_github:
     docker:
       - image: cibuilds/github:0.13.0
