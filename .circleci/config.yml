@@ -8,10 +8,15 @@ jobs:
     docker:
       - image: cimg/go:1.22
     steps:
+      - add_ssh_keys:
+          fingerprints:
+            - SHA256:S/ROrHXpQH6H9irqoTBO/T6bKdv0TLepe2KjL5v32SM
       - checkout
       - run:
           name: Run unit tests
           command: make test
+          environment:
+            GOPRIVATE: github.com/honeycombio/symbolic-go
   publish_github:
     docker:
       - image: cibuilds/github:0.13.0
