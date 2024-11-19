@@ -1,13 +1,22 @@
 receivers:
   otlp:
     protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "http://localhost:3000"
       grpc:
         endpoint: 0.0.0.0:4317
 
 processors:
   symbolicator:
+    output_stack_trace_key: exceptions.stacktrace_unpacked
   batch:
 
+extensions:
+  uploaderextension:
+    endpoint: ":8080"
 exporters:
   # NOTE: Prior to v0.86.0 use `logging` instead of `debug`.
   debug:
@@ -16,13 +25,18 @@ exporters:
     endpoint: localhost:14317
     tls:
       insecure: true
-
+  otlp/honeycomb:
+    endpoint: "api-dogfood.honeycomb.io:443" # US instance
+    #endpoint: "api.eu1.honeycomb.io:443" # EU instance
+    headers:
+      # "x-honeycomb-team": "api-key"
 service:
+  extensions: [uploaderextension]
   pipelines:
     traces:
       receivers: [otlp]
       processors: [symbolicator, batch]
-      exporters: [otlp/jaeger, debug]
+      exporters: [debug, otlp/honeycomb]
   telemetry:
     logs:
       level: debug

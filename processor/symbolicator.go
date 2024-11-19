@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"path"
+
+	"net/url"
 
 	"github.com/honeycombio/symbolic-go"
 )
@@ -21,7 +24,7 @@ func newBasicSymbolicator(store sourceMapStore) *basicSymbolicator {
 }
 
 // symbolicate takes a line, column, function name, and URL and returns a string
-func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (string, error) {
+func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64, function, sourcemapUrl string) (string, error) {
 	if column < 0 || column > math.MaxUint32 {
 		return "", fmt.Errorf("column must be uint32: %d", column)
 	}
@@ -30,8 +33,13 @@ func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64
 		return "", fmt.Errorf("line must be uint32: %d", line)
 	}
 
+	parsedURL, err := url.Parse(sourcemapUrl)
+	if err != nil {
+		return "", err
+	}
+	filename := path.Base(parsedURL.Path)
 	// TODO: we should look to see if we have already made a SourceMapCache for this URL
-	source, sMap, err := ns.store.GetSourceMap(ctx, url)
+	source, sMap, err := ns.store.GetSourceMap(ctx, filename)
 
 	if err != nil {
 		return "", err
