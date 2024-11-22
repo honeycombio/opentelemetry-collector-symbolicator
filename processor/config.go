@@ -22,6 +22,25 @@ type Config struct {
 	// will be written to.
 	OutputStackTraceKey string `mapstructure:"output_stack_trace_key"`
 
+	// OriginalStackTraceKey is the attribute key that preserves the original stack 
+	// trace
+	OriginalStackTraceKey string `mapstructure:"original_stack_trace_key"`
+
+	// OriginalColumnsAttributeKey is the attribute key that preserves the original
+	// column numbers
+	OriginalColumnsAttributeKey string `mapstructure:"original_columns_attribute_key"`
+
+	// OriginalFunctionsAttributeKey is the attribute key that preserves the original
+	// function names
+	OriginalFunctionsAttributeKey string `mapstructure:"original_functions_attribute_key"`
+
+	// OriginalLinesAttributeKey is the attribute key that preserves the original
+	// line numbers
+	OriginalLinesAttributeKey string `mapstructure:"original_lines_attribute_key"`
+
+	// OriginalUrlsAttributeKey is the attribute key that preserves the original URLs
+	OriginalUrlsAttributeKey string `mapstructure:"original_urls_attribute_key"`
+
 	// SourceMapFilePath is a file path to where the minified source and source
 	// maps are stored on disk
 	SourceMapFilePath string `mapstructure:"source_map_file_path"`
