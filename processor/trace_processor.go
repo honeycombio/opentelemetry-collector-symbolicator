@@ -114,7 +114,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	var origUrls = attributes.PutEmptySlice(sp.cfg.OriginalUrlsAttributeKey)
 	urls.CopyTo(origUrls)
 
-	var origStackTraceStr, _ = attributes.Get(sp.cfg.OriginalStackTraceKey)
+	var origStackTraceStr, _ = attributes.Get(sp.cfg.OutputStackTraceKey)
 	attributes.PutStr(sp.cfg.OriginalStackTraceKey, origStackTraceStr.Str())
 
 	// Update with symbolicated stack trace
