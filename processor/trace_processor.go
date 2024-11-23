@@ -101,6 +101,23 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 		)
 	}
 
+	// Preserve original stack trace
+	var origColumns = attributes.PutEmptySlice(sp.cfg.OriginalColumnsAttributeKey)
+	columns.CopyTo(origColumns)
+
+	var origFunctions = attributes.PutEmptySlice(sp.cfg.OriginalFunctionsAttributeKey)
+	functions.CopyTo(origFunctions)
+
+	var origLines = attributes.PutEmptySlice(sp.cfg.OriginalLinesAttributeKey)
+	lines.CopyTo(origLines)
+
+	var origUrls = attributes.PutEmptySlice(sp.cfg.OriginalUrlsAttributeKey)
+	urls.CopyTo(origUrls)
+
+	var origStackTraceStr, _ = attributes.Get(sp.cfg.OriginalStackTraceKey)
+	attributes.PutStr(sp.cfg.OriginalStackTraceKey, origStackTraceStr.Str())
+
+	// Update with symbolicated stack trace
 	var stack []string
 
 	for i := 0; i < columns.Len(); i++ {
