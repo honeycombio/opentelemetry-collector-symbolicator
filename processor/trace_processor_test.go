@@ -75,6 +75,8 @@ func TestProcess(t *testing.T) {
 				assert.Equal(t, "symbolicated 42:42 function url", attr.Str())
 			},
 		},
+		// Add unit tests to include attributes preserving stack trace
+		// Add unit test testing the preserveStackTrace option
 		{
 			Name: "missing columns attribute",
 			ApplyAttributes: func(span ptrace.Span) {
