@@ -22,9 +22,9 @@ func createDefaultConfig() component.Config {
 		UrlsAttributeKey:      "exception.structured_stacktrace.urls",
 		OutputStackTraceKey:   "exception.stacktrace",
 		OriginalStackTraceKey: "exception.stacktrace.original",
-		OriginalFunctionsAttributeKey: "exception.structured_stacktrace.columns.original",
+		OriginalFunctionsAttributeKey: "exception.structured_stacktrace.functions.original",
 		OriginalLinesAttributeKey:     "exception.structured_stacktrace.lines.original",
-		OriginalColumnsAttributeKey:   "exception.structured_stacktrace.functions.original",
+		OriginalColumnsAttributeKey:   "exception.structured_stacktrace.columns.original",
 		OriginalUrlsAttributeKey:      "exception.structured_stacktrace.urls.original",
 		SourceMapFilePath:     ".",
 	}
