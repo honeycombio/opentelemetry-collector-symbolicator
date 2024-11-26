@@ -141,7 +141,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 			mappedColumns.AppendEmpty().SetInt(mappedStackFrame.Col)
 			mappedFunctions.AppendEmpty().SetStr(mappedStackFrame.FunctionName)
 			mappedLines.AppendEmpty().SetInt(mappedStackFrame.Line)
-			mappedUrls.AppendEmpty().SetStr(mappedStackFrame.Src)
+			mappedUrls.AppendEmpty().SetStr(mappedStackFrame.URL)
 		}
 	}
 

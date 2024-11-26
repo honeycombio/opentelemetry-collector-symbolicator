@@ -27,14 +27,14 @@ func (ts *testSymbolicator) clear() {
 	ts.SymbolicatedLines = nil
 }
 
-func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (string, error) {
+func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (string, MappedStackFrame, error) {
 	ts.SymbolicatedLines = append(ts.SymbolicatedLines, symbolicatedLine{
 		Line:     line,
 		Column:   column,
 		Function: function,
 		URL:      url,
 	})
-	return fmt.Sprintf("symbolicated %d:%d %s %s", line, column, function, url), nil
+	return fmt.Sprintf("symbolicated %d:%d %s %s", line, column, function, url), MappedStackFrame{}, nil
 }
 
 func TestProcess(t *testing.T) {
