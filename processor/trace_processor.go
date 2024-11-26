@@ -19,7 +19,7 @@ var (
 
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
-	symbolicate(ctx context.Context, line, column int64, function, url string) (string, error)
+	symbolicate(ctx context.Context, line, column int64, function, url string) (string, MappedStackFrame, error)
 }
 
 // symbolicatorProcessor is a processor that finds and symbolicates stack
@@ -121,14 +121,27 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 
 	// Update with symbolicated stack trace
 	var stack []string
+	var mappedColumns = attributes.PutEmptySlice(sp.cfg.ColumnsAttributeKey)
+	var mappedFunctions = attributes.PutEmptySlice(sp.cfg.FunctionsAttributeKey)
+	var mappedLines = attributes.PutEmptySlice(sp.cfg.LinesAttributeKey)
+	var mappedUrls = attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
+	
 
 	for i := 0; i < columns.Len(); i++ {
-		s, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
+		s, mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
 
 		if err != nil {
 			stack = append(stack, fmt.Sprintf("Failed to symbolicate: %v", err))
+			mappedColumns.AppendEmpty().SetInt(columns.At(i).Int())
+			mappedFunctions.AppendEmpty().SetStr(functions.At(i).Str())
+			mappedLines.AppendEmpty().SetInt(lines.At(i).Int())
+			mappedUrls.AppendEmpty().SetStr(urls.At(i).Str())
 		} else {
 			stack = append(stack, s)
+			mappedColumns.AppendEmpty().SetInt(mappedStackFrame.Col)
+			mappedFunctions.AppendEmpty().SetStr(mappedStackFrame.FunctionName)
+			mappedLines.AppendEmpty().SetInt(mappedStackFrame.Line)
+			mappedUrls.AppendEmpty().SetStr(mappedStackFrame.Src)
 		}
 	}
 
