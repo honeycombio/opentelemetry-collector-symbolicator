@@ -34,7 +34,7 @@ func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64,
 		Function: function,
 		URL:      url,
 	})
-	return fmt.Sprintf("symbolicated %d:%d %s %s", line, column, function, url), MappedStackFrame{}, nil
+	return fmt.Sprintf("symbolicated %d:%d %s %s", line, column, function, url), MappedStackFrame{FunctionName: function, Col: column, Line: line, URL: url}, nil
 }
 
 func TestProcess(t *testing.T) {
@@ -54,7 +54,7 @@ func TestProcess(t *testing.T) {
 		AssertOutput            func(td ptrace.Traces)
 	}{
 		{
-			Name: "attributes provided",
+			Name: "symbolicated stacktrace attribute provided",
 			ApplyAttributes: func(span ptrace.Span) {
 				span.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().AppendEmpty().SetInt(42)
 				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().AppendEmpty().SetInt(42)
@@ -70,13 +70,106 @@ func TestProcess(t *testing.T) {
 				rs := td.ResourceSpans().At(0)
 				ils := rs.ScopeSpans().At(0)
 				span := ils.Spans().At(0)
+
 				attr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
 				assert.True(t, ok)
 				assert.Equal(t, "symbolicated 42:42 function url", attr.Str())
+
+				attr, ok = span.Attributes().Get(cfg.ColumnsAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "[42]", attr.AsString())
+
+				attr, ok = span.Attributes().Get(cfg.LinesAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "[42]", attr.AsString())
+
+				attr, ok = span.Attributes().Get(cfg.FunctionsAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "[\"function\"]", attr.AsString())
+
+				attr, ok = span.Attributes().Get(cfg.UrlsAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "[\"url\"]", attr.AsString())
 			},
 		},
-		// Add unit tests to include attributes preserving stack trace
-		// Add unit test testing the preserveStackTrace option
+		{
+			Name: "original stacktrace attributes preserved when preserveStackTrace is true (default)",
+			ApplyAttributes: func(span ptrace.Span) {
+				span.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().FromRaw([]any{1, 2, 3})
+				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
+				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
+				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
+				span.Attributes().PutEmpty(cfg.OutputStackTraceKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
+					{Line: 4, Column: 1, Function: "func1", URL: "url1"},
+					{Line: 5, Column: 2, Function: "func2", URL: "url2"},
+					{Line: 6, Column: 3, Function: "func3", URL: "url3"},
+				})
+			},
+			AssertOutput: func(td ptrace.Traces) {
+				rs := td.ResourceSpans().At(0)
+				ils := rs.ScopeSpans().At(0)
+				span := ils.Spans().At(0)
+				attr, ok := span.Attributes().Get(cfg.OriginalColumnsAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "[1,2,3]", attr.AsString())
+
+				attr, ok = span.Attributes().Get(cfg.OriginalLinesAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "[4,5,6]", attr.AsString())
+
+				attr, ok = span.Attributes().Get(cfg.OriginalFunctionsAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "[\"func1\",\"func2\",\"func3\"]", attr.AsString())
+
+				attr, ok = span.Attributes().Get(cfg.OriginalUrlsAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "[\"url1\",\"url2\",\"url3\"]", attr.AsString())
+
+				attr, ok = span.Attributes().Get(cfg.OriginalStackTraceKey)
+				assert.True(t, ok)
+				assert.Equal(t, "Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)", attr.AsString())
+			},
+		},
+		{
+			Name: "original stacktrace attributes not preserved when preserveStackTrace is false",
+			ApplyAttributes: func(span ptrace.Span) {
+				processor.cfg.PreserveStackTrace = false
+				span.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().FromRaw([]any{1, 2, 3})
+				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
+				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
+				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
+				span.Attributes().PutEmpty(cfg.OutputStackTraceKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
+					{Line: 4, Column: 1, Function: "func1", URL: "url1"},
+					{Line: 5, Column: 2, Function: "func2", URL: "url2"},
+					{Line: 6, Column: 3, Function: "func3", URL: "url3"},
+				})
+			},
+			AssertOutput: func(td ptrace.Traces) {
+				rs := td.ResourceSpans().At(0)
+				ils := rs.ScopeSpans().At(0)
+				span := ils.Spans().At(0)
+				_, ok := span.Attributes().Get(cfg.OriginalColumnsAttributeKey)
+				assert.False(t, ok)
+
+				_, ok = span.Attributes().Get(cfg.OriginalLinesAttributeKey)
+				assert.False(t, ok)
+
+				_, ok = span.Attributes().Get(cfg.OriginalFunctionsAttributeKey)
+				assert.False(t, ok)
+
+				_, ok = span.Attributes().Get(cfg.OriginalUrlsAttributeKey)
+				assert.False(t, ok)
+
+				_, ok = span.Attributes().Get(cfg.OriginalStackTraceKey)
+				assert.False(t, ok)
+			},
+		},
 		{
 			Name: "missing columns attribute",
 			ApplyAttributes: func(span ptrace.Span) {
