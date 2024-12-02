@@ -102,7 +102,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	}
 
 	// Preserve original stack trace
-	if (sp.cfg.PreserveStackTrace) {
+	if sp.cfg.PreserveStackTrace {
 		var origColumns = attributes.PutEmptySlice(sp.cfg.OriginalColumnsAttributeKey)
 		columns.CopyTo(origColumns)
 
@@ -125,17 +125,16 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	var mappedFunctions = attributes.PutEmptySlice(sp.cfg.FunctionsAttributeKey)
 	var mappedLines = attributes.PutEmptySlice(sp.cfg.LinesAttributeKey)
 	var mappedUrls = attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
-	
 
 	for i := 0; i < columns.Len(); i++ {
 		s, mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
 
 		if err != nil {
 			stack = append(stack, fmt.Sprintf("Failed to symbolicate: %v", err))
-			mappedColumns.AppendEmpty().SetInt(columns.At(i).Int())
-			mappedFunctions.AppendEmpty().SetStr(functions.At(i).Str())
-			mappedLines.AppendEmpty().SetInt(lines.At(i).Int())
-			mappedUrls.AppendEmpty().SetStr(urls.At(i).Str())
+			mappedColumns.AppendEmpty().SetInt(-1)
+			mappedFunctions.AppendEmpty().SetStr("")
+			mappedLines.AppendEmpty().SetInt(-1)
+			mappedUrls.AppendEmpty().SetStr("")
 		} else {
 			stack = append(stack, s)
 			mappedColumns.AppendEmpty().SetInt(mappedStackFrame.Col)

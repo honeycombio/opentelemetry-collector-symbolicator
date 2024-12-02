@@ -23,8 +23,8 @@ func newBasicSymbolicator(store sourceMapStore) *basicSymbolicator {
 type MappedStackFrame struct {
 	FunctionName string
 	URL          string
-	Line		 int64
-	Col 		 int64
+	Line         int64
+	Col          int64
 }
 
 // symbolicate takes a line, column, function name, and URL and returns a string
@@ -61,9 +61,9 @@ func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64
 	}
 
 	return fmt.Sprintf("at %s(%s:%d:%d)", t.FunctionName, t.Src, t.Line, t.Col), MappedStackFrame{
-			FunctionName: t.FunctionName,
-			URL: t.Src,
-			Line: int64(t.Line),
-			Col: int64(t.Col),
-		}, nil
+		FunctionName: t.FunctionName,
+		URL:          t.Src,
+		Line:         int64(t.Line),
+		Col:          int64(t.Col),
+	}, nil
 }

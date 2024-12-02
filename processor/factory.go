@@ -16,18 +16,18 @@ var (
 // createDefaultConfig creates the default configuration for the processor.
 func createDefaultConfig() component.Config {
 	return &Config{
-		ColumnsAttributeKey:   "exception.structured_stacktrace.columns",
-		FunctionsAttributeKey: "exception.structured_stacktrace.functions",
-		LinesAttributeKey:     "exception.structured_stacktrace.lines",
-		UrlsAttributeKey:      "exception.structured_stacktrace.urls",
-		OutputStackTraceKey:   "exception.stacktrace",
-		PreserveStackTrace: true,
-		OriginalStackTraceKey: "exception.stacktrace.original",
+		ColumnsAttributeKey:           "exception.structured_stacktrace.columns",
+		FunctionsAttributeKey:         "exception.structured_stacktrace.functions",
+		LinesAttributeKey:             "exception.structured_stacktrace.lines",
+		UrlsAttributeKey:              "exception.structured_stacktrace.urls",
+		OutputStackTraceKey:           "exception.stacktrace",
+		PreserveStackTrace:            true,
+		OriginalStackTraceKey:         "exception.stacktrace.original",
 		OriginalFunctionsAttributeKey: "exception.structured_stacktrace.functions.original",
 		OriginalLinesAttributeKey:     "exception.structured_stacktrace.lines.original",
 		OriginalColumnsAttributeKey:   "exception.structured_stacktrace.columns.original",
 		OriginalUrlsAttributeKey:      "exception.structured_stacktrace.urls.original",
-		SourceMapFilePath:     ".",
+		SourceMapFilePath:             ".",
 	}
 }
 
