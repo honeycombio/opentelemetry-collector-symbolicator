@@ -19,7 +19,7 @@ var (
 
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
-	symbolicate(ctx context.Context, line, column int64, function, url string) (*MappedStackFrame, error)
+	symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error)
 }
 
 // symbolicatorProcessor is a processor that finds and symbolicates stack
@@ -73,7 +73,7 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 
 // formatStackFrame takes a MappedStackFrame struct and returns a string representation of the stack frame
 // TODO: Update to consider different browser formats
-func formatStackFrame(sf *MappedStackFrame) string {
+func formatStackFrame(sf *mappedStackFrame) string {
 	return fmt.Sprintf("at %s(%s:%d:%d)", sf.FunctionName, sf.URL, sf.Line, sf.Col)
 }
 
