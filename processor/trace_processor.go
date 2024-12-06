@@ -19,7 +19,7 @@ var (
 
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
-	symbolicate(ctx context.Context, line, column int64, function, url string) (string, MappedStackFrame, error)
+	symbolicate(ctx context.Context, line, column int64, function, url string) (string, *MappedStackFrame, error)
 }
 
 // symbolicatorProcessor is a processor that finds and symbolicates stack
