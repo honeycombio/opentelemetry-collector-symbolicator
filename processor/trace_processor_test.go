@@ -2,7 +2,6 @@ package symbolicatorprocessor
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,14 +26,14 @@ func (ts *testSymbolicator) clear() {
 	ts.SymbolicatedLines = nil
 }
 
-func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (string, *MappedStackFrame, error) {
+func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (*MappedStackFrame, error) {
 	ts.SymbolicatedLines = append(ts.SymbolicatedLines, symbolicatedLine{
 		Line:     line,
 		Column:   column,
 		Function: function,
 		URL:      url,
 	})
-	return fmt.Sprintf("symbolicated %d:%d %s %s", line, column, function, url), &MappedStackFrame{FunctionName: function, Col: column, Line: line, URL: url}, nil
+	return &MappedStackFrame{FunctionName: function, Col: column, Line: line, URL: url}, nil
 }
 
 func TestProcess(t *testing.T) {
@@ -73,7 +72,7 @@ func TestProcess(t *testing.T) {
 
 				attr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
 				assert.True(t, ok)
-				assert.Equal(t, "symbolicated 42:42 function url", attr.Str())
+				assert.Equal(t, "at function(url:42:42)", attr.Str())
 
 				attr, ok = span.Attributes().Get(cfg.ColumnsAttributeKey)
 				assert.True(t, ok)

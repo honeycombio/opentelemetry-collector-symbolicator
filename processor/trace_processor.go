@@ -19,7 +19,7 @@ var (
 
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
-	symbolicate(ctx context.Context, line, column int64, function, url string) (string, *MappedStackFrame, error)
+	symbolicate(ctx context.Context, line, column int64, function, url string) (*MappedStackFrame, error)
 }
 
 // symbolicatorProcessor is a processor that finds and symbolicates stack
@@ -69,6 +69,12 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 			}
 		}
 	}
+}
+
+// formatStackFrame takes a MappedStackFrame struct and returns a string representation of the stack frame
+// TODO: Update to consider different browser formats
+func formatStackFrame(sf *MappedStackFrame) string {
+	return fmt.Sprintf("at %s(%s:%d:%d)", sf.FunctionName, sf.URL, sf.Line, sf.Col)
 }
 
 // processAttributes takes the attributes and determines if they contain
@@ -127,7 +133,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	var mappedUrls = attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
 
 	for i := 0; i < columns.Len(); i++ {
-		s, mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
+		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
 
 		if err != nil {
 			stack = append(stack, fmt.Sprintf("Failed to symbolicate: %v", err))
@@ -136,6 +142,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 			mappedLines.AppendEmpty().SetInt(-1)
 			mappedUrls.AppendEmpty().SetStr("")
 		} else {
+			s := formatStackFrame(mappedStackFrame)
 			stack = append(stack, s)
 			mappedColumns.AppendEmpty().SetInt(mappedStackFrame.Col)
 			mappedFunctions.AppendEmpty().SetStr(mappedStackFrame.FunctionName)
