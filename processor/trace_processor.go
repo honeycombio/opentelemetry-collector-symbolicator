@@ -19,7 +19,7 @@ var (
 
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
-	symbolicate(ctx context.Context, line, column int64, function, url string) (string, error)
+	symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error)
 }
 
 // symbolicatorProcessor is a processor that finds and symbolicates stack
@@ -71,6 +71,12 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 	}
 }
 
+// formatStackFrame takes a MappedStackFrame struct and returns a string representation of the stack frame
+// TODO: Update to consider different browser formats
+func formatStackFrame(sf *mappedStackFrame) string {
+	return fmt.Sprintf("at %s(%s:%d:%d)", sf.FunctionName, sf.URL, sf.Line, sf.Col)
+}
+
 // processAttributes takes the attributes and determines if they contain
 // required stacktrace information. If they do, it symbolicates the stack
 // trace and adds it to the attributes.
@@ -102,7 +108,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	}
 
 	// Preserve original stack trace
-	if (sp.cfg.PreserveStackTrace) {
+	if sp.cfg.PreserveStackTrace {
 		var origColumns = attributes.PutEmptySlice(sp.cfg.OriginalColumnsAttributeKey)
 		columns.CopyTo(origColumns)
 
@@ -121,14 +127,27 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 
 	// Update with symbolicated stack trace
 	var stack []string
+	var mappedColumns = attributes.PutEmptySlice(sp.cfg.ColumnsAttributeKey)
+	var mappedFunctions = attributes.PutEmptySlice(sp.cfg.FunctionsAttributeKey)
+	var mappedLines = attributes.PutEmptySlice(sp.cfg.LinesAttributeKey)
+	var mappedUrls = attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
 
 	for i := 0; i < columns.Len(); i++ {
-		s, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
+		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
 
 		if err != nil {
 			stack = append(stack, fmt.Sprintf("Failed to symbolicate: %v", err))
+			mappedColumns.AppendEmpty().SetInt(-1)
+			mappedFunctions.AppendEmpty().SetStr("")
+			mappedLines.AppendEmpty().SetInt(-1)
+			mappedUrls.AppendEmpty().SetStr("")
 		} else {
+			s := formatStackFrame(mappedStackFrame)
 			stack = append(stack, s)
+			mappedColumns.AppendEmpty().SetInt(mappedStackFrame.Col)
+			mappedFunctions.AppendEmpty().SetStr(mappedStackFrame.FunctionName)
+			mappedLines.AppendEmpty().SetInt(mappedStackFrame.Line)
+			mappedUrls.AppendEmpty().SetStr(mappedStackFrame.URL)
 		}
 	}
 

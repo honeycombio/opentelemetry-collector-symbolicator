@@ -20,21 +20,28 @@ func newBasicSymbolicator(store sourceMapStore) *basicSymbolicator {
 	return &basicSymbolicator{store: store}
 }
 
+type mappedStackFrame struct {
+	FunctionName string
+	URL          string
+	Line         int64
+	Col          int64
+}
+
 // symbolicate takes a line, column, function name, and URL and returns a string
-func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (string, error) {
+func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error) {
 	if column < 0 || column > math.MaxUint32 {
-		return "", fmt.Errorf("column must be uint32: %d", column)
+		return &mappedStackFrame{}, fmt.Errorf("column must be uint32: %d", column)
 	}
 
 	if line < 0 || line > math.MaxUint32 {
-		return "", fmt.Errorf("line must be uint32: %d", line)
+		return &mappedStackFrame{}, fmt.Errorf("line must be uint32: %d", line)
 	}
 
 	// TODO: we should look to see if we have already made a SourceMapCache for this URL
 	source, sMap, err := ns.store.GetSourceMap(ctx, url)
 
 	if err != nil {
-		return "", err
+		return &mappedStackFrame{}, err
 	}
 
 	// Create a new source map cache
@@ -44,14 +51,19 @@ func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64
 	smc, err := symbolic.NewSourceMapCache(source, sMap)
 
 	if err != nil {
-		return "", err
+		return &mappedStackFrame{}, err
 	}
 
 	t, err := smc.Lookup(uint32(line), uint32(column), 0)
 
 	if err != nil {
-		return "", err
+		return &mappedStackFrame{}, err
 	}
 
-	return fmt.Sprintf("at %s(%s:%d:%d)", t.FunctionName, t.Src, t.Line, t.Col), nil
+	return &mappedStackFrame{
+		FunctionName: t.FunctionName,
+		URL:          t.Src,
+		Line:         int64(t.Line),
+		Col:          int64(t.Col),
+	}, nil
 }
