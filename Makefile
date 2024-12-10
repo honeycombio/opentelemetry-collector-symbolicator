@@ -1,6 +1,6 @@
 .PHONY: builder
 builder:
-	go install go.opentelemetry.io/collector/cmd/builder@v0.111.0
+	go install go.opentelemetry.io/collector/cmd/builder@v0.115.0
 
 .PHONY: clean
 clean:
@@ -9,6 +9,10 @@ clean:
 .PHONY: build
 build: builder
 	builder --config builder-config.yaml
+
+.PHONY: build-docker
+build-docker:
+	docker buildx build --ssh default . -t collector-symbolicator-processor 
 
 .PHONY: run 
 run: build

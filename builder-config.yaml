@@ -2,30 +2,37 @@ dist:
   name: otelcol-dev
   description: Basic OTel Collector distribution for Developers
   output_path: ./otelcol-dev
-  otelcol_version: 0.111.0
+  version: 0.115.0
 
 exporters:
   - gomod:
       # NOTE: Prior to v0.86.0 use the `loggingexporter` instead of `debugexporter`.
-      go.opentelemetry.io/collector/exporter/debugexporter v0.111.0
-  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.111.0
-  - gomod: go.opentelemetry.io/collector/exporter/nopexporter v0.111.0
-  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.111.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.111.0
+      go.opentelemetry.io/collector/exporter/debugexporter v0.115.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.115.0
+  - gomod: go.opentelemetry.io/collector/exporter/nopexporter v0.115.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.115.0
 
 processors:
-  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.111.0
-  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.111.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.111.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.111.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.111.0
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.115.0
+  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.115.0
   - gomod: github.com/honeycombio/opentelemetry-collector-symbolicator/processor v0.0.0
     name: symbolicatorprocessor
     path: ./processor
 
 receivers:
-  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.111.0
-  - gomod: go.opentelemetry.io/collector/receiver/nopreceiver v0.111.0
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.115.0
+  - gomod: go.opentelemetry.io/collector/receiver/nopreceiver v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kubeletstatsreceiver v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver v0.115.0
 
 providers:
   - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.17.0
@@ -35,6 +42,6 @@ providers:
   - gomod: go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.17.0
 
 extensions:
-  - gomod: go.opentelemetry.io/collector/extension/zpagesextension v0.111.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.111.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.111.0
+  - gomod: go.opentelemetry.io/collector/extension/zpagesextension v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.115.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.115.0
