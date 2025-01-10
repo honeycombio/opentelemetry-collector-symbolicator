@@ -59,6 +59,8 @@ func TestProcess(t *testing.T) {
 				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().AppendEmpty().SetInt(42)
 				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("function")
 				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("url")
+				span.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
+				span.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("Test error!")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -72,7 +74,7 @@ func TestProcess(t *testing.T) {
 
 				attr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
 				assert.True(t, ok)
-				assert.Equal(t, "at function(url:42:42)", attr.Str())
+				assert.Equal(t, "Error: Test error!\n    at function(url:42:42)", attr.Str())
 
 				attr, ok = span.Attributes().Get(cfg.ColumnsAttributeKey)
 				assert.True(t, ok)
