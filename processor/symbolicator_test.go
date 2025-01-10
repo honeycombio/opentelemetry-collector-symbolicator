@@ -19,7 +19,7 @@ func TestSymbolicator(t *testing.T) {
 	line := formatStackFrame(sf)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "at bar(basic-mapping-original.js:8:1)", line)
+	assert.Equal(t, "    at bar(basic-mapping-original.js:8:1)", line)
 
 	_, err = sym.symbolicate(ctx, 0, 34, "b", "does-not-exist.js")
 	assert.Error(t, err)
