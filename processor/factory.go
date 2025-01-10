@@ -21,6 +21,8 @@ func createDefaultConfig() component.Config {
 		LinesAttributeKey:             "exception.structured_stacktrace.lines",
 		UrlsAttributeKey:              "exception.structured_stacktrace.urls",
 		OutputStackTraceKey:           "exception.stacktrace",
+		StackTypeKey:				   "exception.type",
+		StackMessageKey: 			   "exception.message",
 		PreserveStackTrace:            true,
 		OriginalStackTraceKey:         "exception.stacktrace.original",
 		OriginalFunctionsAttributeKey: "exception.structured_stacktrace.functions.original",

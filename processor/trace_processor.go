@@ -74,7 +74,7 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 // formatStackFrame takes a MappedStackFrame struct and returns a string representation of the stack frame
 // TODO: Update to consider different browser formats
 func formatStackFrame(sf *mappedStackFrame) string {
-	return fmt.Sprintf("at %s(%s:%d:%d)", sf.FunctionName, sf.URL, sf.Line, sf.Col)
+	return fmt.Sprintf("    at %s(%s:%d:%d)", sf.FunctionName, sf.URL, sf.Line, sf.Col)
 }
 
 // processAttributes takes the attributes and determines if they contain
@@ -131,6 +131,11 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	var mappedFunctions = attributes.PutEmptySlice(sp.cfg.FunctionsAttributeKey)
 	var mappedLines = attributes.PutEmptySlice(sp.cfg.LinesAttributeKey)
 	var mappedUrls = attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
+
+	var stackType, _ = attributes.Get(sp.cfg.StackTypeKey)
+	var stackMessage, _ = attributes.Get(sp.cfg.StackMessageKey)
+
+	stack = append(stack, fmt.Sprintf("%s: %s", stackType.Str(), stackMessage.Str()))
 
 	for i := 0; i < columns.Len(); i++ {
 		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
