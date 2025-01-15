@@ -2,6 +2,8 @@ version: 2.1
 
 orbs:
   go: circleci/go@1.12.0
+  aws-ecr: circleci/aws-ecr@9.3.7
+  aws-cli: circleci/aws-cli@5.1.0
 
 jobs:
   test:
@@ -53,3 +55,18 @@ workflows:
               only: /^v[0-9].*/
             branches:
               ignore: /.*/
+      - aws-ecr/build_and_push_image:
+          # filters:
+          #   branches:
+          #     only:
+          #       - main
+          auth:
+            - aws-cli/setup:
+                role_arn: "arn:aws:iam::702835727665:role/circleci-deploy"
+                role_session_name: "collector-symbolicator-processor"
+                region: us-east-1
+          account_id: "702835727665"
+          region: "us-east-1"
+          repo: collector-symbolicator-processor
+          tag: "${CIRCLE_SHA1}"
+          platform: linux/arm64
