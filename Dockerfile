@@ -19,7 +19,7 @@ RUN apk add libgcc libc6-compat
 
 COPY --from=build --chmod=755 /go/src/otelcol-dev/otelcol-dev /otelcol-dev
 COPY --from=build  /go/src/config.yaml /
-COPY --from=build /go/pkg/mod/github.com/honeycombio/symbolic-go@v0.0.2/lib/linux_aarch64/libsymbolic_cabi.so /go/pkg/mod/github.com/honeycombio/symbolic-go@v0.0.2/lib/linux_aarch64/
+COPY --from=build /go/pkg/mod/github.com/honeycombio/ /go/pkg/mod/github.com/honeycombio/
 
 ENTRYPOINT [ "/otelcol-dev" ]
 CMD [ "--config", "config.yaml" ]
