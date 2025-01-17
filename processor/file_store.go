@@ -30,13 +30,15 @@ func newFileStore(root string, logger *zap.Logger) *fileStore {
 }
 
 func (fs *fileStore) GetSourceMap(ctx context.Context, url string) (string, string, error) {
-	source, err := os.ReadFile(filepath.Join(fs.root, url))
+	path := filepath.Join(fs.root, url)
+
+	source, err := os.ReadFile(path)
 
 	if err != nil {
 		return "", "", fmt.Errorf("%w: %s", errFailedToFindSourceFile, url)
 	}
 
-	fs.logger.Info("Found source file", zap.String("path", filepath.Join(fs.root, url)))
+	fs.logger.Info("Found source file", zap.String("path", path))
 
 	matches := mappingURLRegex.FindStringSubmatch(string(source))
 
@@ -47,13 +49,16 @@ func (fs *fileStore) GetSourceMap(ctx context.Context, url string) (string, stri
 	// the capture group we want is the last one
 	mapName := matches[len(matches)-1]
 
-	sourceMap, err := os.ReadFile(filepath.Join(fs.root, mapName))
+	// the map name is relative to the source file
+	path = filepath.Join(filepath.Dir(path), mapName)
+
+	sourceMap, err := os.ReadFile(path)
 
 	if err != nil {
 		return string(source), "", fmt.Errorf("%w: %s", errFailedToFindSourceMap, mapName)
 	}
 
-	fs.logger.Info("Found map file", zap.String("path", filepath.Join(fs.root, mapName)))
+	fs.logger.Info("Found map file", zap.String("path", path))
 
 	return string(source), string(sourceMap), nil
 }
