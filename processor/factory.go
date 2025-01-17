@@ -2,6 +2,7 @@ package symbolicatorprocessor
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -30,6 +31,7 @@ func createDefaultConfig() component.Config {
 		OriginalColumnsAttributeKey:   "exception.structured_stacktrace.columns.original",
 		OriginalUrlsAttributeKey:      "exception.structured_stacktrace.urls.original",
 		SourceMapFilePath:             ".",
+		Timeout:                       5 * time.Second,
 	}
 }
 

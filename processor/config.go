@@ -1,5 +1,7 @@
 package symbolicatorprocessor
 
+import "time"
+
 // Config defines configuration for the symbolicator processor.
 type Config struct {
 	// ColumnsAttributeKey is the attribute key that contains the column numbers
@@ -54,6 +56,9 @@ type Config struct {
 	// SourceMapFilePath is a file path to where the minified source and source
 	// maps are stored on disk.
 	SourceMapFilePath string `mapstructure:"source_map_file_path"`
+
+	// Timeout is the maximum time to wait for a response from the symbolicator.
+	Timeout time.Duration `mapstructure:"timeout"`
 }
 
 // Validate checks the configuration for any issues.
