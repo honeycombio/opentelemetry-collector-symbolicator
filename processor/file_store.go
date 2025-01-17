@@ -3,6 +3,7 @@ package symbolicatorprocessor
 import (
 	"context"
 	"fmt"
+	neturl "net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -30,12 +31,18 @@ func newFileStore(root string, logger *zap.Logger) *fileStore {
 }
 
 func (fs *fileStore) GetSourceMap(ctx context.Context, url string) (string, string, error) {
-	path := filepath.Join(fs.root, url)
+	u, err := neturl.Parse(url)
+
+	if err != nil {
+		return "", "", err
+	}
+
+	path := filepath.Join(fs.root, u.Path)
 
 	source, err := os.ReadFile(path)
 
 	if err != nil {
-		return "", "", fmt.Errorf("%w: %s", errFailedToFindSourceFile, url)
+		return "", "", fmt.Errorf("%w: %s", errFailedToFindSourceFile, path)
 	}
 
 	fs.logger.Info("Found source file", zap.String("path", path))
@@ -43,7 +50,7 @@ func (fs *fileStore) GetSourceMap(ctx context.Context, url string) (string, stri
 	matches := mappingURLRegex.FindStringSubmatch(string(source))
 
 	if len(matches) <= 0 {
-		return string(source), "", fmt.Errorf("%w: %s", errFailedToFindSourceMapLocation, url)
+		return string(source), "", fmt.Errorf("%w: %s", errFailedToFindSourceMapLocation, path)
 	}
 
 	// the capture group we want is the last one

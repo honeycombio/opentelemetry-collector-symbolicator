@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	neturl "net/url"
 
 	"github.com/honeycombio/symbolic-go"
 )
@@ -38,14 +37,8 @@ func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64
 		return &mappedStackFrame{}, fmt.Errorf("line must be uint32: %d", line)
 	}
 
-	u, err := neturl.Parse(url)
-
-	if err != nil {
-		return nil, err
-	}
-
 	// TODO: we should look to see if we have already made a SourceMapCache for this URL
-	source, sMap, err := ns.store.GetSourceMap(ctx, u.Path)
+	source, sMap, err := ns.store.GetSourceMap(ctx, url)
 
 	if err != nil {
 		return &mappedStackFrame{}, err
