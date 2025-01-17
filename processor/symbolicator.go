@@ -9,7 +9,7 @@ import (
 )
 
 type sourceMapStore interface {
-	GetSourceMap(ctx context.Context, url string) (string, string, error)
+	GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error)
 }
 
 type basicSymbolicator struct {
@@ -48,7 +48,7 @@ func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64
 	// TODO: we should cache this but they are not thread safe
 	// so we need to lock around them
 	// TODO: we should also have a way to evict old source maps
-	smc, err := symbolic.NewSourceMapCache(source, sMap)
+	smc, err := symbolic.NewSourceMapCache(string(source), string(sMap))
 
 	if err != nil {
 		return &mappedStackFrame{}, err
