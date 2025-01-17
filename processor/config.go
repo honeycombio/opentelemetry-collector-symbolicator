@@ -51,9 +51,14 @@ type Config struct {
 	// OriginalUrlsAttributeKey is the attribute key that preserves the original URLs.
 	OriginalUrlsAttributeKey string `mapstructure:"original_urls_attribute_key"`
 
-	// SourceMapFilePath is a file path to where the minified source and source
+	// LocalSourceMapConfiguration is the configuration for sourcing source maps on a local volume.
+	LocalSourceMapConfiguration *LocalSourceMapConfiguration `mapstructure:"local_source_maps"`
+}
+
+type LocalSourceMapConfiguration struct {
+	// Path is a file path to where the minified source and source
 	// maps are stored on disk.
-	SourceMapFilePath string `mapstructure:"source_map_file_path"`
+	Path string `mapstructure:"path"`
 }
 
 // Validate checks the configuration for any issues.

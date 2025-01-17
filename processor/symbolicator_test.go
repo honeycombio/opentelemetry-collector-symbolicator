@@ -12,7 +12,7 @@ import (
 func TestSymbolicator(t *testing.T) {
 	ctx := context.Background()
 
-	fs := newFileStore("../test_assets", zaptest.NewLogger(t))
+	fs := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
 	sym := newBasicSymbolicator(fs)
 
 	sf, err := sym.symbolicate(ctx, 0, 34, "b", "basic-mapping.js")

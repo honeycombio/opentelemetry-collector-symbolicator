@@ -29,14 +29,16 @@ func createDefaultConfig() component.Config {
 		OriginalLinesAttributeKey:     "exception.structured_stacktrace.lines.original",
 		OriginalColumnsAttributeKey:   "exception.structured_stacktrace.columns.original",
 		OriginalUrlsAttributeKey:      "exception.structured_stacktrace.urls.original",
-		SourceMapFilePath:             ".",
+		LocalSourceMapConfiguration: &LocalSourceMapConfiguration{
+			Path: ".",
+		},
 	}
 }
 
 // createTracesProcessor creates a traces processor
 func createTracesProcessor(ctx context.Context, set processor.Settings, cfg component.Config, next consumer.Traces) (processor.Traces, error) {
 	symCfg := cfg.(*Config)
-	fs := newFileStore(symCfg.SourceMapFilePath, set.Logger)
+	fs := newFileStore(ctx, set.Logger, symCfg.LocalSourceMapConfiguration)
 	sym := newBasicSymbolicator(fs)
 	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym)
 	return processorhelper.NewTraces(ctx, set, cfg, next, processor.processTraces, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))

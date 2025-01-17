@@ -23,10 +23,10 @@ type fileStore struct {
 	root   string
 }
 
-func newFileStore(root string, logger *zap.Logger) *fileStore {
+func newFileStore(_ context.Context, logger *zap.Logger, cfg *LocalSourceMapConfiguration) *fileStore {
 	return &fileStore{
 		logger: logger,
-		root:   root,
+		root:   cfg.Path,
 	}
 }
 
