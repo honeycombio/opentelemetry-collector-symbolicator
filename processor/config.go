@@ -53,12 +53,22 @@ type Config struct {
 
 	// LocalSourceMapConfiguration is the configuration for sourcing source maps on a local volume.
 	LocalSourceMapConfiguration *LocalSourceMapConfiguration `mapstructure:"local_source_maps"`
+
+	// S3SourceMapConfiguration is the configuration for sourcing source maps from S3.
+	S3SourceMapConfiguration *S3SourceMapConfiguration `mapstructure:"s3_source_maps"`
 }
 
 type LocalSourceMapConfiguration struct {
 	// Path is a file path to where the minified source and source
 	// maps are stored on disk.
 	Path string `mapstructure:"path"`
+}
+
+type S3SourceMapConfiguration struct {
+	// Region is the AWS region where the S3 bucket is located.
+	Region string `mapstructure:"region"`
+	// BucketName is the name of the S3 bucket.
+	BucketName string `mapstructure:"bucket"`
 }
 
 // Validate checks the configuration for any issues.
