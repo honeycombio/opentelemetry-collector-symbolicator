@@ -13,9 +13,7 @@ ADD ./config.yaml ./
 ARG GOPRIVATE=github.com/honeycombio/symbolic-go
 RUN --mount=type=ssh make build
 
-FROM alpine
-
-RUN apk add libgcc libc6-compat
+FROM gcr.io/distroless/cc
 
 COPY --from=build --chmod=755 /go/src/otelcol-dev/otelcol-dev /otelcol-dev
 COPY --from=build  /go/src/config.yaml /
