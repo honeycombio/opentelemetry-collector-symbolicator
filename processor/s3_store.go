@@ -17,6 +17,7 @@ type s3Store struct {
 	logger *zap.Logger
 	client *s3.Client
 	bucket string
+	prefix string
 }
 
 func (s *s3Store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error) {
@@ -26,7 +27,7 @@ func (s *s3Store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte,
 		return nil, nil, err
 	}
 
-	path := u.Path
+	path := filepath.Join(s.prefix, u.Path)
 
 	source, err := s.loadContent(ctx, path)
 
@@ -92,5 +93,7 @@ func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3SourceMapConfigu
 	return &s3Store{
 		logger: logger,
 		client: client,
+		prefix: cfg.Prefix,
+		bucket: cfg.BucketName,
 	}, nil
 }

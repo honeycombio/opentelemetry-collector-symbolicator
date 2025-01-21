@@ -51,6 +51,8 @@ type Config struct {
 	// OriginalUrlsAttributeKey is the attribute key that preserves the original URLs.
 	OriginalUrlsAttributeKey string `mapstructure:"original_urls_attribute_key"`
 
+	SourceMapStoreKey string `mapstructure:"source_map_store"`
+
 	// LocalSourceMapConfiguration is the configuration for sourcing source maps on a local volume.
 	LocalSourceMapConfiguration *LocalSourceMapConfiguration `mapstructure:"local_source_maps"`
 
@@ -69,6 +71,8 @@ type S3SourceMapConfiguration struct {
 	Region string `mapstructure:"region"`
 	// BucketName is the name of the S3 bucket.
 	BucketName string `mapstructure:"bucket"`
+	// Prefix is the prefix to use when looking for source maps.
+	Prefix string `mapstructure:"prefix"`
 }
 
 // Validate checks the configuration for any issues.
