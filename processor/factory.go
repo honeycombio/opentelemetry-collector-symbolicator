@@ -2,6 +2,7 @@ package symbolicatorprocessor
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -30,6 +31,7 @@ func createDefaultConfig() component.Config {
 		OriginalColumnsAttributeKey:   "exception.structured_stacktrace.columns.original",
 		OriginalUrlsAttributeKey:      "exception.structured_stacktrace.urls.original",
 		SourceMapFilePath:             ".",
+		Timeout:                       5 * time.Second,
 	}
 }
 
@@ -37,7 +39,7 @@ func createDefaultConfig() component.Config {
 func createTracesProcessor(ctx context.Context, set processor.Settings, cfg component.Config, next consumer.Traces) (processor.Traces, error) {
 	symCfg := cfg.(*Config)
 	fs := newFileStore(symCfg.SourceMapFilePath, set.Logger)
-	sym := newBasicSymbolicator(fs)
+	sym := newBasicSymbolicator(ctx, symCfg.Timeout, fs)
 	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym)
 	return processorhelper.NewTraces(ctx, set, cfg, next, processor.processTraces, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
 }
