@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/honeycombio/symbolic-go"
 )
@@ -13,11 +14,20 @@ type sourceMapStore interface {
 }
 
 type basicSymbolicator struct {
-	store sourceMapStore
+	store   sourceMapStore
+	timeout time.Duration
+	ch      chan struct{}
+	cache   map[string]*symbolic.SourceMapCache
 }
 
-func newBasicSymbolicator(store sourceMapStore) *basicSymbolicator {
-	return &basicSymbolicator{store: store}
+func newBasicSymbolicator(_ context.Context, timeout time.Duration, store sourceMapStore) *basicSymbolicator {
+	return &basicSymbolicator{
+		store:   store,
+		timeout: timeout,
+		// the channel is buffered to allow for a single request to be in progress at a time
+		ch:    make(chan struct{}, 1),
+		cache: map[string]*symbolic.SourceMapCache{},
+	}
 }
 
 type mappedStackFrame struct {
@@ -37,24 +47,7 @@ func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64
 		return &mappedStackFrame{}, fmt.Errorf("line must be uint32: %d", line)
 	}
 
-	// TODO: we should look to see if we have already made a SourceMapCache for this URL
-	source, sMap, err := ns.store.GetSourceMap(ctx, url)
-
-	if err != nil {
-		return &mappedStackFrame{}, err
-	}
-
-	// Create a new source map cache
-	// TODO: we should cache this but they are not thread safe
-	// so we need to lock around them
-	// TODO: we should also have a way to evict old source maps
-	smc, err := symbolic.NewSourceMapCache(string(source), string(sMap))
-
-	if err != nil {
-		return &mappedStackFrame{}, err
-	}
-
-	t, err := smc.Lookup(uint32(line), uint32(column), 0)
+	t, err := ns.limitedSymbolicate(ctx, line, column, url)
 
 	if err != nil {
 		return &mappedStackFrame{}, err
@@ -66,4 +59,37 @@ func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64
 		Line:         int64(t.Line),
 		Col:          int64(t.Col),
 	}, nil
+}
+
+// limitedSymbolicate performs the actual symbolication. It is limited to a single request at a time
+// it checks and caches the source map cache before loading the source map from the store
+func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, column int64, url string) (*symbolic.SourceMapCacheToken, error) {
+	select {
+	case ns.ch <- struct{}{}:
+	case <-time.After(ns.timeout):
+		return nil, fmt.Errorf("timeout")
+	}
+
+	defer func() {
+		<-ns.ch
+	}()
+
+	smc, ok := ns.cache[url]
+
+	if !ok {
+		source, sMap, err := ns.store.GetSourceMap(ctx, url)
+
+		if err != nil {
+			return nil, err
+		}
+
+		smc, err = symbolic.NewSourceMapCache(string(source), string(sMap))
+		if err != nil {
+			return nil, err
+		}
+
+		ns.cache[url] = smc
+	}
+
+	return smc.Lookup(uint32(line), uint32(column), 0)
 }

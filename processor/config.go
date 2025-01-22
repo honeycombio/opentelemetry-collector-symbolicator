@@ -1,5 +1,7 @@
 package symbolicatorprocessor
 
+import "time"
+
 // Config defines configuration for the symbolicator processor.
 type Config struct {
 	// ColumnsAttributeKey is the attribute key that contains the column numbers
@@ -58,6 +60,9 @@ type Config struct {
 
 	// S3SourceMapConfiguration is the configuration for sourcing source maps from S3.
 	S3SourceMapConfiguration *S3SourceMapConfiguration `mapstructure:"s3_source_maps"`
+  
+  // Timeout is the maximum time to wait for a response from the symbolicator.
+	Timeout time.Duration `mapstructure:"timeout"`
 }
 
 type LocalSourceMapConfiguration struct {

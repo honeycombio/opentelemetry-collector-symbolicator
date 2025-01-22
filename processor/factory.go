@@ -2,6 +2,7 @@ package symbolicatorprocessor
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -33,6 +34,7 @@ func createDefaultConfig() component.Config {
 		LocalSourceMapConfiguration: &LocalSourceMapConfiguration{
 			Path: ".",
 		},
+		Timeout:                       5 * time.Second,
 	}
 }
 
@@ -52,7 +54,7 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 		}
 	}
 
-	sym := newBasicSymbolicator(store)
+	sym := newBasicSymbolicator(ctx, symCfg.Timeout, store)
 	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym)
 	return processorhelper.NewTraces(ctx, set, cfg, next, processor.processTraces, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
 }

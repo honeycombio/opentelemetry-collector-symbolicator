@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zaptest"
@@ -13,7 +14,7 @@ func TestSymbolicator(t *testing.T) {
 	ctx := context.Background()
 
 	fs := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
-	sym := newBasicSymbolicator(fs)
+	sym := newBasicSymbolicator(ctx, 5*time.Second, fs)
 
 	sf, err := sym.symbolicate(ctx, 0, 34, "b", "basic-mapping.js")
 	line := formatStackFrame(sf)
