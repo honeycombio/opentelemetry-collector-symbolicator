@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	mappingURLRegex                  = regexp.MustCompile(`\/\/[#@]\s(source(?:Mapping)?URL)=\s*(\S+)`)
+	mappingURLRegex                  = regexp.MustCompile(`\/\/[#@]\s(sourceMappingURL)=\s*(\S+)`)
 	errFailedToFindSourceFile        = fmt.Errorf("failed to find source file")
 	errFailedToFindSourceMapLocation = fmt.Errorf("failed to find source map location")
 	errFailedToFindSourceMap         = fmt.Errorf("failed to find source map")
