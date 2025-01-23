@@ -23,18 +23,18 @@ type fileStore struct {
 	root   string
 }
 
-func newFileStore(root string, logger *zap.Logger) *fileStore {
+func newFileStore(_ context.Context, logger *zap.Logger, cfg *LocalSourceMapConfiguration) *fileStore {
 	return &fileStore{
 		logger: logger,
-		root:   root,
+		root:   cfg.Path,
 	}
 }
 
-func (fs *fileStore) GetSourceMap(ctx context.Context, url string) (string, string, error) {
+func (fs *fileStore) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error) {
 	u, err := neturl.Parse(url)
 
 	if err != nil {
-		return "", "", err
+		return nil, nil, err
 	}
 
 	path := filepath.Join(fs.root, u.Path)
@@ -42,19 +42,19 @@ func (fs *fileStore) GetSourceMap(ctx context.Context, url string) (string, stri
 	source, err := os.ReadFile(path)
 
 	if err != nil {
-		return "", "", fmt.Errorf("%w: %s", errFailedToFindSourceFile, path)
+		return nil, nil, fmt.Errorf("%w: %s", errFailedToFindSourceFile, path)
 	}
 
 	fs.logger.Info("Found source file", zap.String("path", path))
 
-	matches := mappingURLRegex.FindStringSubmatch(string(source))
+	matches := mappingURLRegex.FindSubmatch(source)
 
 	if len(matches) <= 0 {
-		return string(source), "", fmt.Errorf("%w: %s", errFailedToFindSourceMapLocation, path)
+		return nil, nil, fmt.Errorf("%w: %s", errFailedToFindSourceMapLocation, path)
 	}
 
 	// the capture group we want is the last one
-	mapName := matches[len(matches)-1]
+	mapName := string(matches[len(matches)-1])
 
 	// the map name is relative to the source file
 	path = filepath.Join(filepath.Dir(path), mapName)
@@ -62,10 +62,10 @@ func (fs *fileStore) GetSourceMap(ctx context.Context, url string) (string, stri
 	sourceMap, err := os.ReadFile(path)
 
 	if err != nil {
-		return string(source), "", fmt.Errorf("%w: %s", errFailedToFindSourceMap, mapName)
+		return nil, nil, fmt.Errorf("%w: %s", errFailedToFindSourceMap, mapName)
 	}
 
 	fs.logger.Info("Found map file", zap.String("path", path))
 
-	return string(source), string(sourceMap), nil
+	return source, sourceMap, nil
 }

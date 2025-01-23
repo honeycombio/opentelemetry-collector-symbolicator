@@ -30,7 +30,10 @@ func createDefaultConfig() component.Config {
 		OriginalLinesAttributeKey:     "exception.structured_stacktrace.lines.original",
 		OriginalColumnsAttributeKey:   "exception.structured_stacktrace.columns.original",
 		OriginalUrlsAttributeKey:      "exception.structured_stacktrace.urls.original",
-		SourceMapFilePath:             ".",
+		SourceMapStoreKey:             "file_store",
+		LocalSourceMapConfiguration: &LocalSourceMapConfiguration{
+			Path: ".",
+		},
 		Timeout:                       5 * time.Second,
 	}
 }
@@ -38,8 +41,20 @@ func createDefaultConfig() component.Config {
 // createTracesProcessor creates a traces processor
 func createTracesProcessor(ctx context.Context, set processor.Settings, cfg component.Config, next consumer.Traces) (processor.Traces, error) {
 	symCfg := cfg.(*Config)
-	fs := newFileStore(symCfg.SourceMapFilePath, set.Logger)
-	sym := newBasicSymbolicator(ctx, symCfg.Timeout, fs)
+	var store sourceMapStore
+	var err error
+
+	switch symCfg.SourceMapStoreKey {
+	case "file_store":
+		store = newFileStore(ctx, set.Logger, symCfg.LocalSourceMapConfiguration)
+	case "s3_store":
+		store, err = newS3Store(ctx, set.Logger, symCfg.S3SourceMapConfiguration)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	sym := newBasicSymbolicator(ctx, symCfg.Timeout, store)
 	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym)
 	return processorhelper.NewTraces(ctx, set, cfg, next, processor.processTraces, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
 }

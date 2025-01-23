@@ -10,7 +10,7 @@ import (
 )
 
 type sourceMapStore interface {
-	GetSourceMap(ctx context.Context, url string) (string, string, error)
+	GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error)
 }
 
 type basicSymbolicator struct {
@@ -83,7 +83,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 			return nil, err
 		}
 
-		smc, err = symbolic.NewSourceMapCache(source, sMap)
+		smc, err = symbolic.NewSourceMapCache(string(source), string(sMap))
 		if err != nil {
 			return nil, err
 		}
