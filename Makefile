@@ -12,7 +12,7 @@ build: builder
 
 .PHONY: build-docker
 build-docker:
-	docker buildx build -t collector-symbolicator-processor
+	docker buildx build . -t collector-symbolicator-processor
 
 .PHONY: run
 run: build
