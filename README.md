@@ -1,3 +1,116 @@
 # OpenTelemetry Collector Symbolicator Processor
 
 An open telemetry collector processor that will symbolicate JavaScript stack traces using source maps.
+
+## Requirements
+
+- We require the use of CGO for the processor. If you are building your own collector image it must support glibc. We recommend `gcr.io/distroless/cc`
+
+## Basic Configuration
+
+Register the plugin in the processors section of your open telemetry collector configuration.
+
+```
+    processors:
+      symbolicator:
+```
+
+## File Store
+
+The default configuration will load the source(map) files from a local path on disk. You can set the base path that will be used.
+
+```
+    processors:
+      symbolicator:
+        # source_map_store is used to configure which store to use, in this case local disk
+        source_map_store: file_store
+        # (optional) path is used to set the base path of the files, defaults to `.`
+        path: /tmp/sourcemaps
+```
+
+### How does the file store source the files?
+
+Each line of the stack trace includes the URL of the file it originated from.
+Taking this as an example `https://example.com/static/dist/main.c383b093b0b66825a9c3.js`.
+The path is stripped off leaving us with `/static/dist/main.c383b093b0b66825a9c3.js`.
+This path is joined with the configured path and then read from disk.
+
+## S3 Store
+
+You can also load the source(map) files from an S3 bucket.
+
+```
+    processors:
+      symbolicator:
+        # source_map_store is used to configure which store to use, in this case S3
+        source_map_store: s3_store
+        # bucket is the name of the bucket the files are stored in
+        bucket: source-maps-bucket
+        # (optional) region is used to configure the buckets location
+        region: us-east-1
+        # (optional) prefix is used to nest the files in a sub key of the bucket
+        prefix: source-maps
+```
+
+### How does the S3 store source the files?
+
+Each line of the stack trace includes the URL of the file it originated from.
+Taking this as an example `https://example.com/static/dist/main.c383b093b0b66825a9c3.js`.
+The path is stripped off leaving us with `/static/dist/main.c383b093b0b66825a9c3.js`.
+This path is joined with the prefix if provided and then used as the key to
+source from the bucket.
+
+## Exception information format
+
+The processor expects the stacktrace information to be formatted into four separate attributes:
+
+- columns
+- functions
+- lines
+- urls
+
+Each of these attributes must be a slice with each being of equal length.
+
+Example:
+
+```
+columns: [6465,3512358,3512661,3514018,758545]
+functions: ["?","w.callback","push.Br+g.w.crossDomainError","XMLHttpRequest.<anonymous>","XMLHttpRequest.<anonymous>"]
+lines: [3582,2,2,2,2]
+urls: ["https://example.com/static/dist/main.c383b093b0b66825a9c3.js","https://example.com/static/dist/vendor.1c285a50f5307be9648d.js","https://example.com/static/dist/vendor.1c285a50f5307be9648d.js","https://example.com/static/dist/vendor.1c285a50f5307be9648d.js","https://example.com/static/dist/vendor.1c285a50f5307be9648d.js"]
+```
+
+## Advanced Configuration
+
+The following configuration options can also be provided to change the attributes used to look for stack traces and store them.
+
+```
+    processors:
+      symbolicator:
+        # Which attribute should the columns of the stack trace be sourced from
+        columns_attribute_key: exception.structured_stacktrace.columns
+        # Which attribute should the functions of the stack trace be sourced from
+        functions_attribute_key: exception.structured_stacktrace.functions
+        # Which attribute should the lines of the stack trace be sourced from
+        lines_attribute_key: exception.structured_stacktrace.lines
+        # Which attribute should the urls of the stack trace be sourced from
+        urls_attribute_key: exception.structured_stacktrace.urls
+        # Which attribute should the symbolicated stack trace be populated into
+        output_stack_trace_key: exception.stacktrace
+        # Which attribute contains the exception type
+        stack_type_key: exception.type
+        # Which attribute contains the exception message
+        stack_message_key: exception.message
+        # After the stack trace has been symbolicated should the original values be preserved as attributes
+        preserve_stack_trace: true
+        # If the stack trace is being preserved which key should it be copied to
+        original_stack_trace_key: exception.stacktrace.original
+        # If the stack trace is being preserved which key should the functions be copied to
+        original_columns_attribute_key: exception.structured_stacktrace.functions.original
+        # If the stack trace is being preserved which key should the lines be copied to
+        original_functions_attribute_key: exception.structured_stacktrace.lines.original
+        # If the stack trace is being preserved which key should the columns be copied to
+        original_lines_attribute_key: exception.structured_stacktrace.columns.original
+        # If the stack trace is being preserved which key should the urls be copied to
+        original_urls_attribute_key: exception.structured_stacktrace.urls.original
+```
