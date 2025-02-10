@@ -4,7 +4,7 @@ An open telemetry collector processor that will symbolicate JavaScript stack tra
 
 ## Requirements
 
-- We require the use of CGO for the processor. If you are building your own collector image it must support glibc. We reccommend `gcr.io/distroless/cc`
+- We require the use of CGO for the processor. If you are building your own collector image it must support glibc. We recommend `gcr.io/distroless/cc`
 
 ## Basic Configuration
 
@@ -44,7 +44,7 @@ You can also load the source(map) files from an S3 bucket.
       symbolicator:
         # source_map_store is used to configure which store to use, in this case S3
         source_map_store: s3_store
-        # bucket is the name of the bucket the files are store in
+        # bucket is the name of the bucket the files are stored in
         bucket: source-maps-bucket
         # (optional) region is used to configure the buckets location
         region: us-east-1
@@ -69,7 +69,7 @@ The processor expects the stacktrace information to be formatted into four separ
 - lines
 - urls
 
-Each of these attributes must be a slice with each being the of equal length.
+Each of these attributes must be a slice with each being of equal length.
 
 Example:
 
