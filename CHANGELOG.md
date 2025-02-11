@@ -1,6 +1,6 @@
 # Symbolicator Processor changelog
 
-## v0.0.3 [beta] - 02/11/2025
+## v0.0.3 [beta] - 2025/02/11
 
 ### ✨ Features
 
