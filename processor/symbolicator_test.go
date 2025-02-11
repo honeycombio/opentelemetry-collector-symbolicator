@@ -14,7 +14,7 @@ func TestSymbolicator(t *testing.T) {
 	ctx := context.Background()
 
 	fs := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
-	sym := newBasicSymbolicator(ctx, 5*time.Second, fs)
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, fs)
 
 	sf, err := sym.symbolicate(ctx, 0, 34, "b", "basic-mapping.js")
 	line := formatStackFrame(sf)
@@ -30,4 +30,24 @@ func TestSymbolicator(t *testing.T) {
 
 	_, err = sym.symbolicate(ctx, 0, math.MaxInt64, "b", "basic-mapping.js")
 	assert.Error(t, err)
+}
+
+func TestSymbolicatorCache(t *testing.T) {
+	ctx := context.Background()
+
+	fs := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, fs)
+
+	// Cache should be empty to start
+	assert.Equal(t, 0, sym.cache.Len())
+
+	// First symbolication should add to cache
+	sf, err := sym.symbolicate(ctx, 0, 34, "b", "basic-mapping.js")
+	line := formatStackFrame(sf)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "    at bar(basic-mapping-original.js:8:1)", line)
+
+	// Cache should have one entry
+	assert.Equal(t, 1, sym.cache.Len())
 }
