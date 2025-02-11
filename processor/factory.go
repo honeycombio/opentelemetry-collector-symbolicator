@@ -34,7 +34,8 @@ func createDefaultConfig() component.Config {
 		LocalSourceMapConfiguration: &LocalSourceMapConfiguration{
 			Path: ".",
 		},
-		Timeout: 5 * time.Second,
+		Timeout:            5 * time.Second,
+		SourceMapCacheSize: 128,
 	}
 }
 
@@ -54,7 +55,7 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 		}
 	}
 
-	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, store)
+	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store)
 	if err != nil {
 		return nil, err
 	}

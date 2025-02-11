@@ -21,8 +21,8 @@ type basicSymbolicator struct {
 	cache   *lru.Cache[string, *symbolic.SourceMapCache]
 }
 
-func newBasicSymbolicator(_ context.Context, timeout time.Duration, store sourceMapStore) (*basicSymbolicator, error) {
-	cache, err := lru.New[string, *symbolic.SourceMapCache](128) // Adjust the size as needed
+func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCacheSize int, store sourceMapStore) (*basicSymbolicator, error) {
+	cache, err := lru.New[string, *symbolic.SourceMapCache](sourceMapCacheSize) // Adjust the size as needed
 
 	if err != nil {
 		return nil, err

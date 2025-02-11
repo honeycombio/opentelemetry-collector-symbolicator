@@ -60,9 +60,12 @@ type Config struct {
 
 	// S3SourceMapConfiguration is the configuration for sourcing source maps from S3.
 	S3SourceMapConfiguration *S3SourceMapConfiguration `mapstructure:"s3_source_maps"`
-  
-  // Timeout is the maximum time to wait for a response from the symbolicator.
+
+	// Timeout is the maximum time to wait for a response from the symbolicator.
 	Timeout time.Duration `mapstructure:"timeout"`
+
+	// CacheSize is the maximum number of source maps to cache.
+	SourceMapCacheSize int `mapstructure:"source_map_cache_size"`
 }
 
 type LocalSourceMapConfiguration struct {
