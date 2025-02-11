@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/honeycombio/symbolic-go"
 )
 
@@ -17,17 +18,22 @@ type basicSymbolicator struct {
 	store   sourceMapStore
 	timeout time.Duration
 	ch      chan struct{}
-	cache   map[string]*symbolic.SourceMapCache
+	cache   *lru.Cache[string, *symbolic.SourceMapCache]
 }
 
-func newBasicSymbolicator(_ context.Context, timeout time.Duration, store sourceMapStore) *basicSymbolicator {
+func newBasicSymbolicator(_ context.Context, timeout time.Duration, store sourceMapStore) (*basicSymbolicator, error) {
+	cache, err := lru.New[string, *symbolic.SourceMapCache](128) // Adjust the size as needed
+
+	if err != nil {
+		return nil, err
+	}
 	return &basicSymbolicator{
 		store:   store,
 		timeout: timeout,
 		// the channel is buffered to allow for a single request to be in progress at a time
 		ch:    make(chan struct{}, 1),
-		cache: map[string]*symbolic.SourceMapCache{},
-	}
+		cache: cache,
+	}, nil
 }
 
 type mappedStackFrame struct {
@@ -74,7 +80,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 		<-ns.ch
 	}()
 
-	smc, ok := ns.cache[url]
+	smc, ok := ns.cache.Get(url)
 
 	if !ok {
 		source, sMap, err := ns.store.GetSourceMap(ctx, url)
@@ -88,7 +94,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 			return nil, err
 		}
 
-		ns.cache[url] = smc
+		ns.cache.Add(url, smc)
 	}
 
 	return smc.Lookup(uint32(line), uint32(column), 0)

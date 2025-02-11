@@ -34,7 +34,7 @@ func createDefaultConfig() component.Config {
 		LocalSourceMapConfiguration: &LocalSourceMapConfiguration{
 			Path: ".",
 		},
-		Timeout:                       5 * time.Second,
+		Timeout: 5 * time.Second,
 	}
 }
 
@@ -54,7 +54,11 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 		}
 	}
 
-	sym := newBasicSymbolicator(ctx, symCfg.Timeout, store)
+	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, store)
+	if err != nil {
+		return nil, err
+	}
+
 	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym)
 	return processorhelper.NewTraces(ctx, set, cfg, next, processor.processTraces, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
 }
