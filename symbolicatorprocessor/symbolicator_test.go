@@ -13,7 +13,8 @@ import (
 func TestSymbolicator(t *testing.T) {
 	ctx := context.Background()
 
-	fs := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	assert.NoError(t, err)
 	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
 
 	sf, err := sym.symbolicate(ctx, 0, 34, "b", "basic-mapping.js")
@@ -35,7 +36,8 @@ func TestSymbolicator(t *testing.T) {
 func TestSymbolicatorCache(t *testing.T) {
 	ctx := context.Background()
 
-	fs := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	assert.NoError(t, err)
 	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
 
 	// Cache should be empty to start

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	neturl "net/url"
+	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -13,14 +15,20 @@ import (
 	"go.uber.org/zap"
 )
 
-type s3Store struct {
+var (
+	mappingURLRegex                  = regexp.MustCompile(`\/\/[#@]\s(sourceMappingURL)=\s*(\S+)`)
+	errFailedToFindSourceFile        = fmt.Errorf("failed to find source file")
+	errFailedToFindSourceMapLocation = fmt.Errorf("failed to find source map location")
+	errFailedToFindSourceMap         = fmt.Errorf("failed to find source map")
+)
+
+type store struct {
+	fetch  func(ctx context.Context, key string) ([]byte, error)
 	logger *zap.Logger
-	client *s3.Client
-	bucket string
 	prefix string
 }
 
-func (s *s3Store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error) {
+func (s *store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error) {
 	u, err := neturl.Parse(url)
 
 	if err != nil {
@@ -29,7 +37,7 @@ func (s *s3Store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte,
 
 	path := filepath.Join(s.prefix, u.Path)
 
-	source, err := s.loadContent(ctx, path)
+	source, err := s.fetch(ctx, path)
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: %s", errFailedToFindSourceFile, path)
@@ -47,31 +55,27 @@ func (s *s3Store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte,
 	// the map name is relative to the source file
 	path = filepath.Join(filepath.Dir(path), mapName)
 
-	sourceMap, err := s.loadContent(ctx, path)
+	sourceMap, err := s.fetch(ctx, path)
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: %s", errFailedToFindSourceMap, path)
 	}
 
 	return source, sourceMap, nil
+
 }
 
-func (s *s3Store) loadContent(ctx context.Context, key string) ([]byte, error) {
-	result, err := s.client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(key),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer result.Body.Close()
-
-	return io.ReadAll(result.Body)
+func newFileStore(_ context.Context, logger *zap.Logger, cfg *LocalSourceMapConfiguration) (*store, error) {
+	return &store{
+		fetch: func(ctx context.Context, key string) ([]byte, error) {
+			return os.ReadFile(key)
+		},
+		logger: logger,
+		prefix: cfg.Path,
+	}, nil
 }
 
-func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3SourceMapConfiguration) (*s3Store, error) {
+func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3SourceMapConfiguration) (*store, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no S3 configuration provided")
 	}
@@ -90,10 +94,22 @@ func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3SourceMapConfigu
 
 	client := s3.NewFromConfig(awsConfig)
 
-	return &s3Store{
+	return &store{
+		fetch: func(ctx context.Context, key string) ([]byte, error) {
+			result, err := client.GetObject(ctx, &s3.GetObjectInput{
+				Bucket: aws.String(cfg.BucketName),
+				Key:    aws.String(key),
+			})
+
+			if err != nil {
+				return nil, err
+			}
+
+			defer result.Body.Close()
+
+			return io.ReadAll(result.Body)
+		},
 		logger: logger,
-		client: client,
 		prefix: cfg.Prefix,
-		bucket: cfg.BucketName,
 	}, nil
 }
