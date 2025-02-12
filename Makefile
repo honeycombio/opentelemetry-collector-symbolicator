@@ -19,5 +19,5 @@ run: build
 	go run ./otelcol-dev --config config.yaml
 
 .PHONY: test
-test:
+test: build
 	go test ./symbolicatorprocessor/...
