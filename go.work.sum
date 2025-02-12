@@ -181,8 +181,6 @@ github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMW
 github.com/hashicorp/go-syslog v1.0.0 h1:KaodqZuhUoZereWVIYmpUgZysurB1kBLX2j0MwMrUAE=
 github.com/hashicorp/logutils v1.0.0 h1:dLEQVugN8vlakKOUE3ihGLTZJRB4j+M2cdTm/ORI65Y=
 github.com/hashicorp/mdns v1.0.4 h1:sY0CMhFmjIPDMlTB+HfymFHCaYLhgifZ0QhjaYKD/UQ=
-github.com/honeycombio/opentelemetry-collector-symbolicator v0.0.3/go.mod h1:zuX+3TZ81Zw1/QfPYVphO/Fd1B12IbZOe6wheDN2lz4=
-github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor v0.0.1-dev/go.mod h1:4hguvujdZzLPPv9L/0ln/bKrxeyYQ/nmtNuv4J0QnOA=
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6 h1:UDMh68UUwekSh5iP2OMhRRZJiiBccgV7axzUG8vi56c=
 github.com/jessevdk/go-flags v1.4.1-0.20181029123624-5de817a9aa20 h1:dAOsPLhnBzIyxu0VvmnKjlNcIlgMK+erD6VRHDtweMI=
