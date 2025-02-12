@@ -61,6 +61,9 @@ type Config struct {
 	// S3SourceMapConfiguration is the configuration for sourcing source maps from S3.
 	S3SourceMapConfiguration *S3SourceMapConfiguration `mapstructure:"s3_source_maps"`
 
+	// GCSSourceMapConfiguration is the configuration for sourcing source maps from GCS.
+	GCSSourceMapConfiguration *GCSSourceMapConfiguration `mapstructure:"gcs_source_maps"`
+
 	// Timeout is the maximum time to wait for a response from the symbolicator.
 	Timeout time.Duration `mapstructure:"timeout"`
 
@@ -78,6 +81,13 @@ type S3SourceMapConfiguration struct {
 	// Region is the AWS region where the S3 bucket is located.
 	Region string `mapstructure:"region"`
 	// BucketName is the name of the S3 bucket.
+	BucketName string `mapstructure:"bucket"`
+	// Prefix is the prefix to use when looking for source maps.
+	Prefix string `mapstructure:"prefix"`
+}
+
+type GCSSourceMapConfiguration struct {
+	// BucketName is the name of the GCS bucket.
 	BucketName string `mapstructure:"bucket"`
 	// Prefix is the prefix to use when looking for source maps.
 	Prefix string `mapstructure:"prefix"`

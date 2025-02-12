@@ -8,7 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
+	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -108,6 +110,35 @@ func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3SourceMapConfigu
 			defer result.Body.Close()
 
 			return io.ReadAll(result.Body)
+		},
+		logger: logger,
+		prefix: cfg.Prefix,
+	}, nil
+}
+
+func newGCSStore(ctx context.Context, logger *zap.Logger, cfg *GCSSourceMapConfiguration) (*store, error) {
+	client, err := storage.NewClient(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	bucket := client.Bucket(cfg.BucketName)
+
+	return &store{
+		fetch: func(ctx context.Context, key string) ([]byte, error) {
+			// GCS keys can't start with a slash
+			key = strings.TrimPrefix(key, "/")
+
+			r, err := bucket.Object(key).NewReader(ctx)
+
+			if err != nil {
+				return nil, err
+			}
+
+			defer r.Close()
+
+			return io.ReadAll(r)
 		},
 		logger: logger,
 		prefix: cfg.Prefix,
