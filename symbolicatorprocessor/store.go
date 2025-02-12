@@ -68,6 +68,10 @@ func (s *store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, e
 }
 
 func newFileStore(_ context.Context, logger *zap.Logger, cfg *LocalSourceMapConfiguration) (*store, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("no file configuration provided")
+	}
+
 	return &store{
 		fetch: func(ctx context.Context, key string) ([]byte, error) {
 			return os.ReadFile(key)
@@ -117,6 +121,10 @@ func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3SourceMapConfigu
 }
 
 func newGCSStore(ctx context.Context, logger *zap.Logger, cfg *GCSSourceMapConfiguration) (*store, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("no GCS configuration provided")
+	}
+
 	client, err := storage.NewClient(ctx)
 
 	if err != nil {
