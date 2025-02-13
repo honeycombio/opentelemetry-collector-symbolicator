@@ -11,7 +11,8 @@ import (
 func TestFileStore(t *testing.T) {
 	ctx := context.Background()
 
-	fs := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	assert.NoError(t, err)
 
 	source, sMap, err := fs.GetSourceMap(ctx, "basic-mapping.js")
 

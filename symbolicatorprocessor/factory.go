@@ -47,12 +47,15 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 
 	switch symCfg.SourceMapStoreKey {
 	case "file_store":
-		store = newFileStore(ctx, set.Logger, symCfg.LocalSourceMapConfiguration)
+		store, err = newFileStore(ctx, set.Logger, symCfg.LocalSourceMapConfiguration)
 	case "s3_store":
 		store, err = newS3Store(ctx, set.Logger, symCfg.S3SourceMapConfiguration)
-		if err != nil {
-			return nil, err
-		}
+	case "gcs_store":
+		store, err = newGCSStore(ctx, set.Logger, symCfg.GCSSourceMapConfiguration)
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store)
