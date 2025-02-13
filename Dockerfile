@@ -2,7 +2,7 @@ FROM golang:1.23 AS build
 
 WORKDIR /go/src
 
-ADD ./processor ./processor
+ADD ./symbolicatorprocessor ./symbolicatorprocessor
 ADD ./builder-config.yaml ./
 ADD ./Makefile ./
 ADD ./config.yaml ./
