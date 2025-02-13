@@ -13,9 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// S3 client interface to allow mocking
+type S3Client interface {
+    GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+}
+
 type s3Store struct {
 	logger *zap.Logger
-	client *s3.Client
+	client S3Client
 	bucket string
 	prefix string
 }
