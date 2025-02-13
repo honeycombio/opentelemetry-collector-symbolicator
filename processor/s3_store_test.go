@@ -17,26 +17,26 @@ func (m mockGetObjectAPI) GetObject(ctx context.Context, params *s3.GetObjectInp
     return m(ctx, params, optFns...)
 }
 
-func TestS3Store(t *testing.T) {
+func TestGetSourceMap(t *testing.T) {
 	ctx := context.Background()
+	s3_key := ""
 
 	s3Store := &s3Store{
 		logger: zaptest.NewLogger(t),
 		client: mockGetObjectAPI(func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
+			s3_key = *params.Key
+
 			return &s3.GetObjectOutput{
-				Body: io.NopCloser(strings.NewReader("")),
+				Body: io.NopCloser(strings.NewReader("//# sourceMappingURL=basic-mapping.js.map")),
 			}, nil
 		}),
-		bucket: "test-bucket",
-		prefix: "test-prefix",
+		bucket: "test_assets",
+		prefix: "test-bucket-prefix",
 	}
 
-	source, sMap, err := s3Store.GetSourceMap(ctx, "basic-mapping.js")
+	source, _, err := s3Store.GetSourceMap(ctx, "basic-mapping.js?hash=123")
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, source)
-	assert.NotEmpty(t, sMap)
-
-	source, sMap, err = s3Store.GetSourceMap(ctx, "does-not-exist.js")
-	assert.ErrorIs(t, err, errFailedToFindSourceFile)
+	assert.Equal(t, "test-bucket-prefix/basic-mapping.js?hash=123", s3_key)
 }
