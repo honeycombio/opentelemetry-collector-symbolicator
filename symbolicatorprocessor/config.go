@@ -4,6 +4,10 @@ import "time"
 
 // Config defines configuration for the symbolicator processor.
 type Config struct {
+	// SymbolicatorFailureAttributeKey is the attribute key that will be set to
+	// true if the symbolicator fails to fully symbolicate a stack trace.
+	SymbolicatorFailureAttributeKey string `mapstructure:"symbolicator_failure_attribute_key"`
+
 	// ColumnsAttributeKey is the attribute key that contains the column numbers
 	// of the stack trace.
 	ColumnsAttributeKey string `mapstructure:"columns_attribute_key"`
