@@ -2,6 +2,8 @@ package symbolicatorprocessor
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,6 +35,12 @@ func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64,
 		Function: function,
 		URL:      url,
 	})
+
+	// Special case for symbolication errors
+	if column < 0 || column > math.MaxUint32 {
+		return &mappedStackFrame{}, fmt.Errorf("column must be uint32: %d", column)
+	}
+
 	return &mappedStackFrame{FunctionName: function, Col: column, Line: line, URL: url}, nil
 }
 
@@ -91,6 +99,10 @@ func TestProcess(t *testing.T) {
 				attr, ok = span.Attributes().Get(cfg.UrlsAttributeKey)
 				assert.True(t, ok)
 				assert.Equal(t, "[\"url\"]", attr.AsString())
+
+				attr, ok = span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, false, attr.Bool())
 			},
 		},
 		{
@@ -233,6 +245,31 @@ func TestProcess(t *testing.T) {
 				assert.Empty(t, s.SymbolicatedLines)
 			},
 			AssertOutput: func(td ptrace.Traces) {},
+		},
+		{
+			Name: "symbolication failed attribute set to true on symbolication error",
+			ApplyAttributes: func(span ptrace.Span) {
+				span.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().FromRaw([]any{1, int64(math.MaxUint32) + 1, 3})
+				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
+				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
+				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
+				span.Attributes().PutEmpty(cfg.OutputStackTraceKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:5000000000)\n    at func3 (url3:6:3)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
+					{Line: 4, Column: 1, Function: "func1", URL: "url1"},
+					{Line: 5, Column: int64(math.MaxUint32) + 1, Function: "func2", URL: "url2"},
+					{Line: 6, Column: 3, Function: "func3", URL: "url3"},
+				})
+			},
+			AssertOutput: func(td ptrace.Traces) {
+				rs := td.ResourceSpans().At(0)
+				ils := rs.ScopeSpans().At(0)
+				span := ils.Spans().At(0)
+				attr, ok := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, true, attr.Bool())
+			},
 		},
 	}
 
