@@ -1,5 +1,21 @@
 # Symbolicator Processor changelog
 
+## v0.0.4 [beta] - 2023/02/13
+
+### ✨ Features
+
+- feat(processor): Handle symbolication errors (#31) | @jairo-mendoza
+- feat: GCS support (#26) | @martin308
+
+### 🚧 Maintenance
+
+- chore: go work sync (#27) | @martin308
+
+### 🐛 Fixes
+
+- fix: Update path for releases (#25) | @pkanal
+- fix: Dockerfile path (#30) | @martin308
+
 ## v0.0.3 [beta] - 2025/02/11
 
 ### ✨ Features
