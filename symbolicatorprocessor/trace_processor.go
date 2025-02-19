@@ -82,6 +82,7 @@ func formatStackFrame(sf *mappedStackFrame) string {
 // trace and adds it to the attributes.
 func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map) error {
 	var ok bool
+	var hasSymbolicationFailed bool
 	var lines, columns, functions, urls pcommon.Slice
 
 	if columns, ok = getSlice(sp.cfg.ColumnsAttributeKey, attributes); !ok {
@@ -141,6 +142,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
 
 		if err != nil {
+			hasSymbolicationFailed = true
 			stack = append(stack, fmt.Sprintf("Failed to symbolicate: %v", err))
 			mappedColumns.AppendEmpty().SetInt(-1)
 			mappedFunctions.AppendEmpty().SetStr("")
@@ -156,6 +158,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 		}
 	}
 
+	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, hasSymbolicationFailed)
 	attributes.PutStr(sp.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
 
 	return nil

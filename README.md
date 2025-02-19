@@ -89,6 +89,7 @@ The following configuration options can also be provided to change the attribute
 
 | Config Key                                | Description                                                                 | Example Value                                                      |
 |------------------------------------|-----------------------------------------------------------------------------|--------------------------------------------------------------------|
+| `symbolicator_failure_attribute_key` | Signals if the the symbolicator fails to fully symbolicate the stack trace  | `exception.symbolicator.failed`                                    |
 | `columns_attribute_key`            | Which attribute should the columns of the stack trace be sourced from       | `exception.structured_stacktrace.columns`                          |
 | `functions_attribute_key`          | Which attribute should the functions of the stack trace be sourced from     | `exception.structured_stacktrace.functions`                        |
 | `lines_attribute_key`              | Which attribute should the lines of the stack trace be sourced from         | `exception.structured_stacktrace.lines`                            |
