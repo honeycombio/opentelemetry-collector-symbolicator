@@ -1,6 +1,16 @@
 # Symbolicator Processor changelog
 
-## v0.0.4 [beta] - 2023/02/13
+## v0.0.5 [beta] - 2025/02/21
+
+### ✨ Features
+
+- feat: Keep query params in url path (#32) | @jairo-mendoza
+
+### 🐛 Fixes
+
+- fix: update s3 example to include s3_source_maps option (#33) | @jairo-mendoza
+
+## v0.0.4 [beta] - 2025/02/13
 
 ### ✨ Features
 
