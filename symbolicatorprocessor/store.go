@@ -106,6 +106,8 @@ func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3SourceMapConfigu
 
 	return &store{
 		fetch: func(ctx context.Context, key string) ([]byte, error) {
+			key = strings.TrimPrefix(key, "/")
+
 			result, err := client.GetObject(ctx, &s3.GetObjectInput{
 				Bucket: aws.String(cfg.BucketName),
 				Key:    aws.String(key),
