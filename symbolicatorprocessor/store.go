@@ -39,6 +39,10 @@ func (s *store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, e
 
 	path := filepath.Join(s.prefix, u.Path)
 
+	if u.RawQuery != "" {
+		path += "?" + u.RawQuery
+	}
+
 	source, err := s.fetch(ctx, path)
 
 	if err != nil {
@@ -102,6 +106,8 @@ func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3SourceMapConfigu
 
 	return &store{
 		fetch: func(ctx context.Context, key string) ([]byte, error) {
+			key = strings.TrimPrefix(key, "/")
+
 			result, err := client.GetObject(ctx, &s3.GetObjectInput{
 				Bucket: aws.String(cfg.BucketName),
 				Key:    aws.String(key),
