@@ -44,12 +44,14 @@ You can also load the source(map) files from an S3 bucket.
       symbolicator:
         # source_map_store is used to configure which store to use, in this case S3
         source_map_store: s3_store
-        # bucket is the name of the bucket the files are stored in
-        bucket: source-maps-bucket
-        # (optional) region is used to configure the buckets location
-        region: us-east-1
-        # (optional) prefix is used to nest the files in a sub key of the bucket
-        prefix: source-maps
+        # s3_source_maps is used to configure the sourcing of source maps from S3
+        s3_source_maps:
+          # bucket is the name of the bucket the files are stored in
+          bucket: source-maps-bucket
+          # (optional) region is used to configure the buckets location
+          region: us-east-1
+          # (optional) prefix is used to nest the files in a sub key of the bucket
+          prefix: source-maps
 ```
 
 ### How does the S3 store source the files?
@@ -86,27 +88,26 @@ urls: ["https://example.com/static/dist/main.c383b093b0b66825a9c3.js","https://e
 
 The following configuration options can also be provided to change the attributes used to look for stack traces and store them.
 
-
-| Config Key                                | Description                                                                 | Example Value                                                      |
-|------------------------------------|-----------------------------------------------------------------------------|--------------------------------------------------------------------|
-| `symbolicator_failure_attribute_key` | Signals if the the symbolicator fails to fully symbolicate the stack trace  | `exception.symbolicator.failed`                                    |
-| `columns_attribute_key`            | Which attribute should the columns of the stack trace be sourced from       | `exception.structured_stacktrace.columns`                          |
-| `functions_attribute_key`          | Which attribute should the functions of the stack trace be sourced from     | `exception.structured_stacktrace.functions`                        |
-| `lines_attribute_key`              | Which attribute should the lines of the stack trace be sourced from         | `exception.structured_stacktrace.lines`                            |
-| `urls_attribute_key`               | Which attribute should the urls of the stack trace be sourced from          | `exception.structured_stacktrace.urls`                             |
-| `output_stack_trace_key`           | Which attribute should the symbolicated stack trace be populated into       | `exception.stacktrace`                                             |
-| `stack_type_key`                   | Which attribute contains the exception type                                 | `exception.type`                                                   |
-| `stack_message_key`                | Which attribute contains the exception message                              | `exception.message`                                                |
-| `preserve_stack_trace`             | After the stack trace has been symbolicated should the original values be preserved as attributes | `true`                                                             |
-| `original_stack_trace_key`         | If the stack trace is being preserved which key should it be copied to      | `exception.stacktrace.original`                                    |
-| `original_columns_attribute_key`   | If the stack trace is being preserved which key should the functions be copied to | `exception.structured_stacktrace.functions.original`               |
-| `original_functions_attribute_key` | If the stack trace is being preserved which key should the lines be copied to | `exception.structured_stacktrace.lines.original`                   |
-| `original_lines_attribute_key`     | If the stack trace is being preserved which key should the columns be copied to | `exception.structured_stacktrace.columns.original`                 |
-| `original_urls_attribute_key`      | If the stack trace is being preserved which key should the urls be copied to | `exception.structured_stacktrace.urls.original`                    |
+| Config Key                           | Description                                                                                       | Example Value                                        |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `symbolicator_failure_attribute_key` | Signals if the the symbolicator fails to fully symbolicate the stack trace                        | `exception.symbolicator.failed`                      |
+| `columns_attribute_key`              | Which attribute should the columns of the stack trace be sourced from                             | `exception.structured_stacktrace.columns`            |
+| `functions_attribute_key`            | Which attribute should the functions of the stack trace be sourced from                           | `exception.structured_stacktrace.functions`          |
+| `lines_attribute_key`                | Which attribute should the lines of the stack trace be sourced from                               | `exception.structured_stacktrace.lines`              |
+| `urls_attribute_key`                 | Which attribute should the urls of the stack trace be sourced from                                | `exception.structured_stacktrace.urls`               |
+| `output_stack_trace_key`             | Which attribute should the symbolicated stack trace be populated into                             | `exception.stacktrace`                               |
+| `stack_type_key`                     | Which attribute contains the exception type                                                       | `exception.type`                                     |
+| `stack_message_key`                  | Which attribute contains the exception message                                                    | `exception.message`                                  |
+| `preserve_stack_trace`               | After the stack trace has been symbolicated should the original values be preserved as attributes | `true`                                               |
+| `original_stack_trace_key`           | If the stack trace is being preserved which key should it be copied to                            | `exception.stacktrace.original`                      |
+| `original_columns_attribute_key`     | If the stack trace is being preserved which key should the functions be copied to                 | `exception.structured_stacktrace.functions.original` |
+| `original_functions_attribute_key`   | If the stack trace is being preserved which key should the lines be copied to                     | `exception.structured_stacktrace.lines.original`     |
+| `original_lines_attribute_key`       | If the stack trace is being preserved which key should the columns be copied to                   | `exception.structured_stacktrace.columns.original`   |
+| `original_urls_attribute_key`        | If the stack trace is being preserved which key should the urls be copied to                      | `exception.structured_stacktrace.urls.original`      |
 
 ### Additional Options
 
-| Config Key                    | Description                                           | Example Value |
-|------------------------|-------------------------------------------------------|---------------|
-| `timeout`              | Max duration to wait to symbolicate a stack trace in seconds.     | `5`          |
-| `source_map_cache_size`   | The maximum number of source maps to cache. Reduce this if you are running into memory issues with the collector.          | `128`         |
+| Config Key              | Description                                                                                                       | Example Value |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------- |
+| `timeout`               | Max duration to wait to symbolicate a stack trace in seconds.                                                     | `5`           |
+| `source_map_cache_size` | The maximum number of source maps to cache. Reduce this if you are running into memory issues with the collector. | `128`         |
