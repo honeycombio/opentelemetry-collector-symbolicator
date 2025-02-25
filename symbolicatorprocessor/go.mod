@@ -1,8 +1,6 @@
 module github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor
 
-go 1.22.0
-
-toolchain go1.22.3
+go 1.24.0
 
 require (
 	cloud.google.com/go/storage v1.50.0
