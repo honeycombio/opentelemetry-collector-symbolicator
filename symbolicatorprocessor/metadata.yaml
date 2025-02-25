@@ -1,0 +1,7 @@
+type: symbolicator
+
+status:
+  class: processor
+  stability:
+    alpha:
+      - traces

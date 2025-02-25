@@ -4,14 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
-)
-
-var (
-	typeStr = component.MustNewType("symbolicator")
 )
 
 // createDefaultConfig creates the default configuration for the processor.
@@ -71,8 +69,8 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 // NewFactory creates a factory for the symbolicator processor
 func NewFactory() processor.Factory {
 	return processor.NewFactory(
-		typeStr,
+		metadata.Type,
 		createDefaultConfig,
-		processor.WithTraces(createTracesProcessor, component.StabilityLevelAlpha),
+		processor.WithTraces(createTracesProcessor, metadata.TracesStability),
 	)
 }
