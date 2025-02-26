@@ -2,6 +2,8 @@
 
 An open telemetry collector processor that will symbolicate JavaScript stack traces using source maps. This is compatible with [v0.12.0](https://github.com/honeycombio/honeycomb-opentelemetry-web/releases/tag/honeycomb-opentelemetry-web-v0.12.0) and onwards of the Honeycomb OpenTelemetry web SDK.
 
+To install this processor, include it in the build config file of your OpenTelemetry collector distro. You can also use the pre-built [Honeycomb OpenTelemetry collector distro](https://github.com/honeycombio/honeycomb-collector-distro) that already includes this processor.
+
 ## Requirements
 
 - We require the use of CGO for the processor. If you are building your own collector image it must support glibc. We recommend `gcr.io/distroless/cc`
