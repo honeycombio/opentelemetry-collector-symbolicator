@@ -37,7 +37,10 @@ func (s *store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, e
 		return nil, nil, err
 	}
 
-	path := filepath.Join(s.prefix, u.Path)
+	// strip the path from the url and use the base name eg.
+	// https://www.honeycomb.io/assets/js/basic-mapping.js -> basic-mapping.js
+	base := filepath.Base(u.Path)
+	path := filepath.Join(s.prefix, base)
 
 	if u.RawQuery != "" {
 		path += "?" + u.RawQuery
