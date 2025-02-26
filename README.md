@@ -62,6 +62,31 @@ The path is stripped off leaving us with `/static/dist/main.c383b093b0b66825a9c3
 This path is joined with the prefix if provided and then used as the key to
 source from the bucket.
 
+## GCS Store
+
+You can also load the source(map) files from a GCS bucket.
+
+```
+    processors:
+      symbolicator:
+        # source_map_store is used to configure which store to use, in this case GCS
+        source_map_store: gcs_store
+        # gcs_source_maps is used to configure the sourcing of source maps from S3
+        gcs_source_maps:
+          # bucket is the name of the bucket the files are stored in
+          bucket: source-maps-bucket
+          # (optional) prefix is used to nest the files in a sub key of the bucket
+          prefix: source-maps
+```
+
+### How does the GCS store source the files?
+
+Each line of the stack trace includes the URL of the file it originated from.
+Taking this as an example `https://example.com/static/dist/main.c383b093b0b66825a9c3.js`.
+The path is stripped off leaving us with `/static/dist/main.c383b093b0b66825a9c3.js`.
+This path is joined with the prefix if provided and then used as the key to
+source from the bucket.
+
 ## Exception information format
 
 The processor expects the stacktrace information to be formatted into four separate attributes:
