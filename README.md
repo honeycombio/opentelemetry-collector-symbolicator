@@ -71,7 +71,7 @@ You can also load the source(map) files from a GCS bucket.
       symbolicator:
         # source_map_store is used to configure which store to use, in this case GCS
         source_map_store: gcs_store
-        # gcs_source_maps is used to configure the sourcing of source maps from S3
+        # gcs_source_maps is used to configure the sourcing of source maps from GCS
         gcs_source_maps:
           # bucket is the name of the bucket the files are stored in
           bucket: source-maps-bucket
