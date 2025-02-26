@@ -35,7 +35,7 @@ The default configuration will load the source(map) files (this must include bot
 
 Each line of the stack trace includes the URL of the file it originated from.
 Taking this as an example `https://example.com/static/dist/main.c383b093b0b66825a9c3.js`.
-The path is stripped off leaving us with `/static/dist/main.c383b093b0b66825a9c3.js`.
+The base file name is then found `main.c383b093b0b66825a9c3.js`.
 This path is joined with the configured path and then read from disk.
 
 ## S3 Store
@@ -61,7 +61,7 @@ You can also load the source(map) files (this must include both the JavaScript s
 
 Each line of the stack trace includes the URL of the file it originated from.
 Taking this as an example `https://example.com/static/dist/main.c383b093b0b66825a9c3.js`.
-The path is stripped off leaving us with `/static/dist/main.c383b093b0b66825a9c3.js`.
+The base file name is then found `main.c383b093b0b66825a9c3.js`.
 This path is joined with the prefix if provided and then used as the key to
 source from the bucket.
 
