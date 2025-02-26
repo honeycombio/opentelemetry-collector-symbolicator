@@ -17,7 +17,7 @@ Register the plugin in the processors section of your open telemetry collector c
 
 ## File Store
 
-The default configuration will load the source(map) files (this must include both the .js file and the .js.map file) from a local path on disk. You can set the base path that will be used.
+The default configuration will load the source(map) files (this must include both the JavaScript source file and the JavaScript source map file) from a local path on disk. You can set the base path that will be used.
 
 ```yaml
     processors:
@@ -38,7 +38,7 @@ This path is joined with the configured path and then read from disk.
 
 ## S3 Store
 
-You can also load the source(map) files (this must include both the .js file and the .js.map file) from an S3 bucket.
+You can also load the source(map) files (this must include both the JavaScript source file and the JavaScript source map file) from an S3 bucket.
 
 ```yaml
     processors:
