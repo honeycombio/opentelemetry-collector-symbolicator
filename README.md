@@ -1,6 +1,6 @@
 # OpenTelemetry Collector Symbolicator Processor
 
-An open telemetry collector processor that will symbolicate JavaScript stack traces using source maps.
+An open telemetry collector processor that will symbolicate JavaScript stack traces using source maps. This is compatible with [v0.12.0](https://github.com/honeycombio/honeycomb-opentelemetry-web/releases/tag/honeycomb-opentelemetry-web-v0.12.0) and onwards of the Honeycomb OpenTelemetry web SDK.
 
 ## Requirements
 
@@ -10,22 +10,23 @@ An open telemetry collector processor that will symbolicate JavaScript stack tra
 
 Register the plugin in the processors section of your open telemetry collector configuration.
 
-```
+```yaml
     processors:
       symbolicator:
 ```
 
 ## File Store
 
-The default configuration will load the source(map) files from a local path on disk. You can set the base path that will be used.
+The default configuration will load the source(map) files (this must include both the .js file and the .js.map file) from a local path on disk. You can set the base path that will be used.
 
-```
+```yaml
     processors:
       symbolicator:
         # source_map_store is used to configure which store to use, in this case local disk
         source_map_store: file_store
-        # (optional) path is used to set the base path of the files, defaults to `.`
-        path: /tmp/sourcemaps
+        local_source_maps:
+          # (optional) path is used to set the base path of the files, defaults to `.`
+          path: /tmp/sourcemaps
 ```
 
 ### How does the file store source the files?
@@ -37,9 +38,9 @@ This path is joined with the configured path and then read from disk.
 
 ## S3 Store
 
-You can also load the source(map) files from an S3 bucket.
+You can also load the source(map) files (this must include both the .js file and the .js.map file) from an S3 bucket.
 
-```
+```yaml
     processors:
       symbolicator:
         # source_map_store is used to configure which store to use, in this case S3
@@ -75,7 +76,7 @@ Each of these attributes must be a slice with each being of equal length.
 
 Example:
 
-```
+```json
 columns: [6465,3512358,3512661,3514018,758545]
 functions: ["?","w.callback","push.Br+g.w.crossDomainError","XMLHttpRequest.<anonymous>","XMLHttpRequest.<anonymous>"]
 lines: [3582,2,2,2,2]
