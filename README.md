@@ -86,7 +86,7 @@ You can also load the source(map) files from a GCS bucket.
 
 Each line of the stack trace includes the URL of the file it originated from.
 Taking this as an example `https://example.com/static/dist/main.c383b093b0b66825a9c3.js`.
-The path is stripped off leaving us with `main.c383b093b0b66825a9c3.js`.
+The base file name is then found `main.c383b093b0b66825a9c3.js`.
 This path is joined with the prefix if provided and then used as the key to
 source from the bucket.
 
