@@ -1,5 +1,11 @@
 # Symbolicator Processor changelog
 
+## v0.0.6 [beta] - 2025/02/28
+
+### ✨ Features
+
+- feat: Remove path when looking for source files (#36) | @martin308
+
 ## v0.0.5 [beta] - 2025/02/21
 
 ### ✨ Features
