@@ -7,7 +7,7 @@ updates:
     labels:
       - "type: dependencies"
     commit-message:
-      prefix: "maint:"
+      prefix: "maint"
       include: "scope"
     groups:
       otel:
@@ -20,3 +20,6 @@ updates:
     labels:
       - "type: dependencies"
       - "no-changelog"
+    commit-message:
+      prefix: "maint"
+      include: "scope"
