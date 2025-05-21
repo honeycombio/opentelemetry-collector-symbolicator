@@ -1,6 +1,6 @@
 module github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor
 
-go 1.23.0.0
+go 1.23.0
 
 toolchain go1.24.3
 
