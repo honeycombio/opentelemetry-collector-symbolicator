@@ -7,7 +7,7 @@ updates:
     labels:
       - "type: dependencies"
     commit-message:
-      prefix: "maint:"
+      prefix: "maint"
       include: "scope"
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -16,3 +16,6 @@ updates:
     labels:
       - "type: dependencies"
       - "no-changelog"
+    commit-message:
+      prefix: "maint"
+      include: "scope"
