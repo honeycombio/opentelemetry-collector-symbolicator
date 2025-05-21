@@ -9,6 +9,10 @@ updates:
     commit-message:
       prefix: "maint:"
       include: "scope"
+    groups:
+      otel:
+        patterns:
+          - "go.opentelemetry.io/*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
