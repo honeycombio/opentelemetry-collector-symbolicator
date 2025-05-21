@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/symbolicatorprocessor"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "type: dependencies"
+    commit-message:
+      prefix: "maint:"
+      include: "scope"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "type: dependencies"
+      - "no-changelog"
