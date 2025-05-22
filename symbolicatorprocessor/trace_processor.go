@@ -2,6 +2,7 @@ package symbolicatorprocessor
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -20,6 +21,7 @@ var (
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
 	symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error)
+	symbolicateDSYMFrame(ctx context.Context, url string, debugId string, addr uint64) ([]mappedDSYMStackFrame, error)
 }
 
 // symbolicatorProcessor is a processor that finds and symbolicates stack
@@ -162,6 +164,93 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	attributes.PutStr(sp.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
 
 	return nil
+}
+
+type MetricKitCrashReport struct {
+	CallStacks []MetricKitCallStack
+}
+type MetricKitCallStack struct {
+	ThreadAttributed bool
+	CallStackRootFrames []MetricKitCallStackFrame
+}
+type MetricKitCallStackFrame struct {
+	BinaryUUID string
+	OffsetIntoBinaryTextSegment uint64
+	SubFrames *[]MetricKitCallStackFrame
+	BinaryName string
+}
+
+func (sp *symbolicatorProcessor) processDSYMAttributes(ctx context.Context, attributes pcommon.Map) error {
+	var ok bool
+	var hasSymbolicationFailed bool = true
+	var metrickitStackTraceValue pcommon.Value
+
+	if metrickitStackTraceValue, ok = attributes.Get(sp.cfg.MetricKitStackTraceAttributeKey); !ok {
+		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.ColumnsAttributeKey)
+	}
+	metrickitStackTrace := metrickitStackTraceValue.Str()
+
+	var report MetricKitCrashReport
+
+	err := json.Unmarshal([]byte(metrickitStackTrace), &report)
+	if (err != nil) {
+		return err
+	}
+
+	// deepest nested frames are at the top of the stack
+	// gotta unwind the nesting in reverse
+	stacks := make([]string, len(report.CallStacks))
+
+	for idx,callStack := range(report.CallStacks) {
+		capacity := getStackDepth(callStack.CallStackRootFrames[0])
+		symbolicatedStack := make([]string, capacity)
+		frame := callStack.CallStackRootFrames[0]
+		for i := capacity-1; i>=0; i-- {
+			line, err := sp.symbolicateDSYMFrame(ctx, frame)
+			if (err != nil) {
+				return err
+			}
+			symbolicatedStack[i] = line
+			frames := frame.SubFrames
+			if frames == nil {
+				continue
+			}
+			frame = (*frames)[0]
+		}
+
+		stacks[idx] = strings.Join(symbolicatedStack, "\n    ")
+	}
+
+	attributes.PutStr("test.symbolicated.stacktrace", strings.Join(stacks, "\n\n\n"))
+	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, hasSymbolicationFailed)
+
+	return nil
+}
+
+func (sp *symbolicatorProcessor) symbolicateDSYMFrame(ctx context.Context, frame MetricKitCallStackFrame) (string, error) {
+	locations, err := sp.symbolicator.symbolicateDSYMFrame(ctx, "", frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment)
+
+	if err == errFailedToFindSourceFile {
+		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment), nil
+	}
+	if err != nil {
+		return "", err
+	}
+
+	lines := make([]string, len(locations))
+	for i,loc := range(locations) {
+		lines[i] = fmt.Sprintf("%s\t\t\t0x%X %s() (%s:%d) + %d", frame.BinaryName, frame.OffsetIntoBinaryTextSegment, loc.symbol, loc.path, loc.line, loc.symAddr)
+	}
+	
+
+	return strings.Join(lines, "\n"), nil
+}
+
+func getStackDepth(root MetricKitCallStackFrame) int {
+	if root.SubFrames == nil || len(*root.SubFrames) == 0 {
+		return 1
+	}
+	return 1 + getStackDepth((*root.SubFrames)[0])
 }
 
 // getSlice retrieves a slice from a map, returning an empty slice if the key is not found.

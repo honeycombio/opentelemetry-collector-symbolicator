@@ -12,6 +12,7 @@ import (
 
 type sourceMapStore interface {
 	GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error)
+	GetDSYM(ctx context.Context, url string) ([]byte, error)
 }
 
 type basicSymbolicator struct {
@@ -19,6 +20,7 @@ type basicSymbolicator struct {
 	timeout time.Duration
 	ch      chan struct{}
 	cache   *lru.Cache[string, *symbolic.SourceMapCache]
+	dsymCache *lru.Cache[string, *symbolic.Archive]
 }
 
 func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCacheSize int, store sourceMapStore) (*basicSymbolicator, error) {
@@ -98,4 +100,48 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 	}
 
 	return smc.Lookup(uint32(line), uint32(column), 0)
+}
+
+type mappedDSYMStackFrame struct {
+	path string
+	instrAddr uint64
+	lang string
+	line uint32
+	symAddr uint64
+	symbol string
+}
+func (ns *basicSymbolicator) symbolicateDSYMFrame(ctx context.Context, url string, debugId string, addr uint64) ([]mappedDSYMStackFrame, error) {
+	dSYMbytes, err := ns.store.GetDSYM(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+	archive, err := symbolic.NewArchiveFromBytes(dSYMbytes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	cache := archive.SymCaches[debugId]
+	if cache == nil {
+		return nil, fmt.Errorf("could not find symcache for uuid %s", debugId)
+	}
+
+	locations, err := cache.Lookup(addr)
+
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]mappedDSYMStackFrame, len(locations))
+	for i,loc := range(locations) {
+		res[i] = mappedDSYMStackFrame{
+			path: loc.FullPath,
+			instrAddr: loc.InstrAddr,
+			lang: loc.Lang,
+			line: loc.Line,
+			symAddr: loc.SymAddr,
+			symbol: loc.Symbol,
+		}
+	}
+	return res, nil
 }
