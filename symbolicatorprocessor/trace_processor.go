@@ -21,7 +21,7 @@ var (
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
 	symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error)
-	symbolicateDSYMFrame(ctx context.Context, url string, debugId string, addr uint64) ([]mappedDSYMStackFrame, error)
+	symbolicateDSYMFrame(ctx context.Context, dsymName, binaryName, debugId string, addr uint64) ([]mappedDSYMStackFrame, error)
 }
 
 // symbolicatorProcessor is a processor that finds and symbolicates stack
@@ -77,6 +77,15 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 // TODO: Update to consider different browser formats
 func formatStackFrame(sf *mappedStackFrame) string {
 	return fmt.Sprintf("    at %s(%s:%d:%d)", sf.FunctionName, sf.URL, sf.Line, sf.Col)
+}
+
+func formatdSYMStackFrames(frame MetricKitCallStackFrame, frames []mappedDSYMStackFrame) string {
+	lines := make([]string, len(frames))
+	for i,loc := range(frames) {
+		lines[i] = fmt.Sprintf("%s\t\t\t0x%X %s() (%s:%d) + %d", frame.BinaryName, frame.OffsetIntoBinaryTextSegment, loc.symbol, loc.path, loc.line, loc.symAddr)
+	}
+
+	return strings.Join(lines, "\n")
 }
 
 // processAttributes takes the attributes and determines if they contain
@@ -206,7 +215,9 @@ func (sp *symbolicatorProcessor) processDSYMAttributes(ctx context.Context, attr
 		symbolicatedStack := make([]string, capacity)
 		frame := callStack.CallStackRootFrames[0]
 		for i := capacity-1; i>=0; i-- {
-			line, err := sp.symbolicateDSYMFrame(ctx, frame)
+			/* TODO: construct dsym name */
+			dsymName := ""
+			line, err := sp.symbolicateDSYMFrame(ctx, dsymName, frame)
 			if (err != nil) {
 				return err
 			}
@@ -227,8 +238,8 @@ func (sp *symbolicatorProcessor) processDSYMAttributes(ctx context.Context, attr
 	return nil
 }
 
-func (sp *symbolicatorProcessor) symbolicateDSYMFrame(ctx context.Context, frame MetricKitCallStackFrame) (string, error) {
-	locations, err := sp.symbolicator.symbolicateDSYMFrame(ctx, "", frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment)
+func (sp *symbolicatorProcessor) symbolicateDSYMFrame(ctx context.Context, dsymName string, frame MetricKitCallStackFrame) (string, error) {
+	locations, err := sp.symbolicator.symbolicateDSYMFrame(ctx, dsymName, frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment)
 
 	if err == errFailedToFindSourceFile {
 		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment), nil
@@ -237,13 +248,7 @@ func (sp *symbolicatorProcessor) symbolicateDSYMFrame(ctx context.Context, frame
 		return "", err
 	}
 
-	lines := make([]string, len(locations))
-	for i,loc := range(locations) {
-		lines[i] = fmt.Sprintf("%s\t\t\t0x%X %s() (%s:%d) + %d", frame.BinaryName, frame.OffsetIntoBinaryTextSegment, loc.symbol, loc.path, loc.line, loc.symAddr)
-	}
-	
-
-	return strings.Join(lines, "\n"), nil
+	return formatdSYMStackFrames(frame, locations), nil
 }
 
 func getStackDepth(root MetricKitCallStackFrame) int {

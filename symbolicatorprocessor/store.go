@@ -74,8 +74,8 @@ func (s *store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, e
 
 }
 
-func (s *store) GetDSYM(ctx context.Context, debugId string) ([]byte, error) {
-	path := filepath.Join(s.prefix, debugId)
+func (s *store) GetDSYM(ctx context.Context, dsymName, binaryName string) ([]byte, error) {
+	path := filepath.Join(s.prefix, dsymName, "Contents", "Resources", "DWARF", binaryName)
 	dsymBytes, err := s.fetch(ctx, path)
 
 	if err != nil {
