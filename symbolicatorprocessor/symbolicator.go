@@ -13,7 +13,7 @@ import (
 
 type sourceMapStore interface {
 	GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error)
-	GetDSYM(ctx context.Context, dsymName, binaryName string) ([]byte, error)
+	GetDSYM(ctx context.Context, debugId, binaryName string) ([]byte, error)
 }
 
 type basicSymbolicator struct {
@@ -118,12 +118,12 @@ type mappedDSYMStackFrame struct {
 	symAddr uint64
 	symbol string
 }
-func (ns *basicSymbolicator) symbolicateDSYMFrame(ctx context.Context, dsymName, binaryName, debugId string, addr uint64) ([]mappedDSYMStackFrame, error) {
-	cacheKey := dsymName + "/" + binaryName
+func (ns *basicSymbolicator) symbolicateDSYMFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]mappedDSYMStackFrame, error) {
+	cacheKey := debugId + "/" + binaryName
 	archive, ok := ns.dsymCache.Get(cacheKey)
 
 	if !ok {
-		dSYMbytes, err := ns.store.GetDSYM(ctx, dsymName, binaryName)
+		dSYMbytes, err := ns.store.GetDSYM(ctx, debugId, binaryName)
 		if err != nil {
 			return nil, err
 		}

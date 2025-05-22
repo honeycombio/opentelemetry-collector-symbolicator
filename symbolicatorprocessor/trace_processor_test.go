@@ -44,7 +44,7 @@ func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64,
 	return &mappedStackFrame{FunctionName: function, Col: column, Line: line, URL: url}, nil
 }
 
-func (ts *testSymbolicator) symbolicateDSYMFrame(ctx context.Context, dsymName, binaryName, debugId string, addr uint64) ([]mappedDSYMStackFrame, error) {
+func (ts *testSymbolicator) symbolicateDSYMFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]mappedDSYMStackFrame, error) {
 	if debugId != "6A8CB813-45F6-3652-AD33-778FD1EAB196" {
 		return nil, errFailedToFindSourceFile
 	}

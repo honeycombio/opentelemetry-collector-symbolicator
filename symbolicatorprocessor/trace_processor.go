@@ -21,7 +21,7 @@ var (
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
 	symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error)
-	symbolicateDSYMFrame(ctx context.Context, dsymName, binaryName, debugId string, addr uint64) ([]mappedDSYMStackFrame, error)
+	symbolicateDSYMFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]mappedDSYMStackFrame, error)
 }
 
 // symbolicatorProcessor is a processor that finds and symbolicates stack
@@ -215,9 +215,7 @@ func (sp *symbolicatorProcessor) processDSYMAttributes(ctx context.Context, attr
 		symbolicatedStack := make([]string, capacity)
 		frame := callStack.CallStackRootFrames[0]
 		for i := capacity-1; i>=0; i-- {
-			/* TODO: construct dsym name */
-			dsymName := ""
-			line, err := sp.symbolicateDSYMFrame(ctx, dsymName, frame)
+			line, err := sp.symbolicateDSYMFrame(ctx, frame)
 			if (err != nil) {
 				return err
 			}
@@ -238,8 +236,8 @@ func (sp *symbolicatorProcessor) processDSYMAttributes(ctx context.Context, attr
 	return nil
 }
 
-func (sp *symbolicatorProcessor) symbolicateDSYMFrame(ctx context.Context, dsymName string, frame MetricKitCallStackFrame) (string, error) {
-	locations, err := sp.symbolicator.symbolicateDSYMFrame(ctx, dsymName, frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment)
+func (sp *symbolicatorProcessor) symbolicateDSYMFrame(ctx context.Context, frame MetricKitCallStackFrame) (string, error) {
+	locations, err := sp.symbolicator.symbolicateDSYMFrame(ctx, frame.BinaryUUID, frame.BinaryName, frame.OffsetIntoBinaryTextSegment)
 
 	if err == errFailedToFindSourceFile {
 		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment), nil
