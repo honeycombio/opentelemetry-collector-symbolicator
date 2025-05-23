@@ -34,6 +34,10 @@ type Config struct {
 	// StackMessageKey is the attribute key that contains the message of the stack trace.
 	StackMessageKey string `mapstructure:"stack_message_key"`
 
+	// FunctionsAttributeKey is the attribute key that contains the function
+	// names of the stack trace.
+	MetricKitStackTraceAttributeKey string `mapstructure:"metrickit_stack_trace_attribute_key"`
+
 	// preserveStackTrace is a config option that determines whether to keep the
 	// original stack trace in the output.
 	PreserveStackTrace bool `mapstructure:"preserve_stack_trace"`

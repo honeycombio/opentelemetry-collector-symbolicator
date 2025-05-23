@@ -74,6 +74,18 @@ func (s *store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, e
 
 }
 
+func (s *store) GetDSYM(ctx context.Context, debugId, binaryName string) ([]byte, error) {
+	path := filepath.Join(s.prefix, fmt.Sprintf("%s.dSYM", debugId), "Contents", "Resources", "DWARF", binaryName)
+	dsymBytes, err := s.fetch(ctx, path)
+
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errFailedToFindSourceFile, path)
+	}
+
+	return dsymBytes, nil
+
+}
+
 func newFileStore(_ context.Context, logger *zap.Logger, cfg *LocalSourceMapConfiguration) (*store, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no file configuration provided")
