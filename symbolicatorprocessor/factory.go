@@ -53,6 +53,8 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 		store, err = newS3Store(ctx, set.Logger, symCfg.S3SourceMapConfiguration)
 	case "gcs_store":
 		store, err = newGCSStore(ctx, set.Logger, symCfg.GCSSourceMapConfiguration)
+	case "azblob_store":
+		store, err = newBlobStore(ctx, set.Logger, symCfg.BlobSourceMapConfiguration)
 	}
 
 	if err != nil {
