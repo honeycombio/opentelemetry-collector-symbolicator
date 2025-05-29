@@ -1,6 +1,7 @@
 package symbolicatorprocessor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -11,6 +12,8 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -156,6 +159,50 @@ func newGCSStore(ctx context.Context, logger *zap.Logger, cfg *GCSSourceMapConfi
 			defer r.Close()
 
 			return io.ReadAll(r)
+		},
+		logger: logger,
+		prefix: cfg.Prefix,
+	}, nil
+}
+
+func newBlobStore(ctx context.Context, logger *zap.Logger, cfg *BlobSourceMapConfiguration) (*store, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("no Blob configuration provided")
+	}
+
+	credential, err := azidentity.NewDefaultAzureCredential(nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := azblob.NewClient(cfg.ServiceURL, credential, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &store{
+		fetch: func(ctx context.Context, key string) ([]byte, error) {
+			response, err := client.DownloadStream(ctx, cfg.ContainerName, key, nil)
+
+			if err != nil {
+				return nil, err
+			}
+
+			var d bytes.Buffer
+
+			reader := response.NewRetryReader(ctx, nil)
+
+			_, err = d.ReadFrom(reader)
+
+			if err != nil {
+				return nil, err
+			}
+
+			err = reader.Close()
+
+			return d.Bytes(), err
 		},
 		logger: logger,
 		prefix: cfg.Prefix,
