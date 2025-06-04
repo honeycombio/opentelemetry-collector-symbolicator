@@ -24,14 +24,13 @@ type basicSymbolicator struct {
 	dsymCache *lru.Cache[string, *symbolic.Archive]
 }
 
-func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCacheSize int, store sourceMapStore) (*basicSymbolicator, error) {
-	cache, err := lru.New[string, *symbolic.SourceMapCache](sourceMapCacheSize) // Adjust the size as needed
+func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize int, store sourceMapStore) (*basicSymbolicator, error) {
+	cache, err := lru.New[string, *symbolic.SourceMapCache](cacheSize) // Adjust the size as needed
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: distinct cache size
-	dsymCache, err := lru.New[string, *symbolic.Archive](sourceMapCacheSize) // Adjust the size as needed
+	dsymCache, err := lru.New[string, *symbolic.Archive](cacheSize)
 	if err != nil {
 		return nil, err
 	}

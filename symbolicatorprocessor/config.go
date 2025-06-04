@@ -77,6 +77,9 @@ type Config struct {
 
 	// CacheSize is the maximum number of source maps to cache.
 	SourceMapCacheSize int `mapstructure:"source_map_cache_size"`
+
+	// CacheSize is the maximum number of dSYMs to cache.
+	DSYMCacheSize int `mapstructure:"dsym_cache_size"`
 }
 
 type LocalSourceMapConfiguration struct {
