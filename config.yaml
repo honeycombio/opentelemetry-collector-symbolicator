@@ -8,6 +8,7 @@ receivers:
 
 processors:
   symbolicator:
+  proguard_symbolicator:
   batch:
 
 exporters:
