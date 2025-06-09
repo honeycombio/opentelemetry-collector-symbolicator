@@ -20,7 +20,7 @@ func TestSymbolicator(t *testing.T) {
 
 	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
-	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, 128, fs)
 
 	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile)
 	line := formatStackFrame(sf)
@@ -43,7 +43,7 @@ func TestSymbolicatorCache(t *testing.T) {
 
 	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
-	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, 128, fs)
 
 	// Cache should be empty to start
 	assert.Equal(t, 0, sym.cache.Len())
@@ -64,7 +64,7 @@ func TestDSYMSymbolicator(t *testing.T) {
 
 	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
-	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, 128, fs)
 
 	baseFrame := MetricKitCallStackFrame{
 		BinaryUUID: "6A8CB813-45F6-3652-AD33-778FD1EAB196",
@@ -95,7 +95,7 @@ func TestDSYMSymbolicatorCache(t *testing.T) {
 
 	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
-	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, 128, fs)
 
 	// Cache should be empty to start
 	assert.Equal(t, 0, sym.dsymCache.Len())
