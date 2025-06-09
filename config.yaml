@@ -8,6 +8,7 @@ receivers:
 
 processors:
   symbolicator:
+  dsymprocessor:
   batch:
 
 exporters:

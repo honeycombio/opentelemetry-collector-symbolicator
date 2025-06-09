@@ -1,13 +1,11 @@
-package symbolicatorprocessor
+package dsymprocessor
 
 import (
 	"context"
 	"fmt"
 	"io"
-	neturl "net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"cloud.google.com/go/storage"
@@ -18,10 +16,8 @@ import (
 )
 
 var (
-	mappingURLRegex                  = regexp.MustCompile(`\/\/[#@]\s(sourceMappingURL)=\s*(\S+)`)
 	errFailedToFindSourceFile        = fmt.Errorf("failed to find source file")
-	errFailedToFindSourceMapLocation = fmt.Errorf("failed to find source map location")
-	errFailedToFindSourceMap         = fmt.Errorf("failed to find source map")
+	errFailedToFindDSYM		         = fmt.Errorf("failed to find dSYM file")
 )
 
 type store struct {
@@ -30,47 +26,15 @@ type store struct {
 	prefix string
 }
 
-func (s *store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error) {
-	u, err := neturl.Parse(url)
+func (s *store) GetDSYM(ctx context.Context, debugId, binaryName string) ([]byte, error) {
+	path := filepath.Join(s.prefix, fmt.Sprintf("%s.dSYM", debugId), "Contents", "Resources", "DWARF", binaryName)
+	dsymBytes, err := s.fetch(ctx, path)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, fmt.Errorf("%w: %s", errFailedToFindDSYM, path)
 	}
 
-	// strip the path from the url and use the base name eg.
-	// https://www.honeycomb.io/assets/js/basic-mapping.js -> basic-mapping.js
-	base := filepath.Base(u.Path)
-	path := filepath.Join(s.prefix, base)
-
-	if u.RawQuery != "" {
-		path += "?" + u.RawQuery
-	}
-
-	source, err := s.fetch(ctx, path)
-
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %s", errFailedToFindSourceFile, path)
-	}
-
-	matches := mappingURLRegex.FindSubmatch(source)
-
-	if len(matches) <= 0 {
-		return nil, nil, fmt.Errorf("%w: %s", errFailedToFindSourceMapLocation, path)
-	}
-
-	// the capture group we want is the last one
-	mapName := string(matches[len(matches)-1])
-
-	// the map name is relative to the source file
-	path = filepath.Join(filepath.Dir(path), mapName)
-
-	sourceMap, err := s.fetch(ctx, path)
-
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %s", errFailedToFindSourceMap, path)
-	}
-
-	return source, sourceMap, nil
+	return dsymBytes, nil
 
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strings"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -13,7 +12,6 @@ import (
 
 type sourceMapStore interface {
 	GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error)
-	GetDSYM(ctx context.Context, debugId, binaryName string) ([]byte, error)
 }
 
 type basicSymbolicator struct {
@@ -21,27 +19,20 @@ type basicSymbolicator struct {
 	timeout time.Duration
 	ch      chan struct{}
 	cache   *lru.Cache[string, *symbolic.SourceMapCache]
-	dsymCache *lru.Cache[string, *symbolic.Archive]
 }
 
-func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCacheSize, dSSYMCacheSize int, store sourceMapStore) (*basicSymbolicator, error) {
+func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCacheSize int, store sourceMapStore) (*basicSymbolicator, error) {
 	cache, err := lru.New[string, *symbolic.SourceMapCache](sourceMapCacheSize) // Adjust the size as needed
+
 	if err != nil {
 		return nil, err
 	}
-
-	dsymCache, err := lru.New[string, *symbolic.Archive](dSSYMCacheSize)
-	if err != nil {
-		return nil, err
-	}
-
 	return &basicSymbolicator{
 		store:   store,
 		timeout: timeout,
 		// the channel is buffered to allow for a single request to be in progress at a time
 		ch:    make(chan struct{}, 1),
 		cache: cache,
-		dsymCache: dsymCache,
 	}, nil
 }
 
@@ -107,58 +98,4 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 	}
 
 	return smc.Lookup(uint32(line), uint32(column), 0)
-}
-
-type mappedDSYMStackFrame struct {
-	path string
-	instrAddr uint64
-	lang string
-	line uint32
-	symAddr uint64
-	symbol string
-}
-func (ns *basicSymbolicator) symbolicateDSYMFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]*mappedDSYMStackFrame, error) {
-	cacheKey := debugId + "/" + binaryName
-	archive, ok := ns.dsymCache.Get(cacheKey)
-
-	if !ok {
-		dSYMbytes, err := ns.store.GetDSYM(ctx, debugId, binaryName)
-		if err != nil {
-			return nil, err
-		}
-		archive, err = symbolic.NewArchiveFromBytes(dSYMbytes)
-
-		if err != nil {
-			return nil, err
-		}
-
-		ns.dsymCache.Add(cacheKey, archive)
-	}
-
-	symCache, ok := archive.SymCaches[strings.ToLower(debugId)]
-	if !ok {
-		return nil, fmt.Errorf("could not find symcache for uuid %s", debugId)
-	}
-
-	locations, err := symCache.Lookup(addr)
-
-	if err != nil {
-		return nil, err
-	}
-	if len(locations) == 0 {
-		return nil, fmt.Errorf("could not find symbol at location %d", addr)
-	}
-
-	res := make([]*mappedDSYMStackFrame, len(locations))
-	for i,loc := range(locations) {
-		res[i] = &mappedDSYMStackFrame{
-			path: loc.FullPath,
-			instrAddr: loc.InstrAddr,
-			lang: loc.Lang,
-			line: loc.Line,
-			symAddr: loc.SymAddr,
-			symbol: loc.Symbol,
-		}
-	}
-	return res, nil
 }

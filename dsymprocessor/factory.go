@@ -1,4 +1,4 @@
-package symbolicatorprocessor
+package dsymprocessor
 
 import (
 	"context"
@@ -18,35 +18,25 @@ var (
 func createDefaultConfig() component.Config {
 	return &Config{
 		SymbolicatorFailureAttributeKey: "exception.symbolicator.failed",
-		ColumnsAttributeKey:             "exception.structured_stacktrace.columns",
-		FunctionsAttributeKey:           "exception.structured_stacktrace.functions",
-		LinesAttributeKey:               "exception.structured_stacktrace.lines",
-		UrlsAttributeKey:                "exception.structured_stacktrace.urls",
-		OutputStackTraceKey:             "exception.stacktrace",
-		StackTypeKey:                    "exception.type",
-		StackMessageKey:                 "exception.message",
+		MetricKitStackTraceAttributeKey: "metrickit.diagnostic.crash.exception.stacktrace_json",
+		OutputMetricKitStackTraceAttributeKey: "metrickit.diagnostic.crash.exception.stacktrace",
 		PreserveStackTrace:              true,
-		OriginalStackTraceKey:           "exception.stacktrace.original",
-		OriginalFunctionsAttributeKey:   "exception.structured_stacktrace.functions.original",
-		OriginalLinesAttributeKey:       "exception.structured_stacktrace.lines.original",
-		OriginalColumnsAttributeKey:     "exception.structured_stacktrace.columns.original",
-		OriginalUrlsAttributeKey:        "exception.structured_stacktrace.urls.original",
-		SourceMapStoreKey:               "file_store",
+		DSYMStoreKey:               "file_store",
 		LocalSourceMapConfiguration: &LocalSourceMapConfiguration{
 			Path: ".",
 		},
 		Timeout:            5 * time.Second,
-		SourceMapCacheSize: 128,
+		DSYMCacheSize: 128,
 	}
 }
 
 // createTracesProcessor creates a traces processor
 func createTracesProcessor(ctx context.Context, set processor.Settings, cfg component.Config, next consumer.Traces) (processor.Traces, error) {
 	symCfg := cfg.(*Config)
-	var store sourceMapStore
+	var store dsymStore
 	var err error
 
-	switch symCfg.SourceMapStoreKey {
+	switch symCfg.DSYMStoreKey {
 	case "file_store":
 		store, err = newFileStore(ctx, set.Logger, symCfg.LocalSourceMapConfiguration)
 	case "s3_store":
@@ -59,7 +49,7 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 		return nil, err
 	}
 
-	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store)
+	sym, err := newBasicSymbolicator(ctx, symCfg.DSYMCacheSize, store)
 	if err != nil {
 		return nil, err
 	}
