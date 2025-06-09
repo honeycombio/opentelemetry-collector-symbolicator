@@ -59,7 +59,7 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 		return nil, err
 	}
 
-	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store)
+	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.DSYMCacheSize, store)
 	if err != nil {
 		return nil, err
 	}

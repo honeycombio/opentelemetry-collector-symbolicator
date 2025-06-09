@@ -117,7 +117,7 @@ type mappedDSYMStackFrame struct {
 	symAddr uint64
 	symbol string
 }
-func (ns *basicSymbolicator) symbolicateDSYMFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]mappedDSYMStackFrame, error) {
+func (ns *basicSymbolicator) symbolicateDSYMFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]*mappedDSYMStackFrame, error) {
 	cacheKey := debugId + "/" + binaryName
 	archive, ok := ns.dsymCache.Get(cacheKey)
 
@@ -149,9 +149,9 @@ func (ns *basicSymbolicator) symbolicateDSYMFrame(ctx context.Context, debugId, 
 		return nil, fmt.Errorf("could not find symbol at location %d", addr)
 	}
 
-	res := make([]mappedDSYMStackFrame, len(locations))
+	res := make([]*mappedDSYMStackFrame, len(locations))
 	for i,loc := range(locations) {
-		res[i] = mappedDSYMStackFrame{
+		res[i] = &mappedDSYMStackFrame{
 			path: loc.FullPath,
 			instrAddr: loc.InstrAddr,
 			lang: loc.Lang,

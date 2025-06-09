@@ -44,20 +44,19 @@ func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64,
 	return &mappedStackFrame{FunctionName: function, Col: column, Line: line, URL: url}, nil
 }
 
-func (ts *testSymbolicator) symbolicateDSYMFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]mappedDSYMStackFrame, error) {
+func (ts *testSymbolicator) symbolicateDSYMFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]*mappedDSYMStackFrame, error) {
 	if debugId != "6A8CB813-45F6-3652-AD33-778FD1EAB196" {
 		return nil, errFailedToFindSourceFile
 	}
-	return []mappedDSYMStackFrame{
-		{
-			path: "MyFile.swift",
-			instrAddr: 1,
-			lang: "swift",
-			line: 1,
-			symAddr: 1,
-			symbol: "main",
-		},
-	}, nil
+	frame := mappedDSYMStackFrame{
+		path: "MyFile.swift",
+		instrAddr: 1,
+		lang: "swift",
+		line: 1,
+		symAddr: 1,
+		symbol: "main",
+	}
+	return []*mappedDSYMStackFrame{ &frame }, nil
 }
 
 func TestProcess(t *testing.T) {
@@ -379,7 +378,7 @@ func TestDSYMProcess(t *testing.T) {
 
 	processor.processDSYMAttributes(ctx, span.Attributes())
 
-	symbolicated, found := span.Attributes().Get("test.symbolicated.stacktrace")
+	symbolicated, found := span.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
 	assert.True(t, found)
 
 	expected := `dyld(189FE480-5D5B-3B89-9289-58BC88624420) +68312

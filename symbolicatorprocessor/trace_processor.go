@@ -21,7 +21,7 @@ var (
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
 	symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error)
-	symbolicateDSYMFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]mappedDSYMStackFrame, error)
+	symbolicateDSYMFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]*mappedDSYMStackFrame, error)
 }
 
 // symbolicatorProcessor is a processor that finds and symbolicates stack
@@ -79,7 +79,7 @@ func formatStackFrame(sf *mappedStackFrame) string {
 	return fmt.Sprintf("    at %s(%s:%d:%d)", sf.FunctionName, sf.URL, sf.Line, sf.Col)
 }
 
-func formatdSYMStackFrames(frame MetricKitCallStackFrame, frames []mappedDSYMStackFrame) string {
+func formatdSYMStackFrames(frame MetricKitCallStackFrame, frames []*mappedDSYMStackFrame) string {
 	lines := make([]string, len(frames))
 	for i,loc := range(frames) {
 		lines[i] = fmt.Sprintf("%s\t\t\t0x%X %s() (%s:%d) + %d", frame.BinaryName, frame.OffsetIntoBinaryTextSegment, loc.symbol, loc.path, loc.line, loc.symAddr)
@@ -191,10 +191,10 @@ type MetricKitCallStackFrame struct {
 
 func (sp *symbolicatorProcessor) processDSYMAttributes(ctx context.Context, attributes pcommon.Map) error {
 	var ok bool
-	var hasSymbolicationFailed bool = true
 	var metrickitStackTraceValue pcommon.Value
 
 	if metrickitStackTraceValue, ok = attributes.Get(sp.cfg.MetricKitStackTraceAttributeKey); !ok {
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.ColumnsAttributeKey)
 	}
 	metrickitStackTrace := metrickitStackTraceValue.Str()
@@ -202,7 +202,8 @@ func (sp *symbolicatorProcessor) processDSYMAttributes(ctx context.Context, attr
 	var report MetricKitCrashReport
 
 	err := json.Unmarshal([]byte(metrickitStackTrace), &report)
-	if (err != nil) {
+	if err != nil {
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 		return err
 	}
 
@@ -230,8 +231,8 @@ func (sp *symbolicatorProcessor) processDSYMAttributes(ctx context.Context, attr
 		stacks[idx] = strings.Join(symbolicatedStack, "\n    ")
 	}
 
-	attributes.PutStr("test.symbolicated.stacktrace", strings.Join(stacks, "\n\n\n"))
-	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, hasSymbolicationFailed)
+	attributes.PutStr(sp.cfg.OutputMetricKitStackTraceAttributeKey, strings.Join(stacks, "\n\n\n"))
+	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
 
 	return nil
 }
@@ -239,7 +240,7 @@ func (sp *symbolicatorProcessor) processDSYMAttributes(ctx context.Context, attr
 func (sp *symbolicatorProcessor) symbolicateDSYMFrame(ctx context.Context, frame MetricKitCallStackFrame) (string, error) {
 	locations, err := sp.symbolicator.symbolicateDSYMFrame(ctx, frame.BinaryUUID, frame.BinaryName, frame.OffsetIntoBinaryTextSegment)
 
-	if err == errFailedToFindSourceFile {
+	if errors.Is(err, errFailedToFindSourceFile) {
 		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment), nil
 	}
 	if err != nil {

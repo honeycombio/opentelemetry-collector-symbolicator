@@ -22,6 +22,7 @@ var (
 	errFailedToFindSourceFile        = fmt.Errorf("failed to find source file")
 	errFailedToFindSourceMapLocation = fmt.Errorf("failed to find source map location")
 	errFailedToFindSourceMap         = fmt.Errorf("failed to find source map")
+	errFailedToFindDSYM		         = fmt.Errorf("failed to find dSYM file")
 )
 
 type store struct {
@@ -79,7 +80,7 @@ func (s *store) GetDSYM(ctx context.Context, debugId, binaryName string) ([]byte
 	dsymBytes, err := s.fetch(ctx, path)
 
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", errFailedToFindSourceFile, path)
+		return nil, fmt.Errorf("%w: %s", errFailedToFindDSYM, path)
 	}
 
 	return dsymBytes, nil
