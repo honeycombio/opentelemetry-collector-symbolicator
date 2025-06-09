@@ -69,6 +69,12 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 			if err != nil {
 				sp.logger.Debug("Error processing span", zap.Error(err))
 			}
+
+			err = sp.processDSYMAttributes(ctx, span.Attributes())
+
+			if err != nil {
+				sp.logger.Debug("Error processing span", zap.Error(err))
+			}
 		}
 	}
 }
