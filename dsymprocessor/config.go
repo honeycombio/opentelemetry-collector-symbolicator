@@ -33,7 +33,6 @@ type Config struct {
 	GCSSourceMapConfiguration *GCSSourceMapConfiguration `mapstructure:"gcs_dsyms"`
 
 	// Timeout is the maximum time to wait for a response from the symbolicator.
-	// TODO: use this
 	Timeout time.Duration `mapstructure:"timeout"`
 
 	// CacheSize is the maximum number of dSYMs to cache.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/honeycombio/symbolic-go"
@@ -15,10 +16,12 @@ type dsymStore interface {
 
 type basicSymbolicator struct {
 	store   dsymStore
+	timeout time.Duration
+	ch      chan struct{}
 	cache *lru.Cache[string, *symbolic.Archive]
 }
 
-func newBasicSymbolicator(_ context.Context, cacheSize int, store dsymStore) (*basicSymbolicator, error) {
+func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize int, store dsymStore) (*basicSymbolicator, error) {
 	cache, err := lru.New[string, *symbolic.Archive](cacheSize)
 	if err != nil {
 		return nil, err
@@ -26,7 +29,9 @@ func newBasicSymbolicator(_ context.Context, cacheSize int, store dsymStore) (*b
 
 	return &basicSymbolicator{
 		store:   store,
+		timeout: timeout,
 		// the channel is buffered to allow for a single request to be in progress at a time
+		ch:    make(chan struct{}, 1),
 		cache: cache,
 	}, nil
 }
@@ -40,6 +45,16 @@ type mappedDSYMStackFrame struct {
 	symbol string
 }
 func (ns *basicSymbolicator) symbolicateFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]*mappedDSYMStackFrame, error) {
+	select {
+	case ns.ch <- struct{}{}:
+	case <-time.After(ns.timeout):
+		return nil, fmt.Errorf("timeout")
+	}
+
+	defer func() {
+		<-ns.ch
+	}()
+
 	cacheKey := debugId + "/" + binaryName
 	archive, ok := ns.cache.Get(cacheKey)
 
