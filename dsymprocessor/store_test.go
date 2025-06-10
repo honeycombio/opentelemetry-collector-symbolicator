@@ -11,7 +11,7 @@ import (
 func TestFileStore(t *testing.T) {
 	ctx := context.Background()
 
-	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalDSYMConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
 
 	source, err := fs.GetDSYM(ctx, "6A8CB813-45F6-3652-AD33-778FD1EAB196", "Chateaux Bufeaux")

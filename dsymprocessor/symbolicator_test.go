@@ -12,7 +12,7 @@ import (
 func TestDSYMSymbolicator(t *testing.T) {
 	ctx := context.Background()
 
-	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalDSYMConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
 	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
 
@@ -43,7 +43,7 @@ func TestDSYMSymbolicator(t *testing.T) {
 func TestDSYMSymbolicatorCache(t *testing.T) {
 	ctx := context.Background()
 
-	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalDSYMConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
 	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
 

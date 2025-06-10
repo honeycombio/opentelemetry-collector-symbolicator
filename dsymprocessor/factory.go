@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	typeStr = component.MustNewType("symbolicator")
+	typeStr = component.MustNewType("dsymprocessor")
 )
 
 // createDefaultConfig creates the default configuration for the processor.
@@ -22,7 +22,7 @@ func createDefaultConfig() component.Config {
 		OutputMetricKitStackTraceAttributeKey: "metrickit.diagnostic.crash.exception.stacktrace",
 		PreserveStackTrace:              true,
 		DSYMStoreKey:               "file_store",
-		LocalSourceMapConfiguration: &LocalSourceMapConfiguration{
+		LocalDSYMConfiguration: &LocalDSYMConfiguration{
 			Path: ".",
 		},
 		Timeout:            5 * time.Second,
@@ -38,11 +38,11 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 
 	switch symCfg.DSYMStoreKey {
 	case "file_store":
-		store, err = newFileStore(ctx, set.Logger, symCfg.LocalSourceMapConfiguration)
+		store, err = newFileStore(ctx, set.Logger, symCfg.LocalDSYMConfiguration)
 	case "s3_store":
-		store, err = newS3Store(ctx, set.Logger, symCfg.S3SourceMapConfiguration)
+		store, err = newS3Store(ctx, set.Logger, symCfg.S3DSYMConfiguration)
 	case "gcs_store":
-		store, err = newGCSStore(ctx, set.Logger, symCfg.GCSSourceMapConfiguration)
+		store, err = newGCSStore(ctx, set.Logger, symCfg.GCSDSYMConfiguration)
 	}
 
 	if err != nil {

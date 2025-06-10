@@ -38,7 +38,7 @@ func (s *store) GetDSYM(ctx context.Context, debugId, binaryName string) ([]byte
 
 }
 
-func newFileStore(_ context.Context, logger *zap.Logger, cfg *LocalSourceMapConfiguration) (*store, error) {
+func newFileStore(_ context.Context, logger *zap.Logger, cfg *LocalDSYMConfiguration) (*store, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no file configuration provided")
 	}
@@ -52,7 +52,7 @@ func newFileStore(_ context.Context, logger *zap.Logger, cfg *LocalSourceMapConf
 	}, nil
 }
 
-func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3SourceMapConfiguration) (*store, error) {
+func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3DSYMConfiguration) (*store, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no S3 configuration provided")
 	}
@@ -93,7 +93,7 @@ func newS3Store(ctx context.Context, logger *zap.Logger, cfg *S3SourceMapConfigu
 	}, nil
 }
 
-func newGCSStore(ctx context.Context, logger *zap.Logger, cfg *GCSSourceMapConfiguration) (*store, error) {
+func newGCSStore(ctx context.Context, logger *zap.Logger, cfg *GCSDSYMConfiguration) (*store, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no GCS configuration provided")
 	}
