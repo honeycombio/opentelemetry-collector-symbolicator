@@ -95,11 +95,13 @@ type MetricKitCallStackFrame struct {
 }
 
 func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map) error {
+	// set this true at the beginning. If we succeed, we'll hit the "set to false" call at the end of this function
+	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+
 	var ok bool
 	var metrickitStackTraceValue pcommon.Value
 
 	if metrickitStackTraceValue, ok = attributes.Get(sp.cfg.MetricKitStackTraceAttributeKey); !ok {
-		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.MetricKitStackTraceAttributeKey)
 	}
 	metrickitStackTrace := metrickitStackTraceValue.Str()
@@ -108,7 +110,6 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 
 	err := json.Unmarshal([]byte(metrickitStackTrace), &report)
 	if err != nil {
-		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 		return err
 	}
 
@@ -137,11 +138,12 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	}
 
 	attributes.PutStr(sp.cfg.OutputMetricKitStackTraceAttributeKey, strings.Join(stacks, "\n\n\n"))
-	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
 	if !sp.cfg.PreserveStackTrace {
 		attributes.Remove(sp.cfg.MetricKitStackTraceAttributeKey)
 	}
-
+	
+	// everything was a success, we can overwrite the `true` we put in at the beginning
+	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
 	return nil
 }
 
