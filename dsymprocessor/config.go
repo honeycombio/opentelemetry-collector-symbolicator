@@ -18,7 +18,6 @@ type Config struct {
 
 	// preserveStackTrace is a config option that determines whether to keep the
 	// original stack trace in the output.
-	// TODO: use this
 	PreserveStackTrace bool `mapstructure:"preserve_stack_trace"`
 
 	DSYMStoreKey string `mapstructure:"dsym_store"`

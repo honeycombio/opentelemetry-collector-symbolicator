@@ -138,6 +138,9 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 
 	attributes.PutStr(sp.cfg.OutputMetricKitStackTraceAttributeKey, strings.Join(stacks, "\n\n\n"))
 	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
+	if !sp.cfg.PreserveStackTrace {
+		attributes.Remove(sp.cfg.MetricKitStackTraceAttributeKey)
+	}
 
 	return nil
 }
