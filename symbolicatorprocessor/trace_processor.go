@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/processor"
@@ -30,14 +31,23 @@ type symbolicatorProcessor struct {
 	cfg *Config
 
 	symbolicator symbolicator
+
+	telemetry *metadata.TelemetryBuilder
 }
 
 // newSymbolicatorProcessor creates a new symbolicatorProcessor.
 func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Settings, symbolicator symbolicator) *symbolicatorProcessor {
+	// setup metadata for the processor
+	tb, err := metadata.NewTelemetryBuilder(set.TelemetrySettings)
+	if err != nil {
+		set.Logger.Error("Failed to create telemetry builder", zap.Error(err))
+		return nil
+	}
 	return &symbolicatorProcessor{
 		cfg:          cfg,
 		logger:       set.Logger,
 		symbolicator: symbolicator,
+		telemetry:   tb,
 	}
 }
 
@@ -84,6 +94,8 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	var ok bool
 	var hasSymbolicationFailed bool
 	var lines, columns, functions, urls pcommon.Slice
+
+	sp.telemetry.TestCountThings.Add(ctx, 1)
 
 	if columns, ok = getSlice(sp.cfg.ColumnsAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.ColumnsAttributeKey)
