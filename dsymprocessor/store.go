@@ -16,7 +16,6 @@ import (
 )
 
 var (
-	errFailedToFindSourceFile        = fmt.Errorf("failed to find source file")
 	errFailedToFindDSYM		         = fmt.Errorf("failed to find dSYM file")
 )
 

@@ -148,7 +148,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame MetricKitCallStackFrame) (string, error) {
 	locations, err := sp.symbolicator.symbolicateFrame(ctx, frame.BinaryUUID, frame.BinaryName, frame.OffsetIntoBinaryTextSegment)
 
-	if errors.Is(err, errFailedToFindSourceFile) {
+	if errors.Is(err, errFailedToFindDSYM) {
 		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment), nil
 	}
 	if err != nil {

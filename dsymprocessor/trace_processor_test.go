@@ -28,7 +28,7 @@ func (ts *testSymbolicator) clear() {
 
 func (ts *testSymbolicator) symbolicateFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]*mappedDSYMStackFrame, error) {
 	if debugId != "6A8CB813-45F6-3652-AD33-778FD1EAB196" {
-		return nil, errFailedToFindSourceFile
+		return nil, errFailedToFindDSYM
 	}
 	frame := mappedDSYMStackFrame{
 		path: "MyFile.swift",
