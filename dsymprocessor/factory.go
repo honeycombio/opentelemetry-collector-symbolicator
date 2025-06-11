@@ -19,7 +19,7 @@ func createDefaultConfig() component.Config {
 	return &Config{
 		SymbolicatorFailureAttributeKey: "exception.symbolicator.failed",
 		MetricKitStackTraceAttributeKey: "metrickit.diagnostic.crash.exception.stacktrace_json",
-		OutputMetricKitStackTraceAttributeKey: "metrickit.diagnostic.crash.exception.stacktrace",
+		OutputMetricKitStackTraceAttributeKey: "exception.stacktrace",
 		PreserveStackTrace:              true,
 		DSYMStoreKey:               "file_store",
 		LocalDSYMConfiguration: &LocalDSYMConfiguration{
