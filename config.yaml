@@ -5,6 +5,12 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: otelcol_scrape
+          static_configs:
+            - targets: ["0.0.0.0:8888"]
 
 processors:
   symbolicator:
@@ -20,6 +26,10 @@ service:
     traces:
       receivers: [otlp]
       processors: [symbolicator, batch]
+      exporters: [debug]
+    metrics:
+      receivers: [prometheus]
+      processors: [batch]
       exporters: [debug]
   telemetry:
     logs:
