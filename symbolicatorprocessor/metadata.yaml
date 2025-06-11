@@ -1,0 +1,17 @@
+type: symbolicator
+
+status:
+  class: processor
+  stability:
+    alpha:
+      - traces
+
+telemetry:
+  metrics:
+    test_count_things:
+      enabled: true
+      description: look a description
+      unit: "{times}"
+      sum:
+        value_type: int
+        monotonic: true
