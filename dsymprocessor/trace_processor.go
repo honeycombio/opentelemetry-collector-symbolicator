@@ -73,7 +73,7 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 
 func formatStackFrames(frame MetricKitCallStackFrame, frames []*mappedDSYMStackFrame) string {
 	lines := make([]string, len(frames))
-	for i,loc := range(frames) {
+	for i, loc := range frames {
 		lines[i] = fmt.Sprintf("%s\t\t\t0x%X %s() (%s:%d) + %d", frame.BinaryName, frame.OffsetIntoBinaryTextSegment, loc.symbol, loc.path, loc.line, loc.symAddr)
 	}
 
@@ -84,14 +84,14 @@ type MetricKitCrashReport struct {
 	CallStacks []MetricKitCallStack
 }
 type MetricKitCallStack struct {
-	ThreadAttributed bool
+	ThreadAttributed    bool
 	CallStackRootFrames []MetricKitCallStackFrame
 }
 type MetricKitCallStackFrame struct {
-	BinaryUUID string
+	BinaryUUID                  string
 	OffsetIntoBinaryTextSegment uint64
-	SubFrames *[]MetricKitCallStackFrame
-	BinaryName string
+	SubFrames                   *[]MetricKitCallStackFrame
+	BinaryName                  string
 }
 
 func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map) error {
@@ -117,13 +117,13 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	// gotta unwind the nesting in reverse
 	stacks := make([]string, len(report.CallStacks))
 
-	for idx,callStack := range(report.CallStacks) {
+	for idx, callStack := range report.CallStacks {
 		capacity := getStackDepth(callStack.CallStackRootFrames[0])
 		symbolicatedStack := make([]string, capacity)
 		frame := callStack.CallStackRootFrames[0]
-		for i := capacity-1; i>=0; i-- {
+		for i := capacity - 1; i >= 0; i-- {
 			line, err := sp.symbolicateFrame(ctx, frame)
-			if (err != nil) {
+			if err != nil {
 				return err
 			}
 			symbolicatedStack[i] = line
@@ -141,7 +141,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	if !sp.cfg.PreserveStackTrace {
 		attributes.Remove(sp.cfg.MetricKitStackTraceAttributeKey)
 	}
-	
+
 	// everything was a success, we can overwrite the `true` we put in at the beginning
 	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
 	return nil

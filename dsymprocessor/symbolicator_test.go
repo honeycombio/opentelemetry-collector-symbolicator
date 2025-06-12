@@ -17,9 +17,9 @@ func TestDSYMSymbolicator(t *testing.T) {
 	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
 
 	baseFrame := MetricKitCallStackFrame{
-		BinaryUUID: "6A8CB813-45F6-3652-AD33-778FD1EAB196",
+		BinaryUUID:                  "6A8CB813-45F6-3652-AD33-778FD1EAB196",
 		OffsetIntoBinaryTextSegment: 100436,
-		BinaryName: "chateaux-bufeaux",
+		BinaryName:                  "chateaux-bufeaux",
 	}
 	sf, err := sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "Chateaux Bufeaux", baseFrame.OffsetIntoBinaryTextSegment)
 	line := formatStackFrames(baseFrame, sf)
@@ -33,7 +33,7 @@ func TestDSYMSymbolicator(t *testing.T) {
 
 	// binary doesn't exist in the dSYM
 	_, err = sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "other binary", baseFrame.OffsetIntoBinaryTextSegment)
-	assert.Error(t, err)	
+	assert.Error(t, err)
 
 	// // nothing at that offset
 	_, err = sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "Chateaux Bufeaux", 9999999999)
@@ -52,9 +52,9 @@ func TestDSYMSymbolicatorCache(t *testing.T) {
 
 	// First symbolication should add to cache
 	baseFrame := MetricKitCallStackFrame{
-		BinaryUUID: "6A8CB813-45F6-3652-AD33-778FD1EAB196",
+		BinaryUUID:                  "6A8CB813-45F6-3652-AD33-778FD1EAB196",
 		OffsetIntoBinaryTextSegment: 100436,
-		BinaryName: "chateaux-bufeaux",
+		BinaryName:                  "chateaux-bufeaux",
 	}
 	sf, err := sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "Chateaux Bufeaux", baseFrame.OffsetIntoBinaryTextSegment)
 	line := formatStackFrames(baseFrame, sf)

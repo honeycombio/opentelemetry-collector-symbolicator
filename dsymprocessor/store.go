@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	errFailedToFindDSYM		         = fmt.Errorf("failed to find dSYM file")
+	errFailedToFindDSYM = fmt.Errorf("failed to find dSYM file")
 )
 
 type store struct {

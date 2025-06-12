@@ -18,7 +18,7 @@ type basicSymbolicator struct {
 	store   dsymStore
 	timeout time.Duration
 	ch      chan struct{}
-	cache *lru.Cache[string, *symbolic.Archive]
+	cache   *lru.Cache[string, *symbolic.Archive]
 }
 
 func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize int, store dsymStore) (*basicSymbolicator, error) {
@@ -37,13 +37,14 @@ func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize in
 }
 
 type mappedDSYMStackFrame struct {
-	path string
+	path      string
 	instrAddr uint64
-	lang string
-	line uint32
-	symAddr uint64
-	symbol string
+	lang      string
+	line      uint32
+	symAddr   uint64
+	symbol    string
 }
+
 func (ns *basicSymbolicator) symbolicateFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]*mappedDSYMStackFrame, error) {
 	select {
 	case ns.ch <- struct{}{}:
@@ -87,14 +88,14 @@ func (ns *basicSymbolicator) symbolicateFrame(ctx context.Context, debugId, bina
 	}
 
 	res := make([]*mappedDSYMStackFrame, len(locations))
-	for i,loc := range(locations) {
+	for i, loc := range locations {
 		res[i] = &mappedDSYMStackFrame{
-			path: loc.FullPath,
+			path:      loc.FullPath,
 			instrAddr: loc.InstrAddr,
-			lang: loc.Lang,
-			line: loc.Line,
-			symAddr: loc.SymAddr,
-			symbol: loc.Symbol,
+			lang:      loc.Lang,
+			line:      loc.Line,
+			symAddr:   loc.SymAddr,
+			symbol:    loc.Symbol,
 		}
 	}
 	return res, nil

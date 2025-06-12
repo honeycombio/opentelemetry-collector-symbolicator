@@ -33,14 +33,14 @@ func (ts *testSymbolicator) symbolicateFrame(ctx context.Context, debugId, binar
 		return nil, errFailedToFindDSYM
 	}
 	frame := mappedDSYMStackFrame{
-		path: "MyFile.swift",
+		path:      "MyFile.swift",
 		instrAddr: 1,
-		lang: "swift",
-		line: 1,
-		symAddr: 1,
-		symbol: "main",
+		lang:      "swift",
+		line:      1,
+		symAddr:   1,
+		symbol:    "main",
 	}
-	return []*mappedDSYMStackFrame{ &frame }, nil
+	return []*mappedDSYMStackFrame{&frame}, nil
 }
 
 func TestProcess(t *testing.T) {
@@ -99,7 +99,7 @@ func TestProcess(t *testing.T) {
 
 	s.clear()
 
-	for _,preserveStack := range([]bool{ true, false}) {
+	for _, preserveStack := range []bool{true, false} {
 		t.Run(fmt.Sprintf("processAttributes with preserveStack = %s", strconv.FormatBool(preserveStack)), func(t *testing.T) {
 			cfg.PreserveStackTrace = preserveStack
 
