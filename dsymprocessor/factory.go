@@ -30,8 +30,8 @@ func createDefaultConfig() component.Config {
 	}
 }
 
-// createTracesProcessor creates a traces processor
-func createTracesProcessor(ctx context.Context, set processor.Settings, cfg component.Config, next consumer.Traces) (processor.Traces, error) {
+// createLogsProcessor creates a logs processor
+func createLogsProcessor(ctx context.Context, set processor.Settings, cfg component.Config, next consumer.Logs) (processor.Logs, error) {
 	symCfg := cfg.(*Config)
 	var store dsymStore
 	var err error
@@ -55,7 +55,7 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 	}
 
 	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym)
-	return processorhelper.NewTraces(ctx, set, cfg, next, processor.processTraces, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
+	return processorhelper.NewLogs(ctx, set, cfg, next, processor.processLogs, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
 }
 
 // NewFactory creates a factory for the symbolicator processor
@@ -63,6 +63,6 @@ func NewFactory() processor.Factory {
 	return processor.NewFactory(
 		typeStr,
 		createDefaultConfig,
-		processor.WithTraces(createTracesProcessor, component.StabilityLevelAlpha),
+		processor.WithLogs(createLogsProcessor, component.StabilityLevelAlpha),
 	)
 }

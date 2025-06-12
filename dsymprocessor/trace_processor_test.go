@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/processor"
 	"go.uber.org/zap/zaptest"
 )
@@ -103,19 +103,18 @@ func TestProcess(t *testing.T) {
 		t.Run(fmt.Sprintf("processAttributes with preserveStack = %s", strconv.FormatBool(preserveStack)), func(t *testing.T) {
 			cfg.PreserveStackTrace = preserveStack
 
-			td := ptrace.NewTraces()
-			rs := td.ResourceSpans().AppendEmpty()
-			ils := rs.ScopeSpans().AppendEmpty()
+			logs := plog.NewLogs()
+			resourceLog := logs.ResourceLogs().AppendEmpty()
+			scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+			
+			log := scopeLog.LogRecords().AppendEmpty()
+			log.SetEventName("metrickit.diagnostic.crash")
+			log.Attributes().PutEmpty(cfg.MetricKitStackTraceAttributeKey).SetStr(jsonstr)
 
-			span := ils.Spans().AppendEmpty()
-			span.SetName("first-batch-first-span")
-			span.SetTraceID([16]byte{1, 2, 3, 4})
-			span.Attributes().PutEmpty(cfg.MetricKitStackTraceAttributeKey).SetStr(jsonstr)
-
-			err := processor.processAttributes(ctx, span.Attributes())
+			err := processor.processAttributes(ctx, log.Attributes())
 			assert.NoError(t, err)
 
-			symbolicated, found := span.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
+			symbolicated, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
 			assert.True(t, found)
 
 			expected := `dyld(189FE480-5D5B-3B89-9289-58BC88624420) +68312
@@ -126,12 +125,12 @@ func TestProcess(t *testing.T) {
 			assert.Equal(t, expected, symbolicated.Str())
 
 			// no failures
-			hasError, found := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+			hasError, found := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
 			assert.True(t, found)
 			assert.False(t, hasError.Bool())
 
 			// original json is preserved based on key
-			metrickitJson, found := span.Attributes().Get(cfg.MetricKitStackTraceAttributeKey)
+			metrickitJson, found := log.Attributes().Get(cfg.MetricKitStackTraceAttributeKey)
 			if preserveStack {
 				assert.True(t, found)
 				assert.Equal(t, jsonstr, metrickitJson.Str())
@@ -198,22 +197,21 @@ func TestProcessFailure_WrongKey(t *testing.T) {
 
 	s.clear()
 
-	td := ptrace.NewTraces()
-	rs := td.ResourceSpans().AppendEmpty()
-	ils := rs.ScopeSpans().AppendEmpty()
+	logs := plog.NewLogs()
+	resourceLog := logs.ResourceLogs().AppendEmpty()
+	scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+	
+	log := scopeLog.LogRecords().AppendEmpty()
+	log.SetEventName("metrickit.diagnostic.crash")
+	log.Attributes().PutEmpty("incorrect.attribute.key").SetStr(jsonstr)
 
-	span := ils.Spans().AppendEmpty()
-	span.SetName("first-batch-first-span")
-	span.SetTraceID([16]byte{1, 2, 3, 4})
-	span.Attributes().PutEmpty("incorrect.attribute.key").SetStr(jsonstr)
-
-	err := processor.processAttributes(ctx, span.Attributes())
+	err := processor.processAttributes(ctx, log.Attributes())
 	assert.Error(t, err)
 
-	_, found := span.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
+	_, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
 	assert.False(t, found)
 
-	hasError, found := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+	hasError, found := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
 	assert.True(t, found)
 	assert.True(t, hasError.Bool())
 }
@@ -232,22 +230,22 @@ func TestProcessFailure_InvalidJson(t *testing.T) {
 
 	s.clear()
 
-	td := ptrace.NewTraces()
-	rs := td.ResourceSpans().AppendEmpty()
-	ils := rs.ScopeSpans().AppendEmpty()
+	logs := plog.NewLogs()
+	resourceLog := logs.ResourceLogs().AppendEmpty()
+	scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+	
+	log := scopeLog.LogRecords().AppendEmpty()
+	log.SetEventName("metrickit.diagnostic.crash")
+	log.Attributes().PutEmpty("incorrect.attribute.key").SetStr(jsonstr)
+	
 
-	span := ils.Spans().AppendEmpty()
-	span.SetName("first-batch-first-span")
-	span.SetTraceID([16]byte{1, 2, 3, 4})
-	span.Attributes().PutEmpty("incorrect.attribute.key").SetStr(jsonstr)
-
-	err := processor.processAttributes(ctx, span.Attributes())
+	err := processor.processAttributes(ctx, log.Attributes())
 	assert.Error(t, err)
 
-	_, found := span.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
+	_, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
 	assert.False(t, found)
 
-	hasError, found := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+	hasError, found := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
 	assert.True(t, found)
 	assert.True(t, hasError.Bool())
 }

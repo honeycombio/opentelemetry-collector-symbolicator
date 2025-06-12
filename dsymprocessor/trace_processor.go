@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/processor"
 	"go.uber.org/zap"
 )
@@ -43,26 +43,26 @@ func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Sett
 
 // processTraces processes the received traces. It is the function configured
 // in the processorhelper.NewTraces call in factory.go
-func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Traces) (ptrace.Traces, error) {
-	sp.logger.Info("Processing traces")
+func (sp *symbolicatorProcessor) processLogs(ctx context.Context, logs plog.Logs) (plog.Logs, error) {
+	sp.logger.Info("Processing logs")
 
-	for i := 0; i < td.ResourceSpans().Len(); i++ {
-		rs := td.ResourceSpans().At(i)
-		sp.processResourceSpans(ctx, rs)
+	for i := 0; i < logs.ResourceLogs().Len(); i++ {
+		rl := logs.ResourceLogs().At(i)
+		sp.processResourceSpans(ctx, rl)
 	}
-	return td, nil
+	return logs, nil
 }
 
 // processResourceSpans takes resource spans and processes the attributes
 // found on the spans.
-func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs ptrace.ResourceSpans) {
-	for i := 0; i < rs.ScopeSpans().Len(); i++ {
-		ss := rs.ScopeSpans().At(i)
+func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rl plog.ResourceLogs) {
+	for i := 0; i < rl.ScopeLogs().Len(); i++ {
+		sl := rl.ScopeLogs().At(i)
 
-		for j := 0; j < ss.Spans().Len(); j++ {
-			span := ss.Spans().At(j)
+		for j := 0; j < sl.LogRecords().Len(); j++ {
+			log := sl.LogRecords().At(j)
 
-			err := sp.processAttributes(ctx, span.Attributes())
+			err := sp.processAttributes(ctx, log.Attributes())
 
 			if err != nil {
 				sp.logger.Debug("Error processing span", zap.Error(err))
