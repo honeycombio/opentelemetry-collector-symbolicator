@@ -45,6 +45,6 @@ workflows:
             - test
           filters:
             tags:
-              only: /^v[0-9].*/
+              only: /^[a-z]+processor\/v[0-9].*/
             branches:
               ignore: /.*/
