@@ -1,5 +1,10 @@
 # Symbolicator Processor changelog
 
+## v0.0.7 [beta] - 2025/06/16
+### ✨ Features
+
+- feat: support symbolicating metrickit stack traces with dSYMs (#53) | @mustafahaddara
+
 ## v0.0.6 [beta] - 2025/02/28
 
 ### ✨ Features
