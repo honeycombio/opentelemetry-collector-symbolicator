@@ -20,7 +20,7 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [symbolicator, batch]
+      processors: [symbolicator]
       exporters: [debug]
   telemetry:
     logs:
