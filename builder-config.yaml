@@ -15,6 +15,9 @@ processors:
   - gomod: github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor v0.0.0
     name: dsymprocessor
     path: ./dsymprocessor
+  - gomod: github.com/honeycombio/opentelemetry-collector-symbolicator/proguardprocessor v0.0.0
+    name: proguardprocessor
+    path: ./proguardprocessor
 
 receivers:
   - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.128.0
