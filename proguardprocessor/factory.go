@@ -26,9 +26,8 @@ func createDefaultConfig() component.Config {
 		OriginalClassesAttributeKey: "exception.structured_stacktrace.classes.original",
 		OriginalMethodsAttributeKey: "exception.structured_stacktrace.methods.original",
 		OriginalLinesAttributeKey:   "exception.structured_stacktrace.lines.original",
-		// TODO: determine if this is a good default
-		ProguardUUIDAttributeKey: "exception.structured_stacktrace.proguard_uuid",
-		ProguardStoreKey:         "file_store",
+		ProguardUUIDAttributeKey:    "build.proguard.uuid",
+		ProguardStoreKey:            "file_store",
 		LocalProguardConfiguration: &LocalStoreConfiguration{
 			Path: ".",
 		},
