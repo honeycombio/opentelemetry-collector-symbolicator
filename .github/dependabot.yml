@@ -4,6 +4,7 @@ updates:
     directories:
       - "/symbolicatorprocessor"
       - "/dsymprocessor"
+      - "/proguardprocessor"
     schedule:
       interval: "weekly"
     labels:
