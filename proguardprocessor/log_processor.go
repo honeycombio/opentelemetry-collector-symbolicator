@@ -92,6 +92,13 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 		)
 	}
 
+	uuidValue, ok := attrs.Get(p.cfg.ProguardUUIDAttributeKey)
+	if !ok {
+		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
+	}
+
+	uuid := uuidValue.Str()
+
 	if p.cfg.PreserveStackTrace {
 		classes.CopyTo(attrs.PutEmptySlice(p.cfg.OriginalClassesAttributeKey))
 		methods.CopyTo(attrs.PutEmptySlice(p.cfg.OriginalMethodsAttributeKey))
@@ -101,13 +108,6 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 			attrs.PutStr(p.cfg.OriginalStackTraceKey, originalStackTrace.Str())
 		}
 	}
-
-	uuidValue, ok := attrs.Get(p.cfg.ProguardUUIDAttributeKey)
-	if !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
-	}
-
-	uuid := uuidValue.Str()
 
 	var stack []string
 	var mappedClasses = attrs.PutEmptySlice(p.cfg.ClassesAttributeKey)
