@@ -1,7 +1,9 @@
 version: 2
 updates:
   - package-ecosystem: "gomod"
-    directory: "/symbolicatorprocessor"
+    directories:
+      - "/symbolicatorprocessor"
+      - "/dsymprocessor"
     schedule:
       interval: "weekly"
     labels:
@@ -10,6 +12,10 @@ updates:
       prefix: "maint"
       include: "scope"
     groups:
+      aws:
+        patterns:
+          - "github.com/aws/aws-sdk-go-v2"
+          - "github.com/aws/aws-sdk-go-v2/*"
       otel:
         patterns:
           - "go.opentelemetry.io/*"
