@@ -8,6 +8,19 @@ type Config struct {
 	// true if the symbolicator fails to fully symbolicate a stack trace.
 	SymbolicatorFailureAttributeKey string `mapstructure:"symbolicator_failure_attribute_key"`
 
+	// StackTraceAttributeKey is the attribute key that contains an explicitly thrown stack trace.
+	StackTraceAttributeKey string `mapstructure:"stack_trace_attribute_key"`
+
+	// OriginalStackTraceKey is the attribute key that preserves the original stack
+	// trace.
+	OriginalStackTraceKey string `mapstructure:"original_stack_trace_key"`
+
+	// BuildUUIDAttributeKey is the attribute key that contains the build UUID of the current app.
+	BuildUUIDAttributeKey string `mapstructure:"build_uuid_attribute_key"`
+
+	// AppExecutableAttributeKey is the attribute key that contains the current app's executable name.
+	AppExecutableAttributeKey string `mapstructure:"app_executable_attribute_key"`
+
 	// MetricKitStackTraceAttributeKey is the attribute key that contains the metrickit
 	// stack trace.
 	MetricKitStackTraceAttributeKey string `mapstructure:"metrickit_stack_trace_attribute_key"`

@@ -43,7 +43,76 @@ func (ts *testSymbolicator) symbolicateFrame(ctx context.Context, debugId, binar
 	return []*mappedDSYMStackFrame{&frame}, nil
 }
 
-func TestProcess(t *testing.T) {
+func TestProcessStackTrace(t *testing.T) {
+	ctx := context.Background()
+	cfg := createDefaultConfig().(*Config)
+	s := &testSymbolicator{}
+	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}, s)
+
+	stacktrace := `0   CoreFoundation                      0x00000001835df228 7821F73C-378B-3A10-BE90-EF526B7DBA93 + 1155624
+1   libobjc.A.dylib                     0x0000000180a79abc objc_exception_throw + 88
+2   CoreFoundation                      0x00000001835e15fc 7821F73C-378B-3A10-BE90-EF526B7DBA93 + 1164796
+3   Chateaux Bufeaux                    0x00000001025a0758 Chateaux Bufeaux + 231256
+4   Chateaux Bufeaux                    0x00000001025a0834 Chateaux Bufeaux + 231476
+5   Chateaux Bufeaux                    0x000000010259f2ac Chateaux Bufeaux + 225964
+6   Chateaux Bufeaux                    0x0000000102577fd1 Chateaux Bufeaux + 65489
+7   libswift_Concurrency.dylib          0x000000018f0a9241 DCB9E73A-92BA-3782-BC6D-3E1906622689 + 414273`
+
+	s.clear()
+
+	for _, preserveStack := range []bool{true, false} {
+		t.Run(fmt.Sprintf("processAttributes with preserveStack = %s", strconv.FormatBool(preserveStack)), func(t *testing.T) {
+			cfg.PreserveStackTrace = preserveStack
+
+			logs := plog.NewLogs()
+			resourceLog := logs.ResourceLogs().AppendEmpty()
+			scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+			
+			log := scopeLog.LogRecords().AppendEmpty()
+			log.SetEventName("error")
+			log.Attributes().PutEmpty(cfg.StackTraceAttributeKey).SetStr(stacktrace)
+			log.Attributes().PutEmpty(cfg.BuildUUIDAttributeKey).SetStr("6A8CB813-45F6-3652-AD33-778FD1EAB196")
+			log.Attributes().PutEmpty(cfg.AppExecutableAttributeKey).SetStr("Chateaux Bufeaux")
+
+			err := processor.processStackTraceAttributes(ctx, log.Attributes())
+			assert.NoError(t, err)
+
+			symbolicated, found := log.Attributes().Get(cfg.StackTraceAttributeKey)
+			assert.True(t, found)
+
+			expected := `0   CoreFoundation                      0x00000001835df228 7821F73C-378B-3A10-BE90-EF526B7DBA93 + 1155624
+1   libobjc.A.dylib                     0x0000000180a79abc objc_exception_throw + 88
+2   CoreFoundation                      0x00000001835e15fc 7821F73C-378B-3A10-BE90-EF526B7DBA93 + 1164796
+3   Chateaux Bufeaux                    0x00000001025a0758 main() (in Chateaux Bufeaux) (MyFile.swift:1) + 231256
+4   Chateaux Bufeaux                    0x00000001025a0834 main() (in Chateaux Bufeaux) (MyFile.swift:1) + 231476
+5   Chateaux Bufeaux                    0x000000010259f2ac main() (in Chateaux Bufeaux) (MyFile.swift:1) + 225964
+6   Chateaux Bufeaux                    0x0000000102577fd1 main() (in Chateaux Bufeaux) (MyFile.swift:1) + 65489
+7   libswift_Concurrency.dylib          0x000000018f0a9241 DCB9E73A-92BA-3782-BC6D-3E1906622689 + 414273`
+
+			assert.Equal(t, expected, symbolicated.Str())
+
+			// no failures
+			hasError, found := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+			assert.True(t, found)
+			assert.False(t, hasError.Bool())
+
+			// original json is preserved based on key
+			originalStackTrace, found := log.Attributes().Get(cfg.OriginalStackTraceKey)
+			if preserveStack {
+				assert.True(t, found)
+				assert.Equal(t, stacktrace, originalStackTrace.Str())
+			} else {
+				assert.False(t, found)
+			}
+		})
+	}
+}
+
+func TestProcessMetricKit(t *testing.T) {
 	ctx := context.Background()
 	cfg := createDefaultConfig().(*Config)
 	s := &testSymbolicator{}
@@ -111,7 +180,7 @@ func TestProcess(t *testing.T) {
 			log.SetEventName("metrickit.diagnostic.crash")
 			log.Attributes().PutEmpty(cfg.MetricKitStackTraceAttributeKey).SetStr(jsonstr)
 
-			err := processor.processAttributes(ctx, log.Attributes())
+			err := processor.processMetricKitAttributes(ctx, log.Attributes())
 			assert.NoError(t, err)
 
 			symbolicated, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
@@ -205,7 +274,7 @@ func TestProcessFailure_WrongKey(t *testing.T) {
 	log.SetEventName("metrickit.diagnostic.crash")
 	log.Attributes().PutEmpty("incorrect.attribute.key").SetStr(jsonstr)
 
-	err := processor.processAttributes(ctx, log.Attributes())
+	err := processor.processMetricKitAttributes(ctx, log.Attributes())
 	assert.Error(t, err)
 
 	_, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
@@ -239,7 +308,7 @@ func TestProcessFailure_InvalidJson(t *testing.T) {
 	log.Attributes().PutEmpty("incorrect.attribute.key").SetStr(jsonstr)
 	
 
-	err := processor.processAttributes(ctx, log.Attributes())
+	err := processor.processMetricKitAttributes(ctx, log.Attributes())
 	assert.Error(t, err)
 
 	_, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)

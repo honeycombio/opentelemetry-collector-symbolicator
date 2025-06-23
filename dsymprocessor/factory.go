@@ -18,6 +18,10 @@ var (
 func createDefaultConfig() component.Config {
 	return &Config{
 		SymbolicatorFailureAttributeKey:       "exception.symbolicator.failed",
+		StackTraceAttributeKey:                "exception.stacktrace",
+		OriginalStackTraceKey:                 "exception.stacktrace.original",
+		AppExecutableAttributeKey:             "app.bundle.executable",
+		BuildUUIDAttributeKey:                 "app.debug.buildUUID",
 		MetricKitStackTraceAttributeKey:       "metrickit.diagnostic.crash.exception.stacktrace_json",
 		OutputMetricKitStackTraceAttributeKey: "exception.stacktrace",
 		PreserveStackTrace:                    true,
