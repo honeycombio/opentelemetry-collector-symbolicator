@@ -148,9 +148,11 @@ func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context
 	return nil
 }
 
+// groups: line number, library name, hex address, uuid or binary name, offset
+var stackLineRegex = regexp.MustCompile(`^([0-9]+)\s+([\w _\-\.]+[\w_\-\.])\s+(0x[\da-f]+)\s+([\w _\-\.]*) \+ (\d+)`)
+var uuidRegex = regexp.MustCompile(`[0-9A-Z]{8}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{12}`)
+
 func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line, binaryName, buildUUID string) (string, error) {
-	// groups: line number, library name, hex address, uuid or binary name, offset
-	stackLineRegex := regexp.MustCompile(`^([0-9]+)\s+([\w _\-\.]+[\w_\-\.])\s+(0x[\da-f]+)\s+([\w _\-\.]*) \+ (\d+)`)
 	matches := stackLineRegex.FindStringSubmatch(line)
 	matchIdxes := stackLineRegex.FindStringSubmatchIndex(line)
 	libName := matches[2]
@@ -191,8 +193,7 @@ func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line,
 }
 
 func isUUID (maybeUUID string) bool {
-	uuidRegex := regexp.MustCompile(`[0-9A-Z]{8}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{12}`)
-	return uuidRegex.Match([]byte(maybeUUID))
+	return uuidRegex.MatchString(maybeUUID)
 }
 
 func formatMetricKitStackFrames(frame MetricKitCallStackFrame, frames []*mappedDSYMStackFrame) string {

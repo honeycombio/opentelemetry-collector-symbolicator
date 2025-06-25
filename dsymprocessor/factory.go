@@ -21,7 +21,7 @@ func createDefaultConfig() component.Config {
 		StackTraceAttributeKey:                "exception.stacktrace",
 		OriginalStackTraceKey:                 "exception.stacktrace.original",
 		AppExecutableAttributeKey:             "app.bundle.executable",
-		BuildUUIDAttributeKey:                 "app.debug.buildUUID",
+		BuildUUIDAttributeKey:                 "app.debug.build_uuid",
 		MetricKitStackTraceAttributeKey:       "metrickit.diagnostic.crash.exception.stacktrace_json",
 		OutputMetricKitStackTraceAttributeKey: "exception.stacktrace",
 		PreserveStackTrace:                    true,
