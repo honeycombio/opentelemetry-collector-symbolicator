@@ -22,7 +22,7 @@ func TestDSYMSymbolicator(t *testing.T) {
 		BinaryName:                  "chateaux-bufeaux",
 	}
 	sf, err := sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "Chateaux Bufeaux", baseFrame.OffsetIntoBinaryTextSegment)
-	line := formatStackFrames(baseFrame, sf)
+	line := formatMetricKitStackFrames(baseFrame, sf)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "chateaux-bufeaux			0x18854 main() (/Users/mustafa/hny/chateaux-bufeaux-ios/Chateaux Bufeaux/Chateaux_BufeauxApp.swift:0) + 100372", line)
@@ -57,7 +57,7 @@ func TestDSYMSymbolicatorCache(t *testing.T) {
 		BinaryName:                  "chateaux-bufeaux",
 	}
 	sf, err := sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "Chateaux Bufeaux", baseFrame.OffsetIntoBinaryTextSegment)
-	line := formatStackFrames(baseFrame, sf)
+	line := formatMetricKitStackFrames(baseFrame, sf)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "chateaux-bufeaux			0x18854 main() (/Users/mustafa/hny/chateaux-bufeaux-ios/Chateaux Bufeaux/Chateaux_BufeauxApp.swift:0) + 100372", line)

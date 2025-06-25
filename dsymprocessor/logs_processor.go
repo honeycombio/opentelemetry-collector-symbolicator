@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -61,17 +63,140 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rl pl
 
 		for j := 0; j < sl.LogRecords().Len(); j++ {
 			log := sl.LogRecords().At(j)
+			attributes := log.Attributes()
 
-			err := sp.processAttributes(ctx, log.Attributes())
+			// if we have a stack trace, try symbolicating it
+			if _, ok := attributes.Get(sp.cfg.StackTraceAttributeKey); ok {
+				err := sp.processStackTraceAttributes(ctx, attributes)
+				if err != nil {
+					sp.logger.Debug("Error processing span", zap.Error(err))
+				}
 
-			if err != nil {
-				sp.logger.Debug("Error processing span", zap.Error(err))
+				continue
 			}
+
+			// no stack trace, let's check if there's a metrickit attribute
+			if _, ok := attributes.Get(sp.cfg.MetricKitStackTraceAttributeKey); ok {
+				err := sp.processMetricKitAttributes(ctx, attributes)
+				if err != nil {
+					sp.logger.Debug("Error processing span", zap.Error(err))
+				}
+
+				continue
+			}
+
+			// neither attribute exists, do nothing
+			err := fmt.Errorf("%w: %s or %s", errMissingAttribute, sp.cfg.StackTraceAttributeKey, sp.cfg.MetricKitStackTraceAttributeKey)
+			sp.logger.Debug("Error processing span", zap.Error(err))
 		}
 	}
 }
 
-func formatStackFrames(frame MetricKitCallStackFrame, frames []*mappedDSYMStackFrame) string {
+func formatStackFrames(prefix, binaryName string, offset uint64, frames []*mappedDSYMStackFrame) string {
+	lines := make([]string, len(frames))
+	for i, loc := range frames {
+		lines[i] = fmt.Sprintf("%s %s() (in %s) (%s:%d) + %d", prefix, loc.symbol, binaryName, loc.path, loc.line, offset)
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context, attributes pcommon.Map) error {
+	// set this true at the beginning. If we succeed, we'll hit the "set to false" call at the end of this function
+	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+
+
+	var ok bool
+	var stackTraceValue pcommon.Value
+	var binaryNameValue pcommon.Value
+	var buildUUIDValue pcommon.Value
+
+	if stackTraceValue, ok = attributes.Get(sp.cfg.StackTraceAttributeKey); !ok {
+		// we should never get here (our caller checks this)
+		return fmt.Errorf("Invalid state! Called proceStackTraceAttributes while missing %s attribute", sp.cfg.StackTraceAttributeKey)
+	}
+	rawStackTrace := stackTraceValue.Str()
+	
+	if buildUUIDValue, ok = attributes.Get(sp.cfg.BuildUUIDAttributeKey); !ok {
+		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.BuildUUIDAttributeKey)
+	}
+	buildUUID := buildUUIDValue.Str()
+
+	if binaryNameValue, ok = attributes.Get(sp.cfg.AppExecutableAttributeKey); !ok {
+		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.AppExecutableAttributeKey)
+	}
+	binaryName := binaryNameValue.Str()
+
+	lines := strings.Split(rawStackTrace, "\n")
+	res := make([]string, len(lines))
+	for idx,line := range(lines) {
+		symbolicated,err := sp.symbolicateStackLine(ctx, line, binaryName, buildUUID)
+		if (err != nil) {
+			sp.logger.Debug("could not symbolicate line")
+			res[idx] = line
+			continue
+		}
+		res[idx] = symbolicated
+	}
+
+	if sp.cfg.PreserveStackTrace {
+		attributes.PutStr(sp.cfg.OriginalStackTraceKey, rawStackTrace)
+	}
+	attributes.PutStr(sp.cfg.StackTraceAttributeKey, strings.Join(res, "\n"))
+	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
+
+	return nil
+}
+
+// groups: line number, library name, hex address, uuid or binary name, offset
+var stackLineRegex = regexp.MustCompile(`^([0-9]+)\s+([\w _\-\.]+[\w_\-\.])\s+(0x[\da-f]+)\s+([\w _\-\.]*) \+ (\d+)`)
+var uuidRegex = regexp.MustCompile(`[0-9A-Z]{8}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{12}`)
+
+func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line, binaryName, buildUUID string) (string, error) {
+	matches := stackLineRegex.FindStringSubmatch(line)
+	matchIdxes := stackLineRegex.FindStringSubmatchIndex(line)
+	libName := matches[2]
+	uuidOrBinary := matches[4]
+	offsetInt,err := strconv.Atoi(matches[5])
+	if err != nil {
+		return "", err
+	}
+	offset := uint64(offsetInt)
+
+	var uuid string
+	var bin string
+	if isUUID(uuidOrBinary) {
+		uuid = uuidOrBinary
+		bin = libName
+	} else if uuidOrBinary == binaryName {
+		uuid = buildUUID
+		bin = binaryName
+	} else {
+		return line, nil
+	}
+
+	locations, err := sp.symbolicator.symbolicateFrame(ctx, uuid, bin, offset)
+
+	if errors.Is(err, errFailedToFindDSYM) {
+		return line, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	
+	// keep everything up to the end of match group 3 (the binary/uuid)
+	//   indexes are paired, so group 0 spans index 0 - index 1
+	//   so index 7 is the end of group 3
+	prefix := line[:matchIdxes[7]]
+
+	return formatStackFrames(prefix, bin, offset, locations), nil
+}
+
+func isUUID (maybeUUID string) bool {
+	return uuidRegex.MatchString(maybeUUID)
+}
+
+func formatMetricKitStackFrames(frame MetricKitCallStackFrame, frames []*mappedDSYMStackFrame) string {
 	lines := make([]string, len(frames))
 	for i, loc := range frames {
 		lines[i] = fmt.Sprintf("%s\t\t\t0x%X %s() (%s:%d) + %d", frame.BinaryName, frame.OffsetIntoBinaryTextSegment, loc.symbol, loc.path, loc.line, loc.symAddr)
@@ -94,7 +219,7 @@ type MetricKitCallStackFrame struct {
 	BinaryName                  string
 }
 
-func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map) error {
+func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context, attributes pcommon.Map) error {
 	// set this true at the beginning. If we succeed, we'll hit the "set to false" call at the end of this function
 	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 
@@ -102,7 +227,8 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	var metrickitStackTraceValue pcommon.Value
 
 	if metrickitStackTraceValue, ok = attributes.Get(sp.cfg.MetricKitStackTraceAttributeKey); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.MetricKitStackTraceAttributeKey)
+		// we should never get here (our caller checks this)
+		return fmt.Errorf("Invalid state! Called processMetricKitAttributes while missing %s attribute", sp.cfg.MetricKitStackTraceAttributeKey)
 	}
 	metrickitStackTrace := metrickitStackTraceValue.Str()
 
@@ -157,7 +283,7 @@ func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame Met
 		return "", err
 	}
 
-	return formatStackFrames(frame, locations), nil
+	return formatMetricKitStackFrames(frame, locations), nil
 }
 
 func getStackDepth(root MetricKitCallStackFrame) int {

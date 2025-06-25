@@ -9,6 +9,8 @@ receivers:
 processors:
   symbolicator:
   dsymprocessor:
+    local_dsyms:
+      path: ./test_assets
   batch:
 
 exporters:
@@ -21,6 +23,10 @@ service:
     traces:
       receivers: [otlp]
       processors: [symbolicator]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [dsymprocessor, batch]
       exporters: [debug]
   telemetry:
     logs:
