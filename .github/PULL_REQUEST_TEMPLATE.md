@@ -10,3 +10,8 @@ Please see our [OSS process document](https://github.com/honeycombio/home/blob/m
 ## Short description of the changes
 
 ## How to verify that this has the expected result
+
+---
+
+- [ ] CHANGELOG is updated
+- [ ] README is updated with documentation
