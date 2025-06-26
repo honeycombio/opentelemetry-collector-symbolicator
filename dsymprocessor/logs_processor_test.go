@@ -206,8 +206,65 @@ func TestProcessMetricKit(t *testing.T) {
 			} else {
 				assert.False(t, found)
 			}
+
+			exceptionType, found := log.Attributes().Get(cfg.OutputMetricKitExceptionTypeAttributeKey)
+			assert.True(t, found)
+			assert.Equal(t, "Unknown Error", exceptionType.Str())
+
+			exceptionMessage, found := log.Attributes().Get(cfg.OutputMetricKitExceptionMessageAttributeKey)
+			assert.True(t, found)
+			assert.Equal(t, "Unknown Error", exceptionMessage.Str())
 		})
 	}
+}
+
+func TestMetricKitExceptionAttrs(t *testing.T) {
+	ctx := context.Background()
+	cfg := createDefaultConfig().(*Config)
+	s := &testSymbolicator{}
+	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}, s)
+
+	jsonstr := `{ "callStacks": [] }`
+
+	logs := plog.NewLogs()
+	resourceLog := logs.ResourceLogs().AppendEmpty()
+	scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+	
+	log := scopeLog.LogRecords().AppendEmpty()
+	log.SetEventName("metrickit.diagnostic.crash")
+	log.Attributes().PutEmpty(cfg.MetricKitStackTraceAttributeKey).SetStr(jsonstr)
+	log.Attributes().PutEmpty("metrickit.diagnostic.crash.exception.mach_exception.name").SetStr("exception type")
+	log.Attributes().PutEmpty("metrickit.diagnostic.crash.exception.mach_exception.description").SetStr("message")
+
+	err := processor.processMetricKitAttributes(ctx, log.Attributes())
+	assert.NoError(t, err)
+
+	exceptionType, found := log.Attributes().Get(cfg.OutputMetricKitExceptionTypeAttributeKey)
+	assert.True(t, found)
+	assert.Equal(t, "exception type", exceptionType.Str())
+
+	exceptionMessage, found := log.Attributes().Get(cfg.OutputMetricKitExceptionMessageAttributeKey)
+	assert.True(t, found)
+	assert.Equal(t, "message", exceptionMessage.Str())
+
+	// add the objc ones, they should take precedence
+	log.Attributes().PutEmpty("metrickit.diagnostic.crash.exception.objc.type").SetStr("objc exception type")
+	log.Attributes().PutEmpty("metrickit.diagnostic.crash.exception.objc.message").SetStr("objc message")
+
+	err = processor.processMetricKitAttributes(ctx, log.Attributes())
+	assert.NoError(t, err)
+
+	exceptionType, found= log.Attributes().Get(cfg.OutputMetricKitExceptionTypeAttributeKey)
+	assert.True(t, found)
+	assert.Equal(t, "objc exception type", exceptionType.Str())
+
+	exceptionMessage, found = log.Attributes().Get(cfg.OutputMetricKitExceptionMessageAttributeKey)
+	assert.True(t, found)
+	assert.Equal(t, "objc message", exceptionMessage.Str())
 }
 
 func TestProcessFailure_WrongKey(t *testing.T) {
