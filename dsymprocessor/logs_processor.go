@@ -222,8 +222,6 @@ func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context,
 	// set this true at the beginning. If we succeed, we'll hit the "set to false" call at the end of this function
 	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 
-	sp.setMetricKitExceptionAttrs(ctx, attributes)
-
 	var ok bool
 	var metrickitStackTraceValue pcommon.Value
 
@@ -271,6 +269,10 @@ func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context,
 
 	// everything was a success, we can overwrite the `true` we put in at the beginning
 	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
+
+	// and we need to set exception.type and exception.message to make this a semantically valid exception
+	sp.setMetricKitExceptionAttrs(ctx, attributes)
+
 	return nil
 }
 
