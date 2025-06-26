@@ -29,6 +29,14 @@ type Config struct {
 	// symbolicated metrickit stack trace.
 	OutputMetricKitStackTraceAttributeKey string `mapstructure:"output_metrickit_stack_trace_attribute_key"`
 
+	// OutputMetricKitStackTraceAttributeKey is the attribute key that contains the
+	// inferred  metrickit stack trace.
+	OutputMetricKitExceptionTypeAttributeKey string `mapstructure:"output_metrickit_exception_type_attribute_key"`
+
+	// OutputMetricKitStackTraceAttributeKey is the attribute key that contains the
+	// symbolicated metrickit stack trace.
+	OutputMetricKitExceptionMessageAttributeKey string `mapstructure:"output_metrickit_exception_message_attribute_key"`
+
 	// preserveStackTrace is a config option that determines whether to keep the
 	// original stack trace in the output.
 	PreserveStackTrace bool `mapstructure:"preserve_stack_trace"`

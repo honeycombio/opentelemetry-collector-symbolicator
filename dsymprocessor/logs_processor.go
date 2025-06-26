@@ -105,7 +105,6 @@ func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context
 	// set this true at the beginning. If we succeed, we'll hit the "set to false" call at the end of this function
 	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 
-
 	var ok bool
 	var stackTraceValue pcommon.Value
 	var binaryNameValue pcommon.Value
@@ -116,7 +115,7 @@ func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context
 		return fmt.Errorf("Invalid state! Called proceStackTraceAttributes while missing %s attribute", sp.cfg.StackTraceAttributeKey)
 	}
 	rawStackTrace := stackTraceValue.Str()
-	
+
 	if buildUUIDValue, ok = attributes.Get(sp.cfg.BuildUUIDAttributeKey); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.BuildUUIDAttributeKey)
 	}
@@ -129,9 +128,9 @@ func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context
 
 	lines := strings.Split(rawStackTrace, "\n")
 	res := make([]string, len(lines))
-	for idx,line := range(lines) {
-		symbolicated,err := sp.symbolicateStackLine(ctx, line, binaryName, buildUUID)
-		if (err != nil) {
+	for idx, line := range lines {
+		symbolicated, err := sp.symbolicateStackLine(ctx, line, binaryName, buildUUID)
+		if err != nil {
 			sp.logger.Debug("could not symbolicate line")
 			res[idx] = line
 			continue
@@ -157,7 +156,7 @@ func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line,
 	matchIdxes := stackLineRegex.FindStringSubmatchIndex(line)
 	libName := matches[2]
 	uuidOrBinary := matches[4]
-	offsetInt,err := strconv.Atoi(matches[5])
+	offsetInt, err := strconv.Atoi(matches[5])
 	if err != nil {
 		return "", err
 	}
@@ -183,7 +182,7 @@ func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line,
 	if err != nil {
 		return "", err
 	}
-	
+
 	// keep everything up to the end of match group 3 (the binary/uuid)
 	//   indexes are paired, so group 0 spans index 0 - index 1
 	//   so index 7 is the end of group 3
@@ -192,7 +191,7 @@ func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line,
 	return formatStackFrames(prefix, bin, offset, locations), nil
 }
 
-func isUUID (maybeUUID string) bool {
+func isUUID(maybeUUID string) bool {
 	return uuidRegex.MatchString(maybeUUID)
 }
 
@@ -222,6 +221,8 @@ type MetricKitCallStackFrame struct {
 func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context, attributes pcommon.Map) error {
 	// set this true at the beginning. If we succeed, we'll hit the "set to false" call at the end of this function
 	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+
+	sp.setMetricKitExceptionAttrs(ctx, attributes)
 
 	var ok bool
 	var metrickitStackTraceValue pcommon.Value
@@ -273,6 +274,32 @@ func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context,
 	return nil
 }
 
+func (sp *symbolicatorProcessor) setMetricKitExceptionAttrs(ctx context.Context, attributes pcommon.Map) {
+	exceptionType := getFirstAvailableString(
+		attributes,
+		[]string{
+			"metrickit.diagnostic.crash.exception.objc.type",
+			"metrickit.diagnostic.crash.exception.mach_exception.name",
+			"metrickit.diagnostic.crash.exception.signal.name",
+		},
+		"Unknown Error",
+	)
+
+	exceptionMsg := getFirstAvailableString(
+		attributes,
+		[]string{
+			"metrickit.diagnostic.crash.exception.objc.message",
+			"metrickit.diagnostic.crash.exception.mach_exception.description",
+			"metrickit.diagnostic.crash.exception.signal.description",
+			"metrickit.diagnostic.crash.exception.termination_reason",
+		},
+		"Unknown Error",
+	)
+
+	attributes.PutStr(sp.cfg.OutputMetricKitExceptionTypeAttributeKey, exceptionType)
+	attributes.PutStr(sp.cfg.OutputMetricKitExceptionMessageAttributeKey, exceptionMsg)
+}
+
 func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame MetricKitCallStackFrame) (string, error) {
 	locations, err := sp.symbolicator.symbolicateFrame(ctx, frame.BinaryUUID, frame.BinaryName, frame.OffsetIntoBinaryTextSegment)
 
@@ -291,4 +318,14 @@ func getStackDepth(root MetricKitCallStackFrame) int {
 		return 1
 	}
 	return 1 + getStackDepth((*root.SubFrames)[0])
+}
+
+func getFirstAvailableString(attributes pcommon.Map, keys []string, fallbackValue string) string {
+	for _, key := range keys {
+		value, ok := attributes.Get(key)
+		if ok {
+			return value.Str()
+		}
+	}
+	return fallbackValue
 }

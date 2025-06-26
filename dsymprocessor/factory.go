@@ -17,15 +17,17 @@ var (
 // createDefaultConfig creates the default configuration for the processor.
 func createDefaultConfig() component.Config {
 	return &Config{
-		SymbolicatorFailureAttributeKey:       "exception.symbolicator.failed",
-		StackTraceAttributeKey:                "exception.stacktrace",
-		OriginalStackTraceKey:                 "exception.stacktrace.original",
-		AppExecutableAttributeKey:             "app.bundle.executable",
-		BuildUUIDAttributeKey:                 "app.debug.build_uuid",
-		MetricKitStackTraceAttributeKey:       "metrickit.diagnostic.crash.exception.stacktrace_json",
-		OutputMetricKitStackTraceAttributeKey: "exception.stacktrace",
-		PreserveStackTrace:                    true,
-		DSYMStoreKey:                          "file_store",
+		SymbolicatorFailureAttributeKey:             "exception.symbolicator.failed",
+		StackTraceAttributeKey:                      "exception.stacktrace",
+		OriginalStackTraceKey:                       "exception.stacktrace.original",
+		AppExecutableAttributeKey:                   "app.bundle.executable",
+		BuildUUIDAttributeKey:                       "app.debug.build_uuid",
+		MetricKitStackTraceAttributeKey:             "metrickit.diagnostic.crash.exception.stacktrace_json",
+		OutputMetricKitStackTraceAttributeKey:       "exception.stacktrace",
+		OutputMetricKitExceptionTypeAttributeKey:    "exception.type",
+		OutputMetricKitExceptionMessageAttributeKey: "exception.message",
+		PreserveStackTrace:                          true,
+		DSYMStoreKey:                                "file_store",
 		LocalDSYMConfiguration: &LocalDSYMConfiguration{
 			Path: ".",
 		},
