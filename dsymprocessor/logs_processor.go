@@ -67,25 +67,13 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rl pl
 
 			// if we have a stack trace, try symbolicating it
 			if _, ok := attributes.Get(sp.cfg.StackTraceAttributeKey); ok {
-				err := sp.processStackTraceAttributes(ctx, attributes, rl.Resource().Attributes())
-				if err != nil {
-					attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
-					attributes.PutStr("exception.symbolicator.error", err.Error())
-					sp.logger.Debug("Error processing span", zap.Error(err))
-				}
-
+				sp.processStackTraceAttributes(ctx, attributes, rl.Resource().Attributes())
 				continue
 			}
 
 			// no stack trace, let's check if there's a metrickit attribute
 			if _, ok := attributes.Get(sp.cfg.MetricKitStackTraceAttributeKey); ok {
-				err := sp.processMetricKitAttributes(ctx, attributes)
-				if err != nil {
-					attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
-					attributes.PutStr("exception.symbolicator.error", err.Error())
-					sp.logger.Debug("Error processing span", zap.Error(err))
-				}
-
+				sp.processMetricKitAttributes(ctx, attributes)
 				continue
 			}
 
@@ -105,7 +93,16 @@ func formatStackFrames(prefix, binaryName string, offset uint64, frames []*mappe
 	return strings.Join(lines, "\n")
 }
 
-func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) error {
+func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) {
+	err := sp.processStackTraceAttributesThrows(ctx, attributes, resourceAttributes)
+	if err != nil {
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+		attributes.PutStr("exception.symbolicator.error", err.Error())
+		sp.logger.Debug("Error processing span", zap.Error(err))
+	}
+}
+
+func (sp *symbolicatorProcessor) processStackTraceAttributesThrows(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) error {
 	var ok bool
 	var stackTraceValue pcommon.Value
 	var binaryNameValue pcommon.Value
@@ -222,7 +219,16 @@ type MetricKitCallStackFrame struct {
 	BinaryName                  string
 }
 
-func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context, attributes pcommon.Map) error {
+func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context, attributes pcommon.Map) {
+	err := sp.processMetricKitAttributesThrows(ctx, attributes)
+	if err != nil {
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+		attributes.PutStr("exception.symbolicator.error", err.Error())
+		sp.logger.Debug("Error processing span", zap.Error(err))
+	}
+}
+
+func (sp *symbolicatorProcessor) processMetricKitAttributesThrows(ctx context.Context, attributes pcommon.Map) error {
 	var ok bool
 	var metrickitStackTraceValue pcommon.Value
 
