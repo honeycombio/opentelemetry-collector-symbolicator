@@ -103,6 +103,9 @@ func TestProcess(t *testing.T) {
 				attr, ok = span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
 				assert.True(t, ok)
 				assert.Equal(t, false, attr.Bool())
+
+				_, ok = span.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
+				assert.False(t, ok)
 			},
 		},
 		{
@@ -269,6 +272,9 @@ func TestProcess(t *testing.T) {
 				attr, ok := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
 				assert.True(t, ok)
 				assert.Equal(t, true, attr.Bool())
+				attr, ok = span.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "column must be uint32: 4294967296", attr.Str())
 			},
 		},
 	}
