@@ -337,10 +337,10 @@ func TestProcessFailure_WrongKey(t *testing.T) {
 
 	// has error
 	hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-	assert.False(t, hasFailureAttr)
+	assert.True(t, hasFailureAttr)
 	assert.True(t, hasFailure.Bool())
 	errorMessage, hasErrorMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
-	assert.False(t, hasErrorMessage)
+	assert.True(t, hasErrorMessage)
 	assert.Equal(t, "Invalid state! Called processMetricKitAttributes while missing metrickit.diagnostic.crash.exception.stacktrace_json attribute", errorMessage.Str())
 }
 
@@ -374,9 +374,9 @@ func TestProcessFailure_InvalidJson(t *testing.T) {
 
 	// has error
 	hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-	assert.False(t, hasFailureAttr)
+	assert.True(t, hasFailureAttr)
 	assert.True(t, hasFailure.Bool())
 	errorMessage, hasErrorMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
-	assert.False(t, hasErrorMessage)
+	assert.True(t, hasErrorMessage)
 	assert.Equal(t, "Invalid state! Called processMetricKitAttributes while missing metrickit.diagnostic.crash.exception.stacktrace_json attribute", errorMessage.Str())
 }
