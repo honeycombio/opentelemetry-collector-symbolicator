@@ -78,7 +78,7 @@ func TestProcessStackTrace(t *testing.T) {
 			log.Attributes().PutEmpty(cfg.BuildUUIDAttributeKey).SetStr("6A8CB813-45F6-3652-AD33-778FD1EAB196")
 			log.Attributes().PutEmpty(cfg.AppExecutableAttributeKey).SetStr("Chateaux Bufeaux")
 
-			err := processor.processStackTraceAttributes(ctx, log.Attributes())
+			err := processor.processStackTraceAttributes(ctx, log.Attributes(), log.Attributes())
 			assert.NoError(t, err)
 
 			symbolicated, found := log.Attributes().Get(cfg.StackTraceAttributeKey)

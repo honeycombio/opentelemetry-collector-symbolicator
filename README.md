@@ -166,18 +166,18 @@ Any frames that refer to unknown binaries will be left as-is.
 
 The following configuration options can also be provided to change the attributes used to look for stack traces and store them.
 
-| Config Key                                         | Description                                                                                       | Example Value                                          |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `symbolicator_failure_attribute_key`               | Signals if the the symbolicator fails to fully symbolicate the stack trace                        | `exception.symbolicator.failed`                        |
-| `stack_trace_attribute_key`                        | Which attribute should the stack trace of a generic stacktrace log be sourced from                | `exception.stacktrace`                                 |
-| `original_stack_trace_key`                         | If the stack trace is being preserved, which key should it be copied to                           | `exception.stacktrace.original`                        |
-| `build_uuid_attribute_key`                         | Which attribute should the binary UUID of a generic stacktrace log be sourced from                | `app.debug.build_uuid`                                 |
-| `app_executable_attribute_key`                     | Which attribute should the name of the app executable of a generic stacktrace log be sourced from | `app.bundle.executable`                                |
-| `metrickit_stack_trace_attribute_key`              | Which attribute should the json representation of a metrickit stacktrace log be sourced from      | `metrickit.diagnostic.crash.exception.stacktrace_json` |
-| `output_metrickit_stack_trace_attribute_key`       | Which attribute should the symbolicated metrickit stack trace be populated into                   | `exception.stacktrace`                                 |
-| `output_metrickit_exception_type_attribute_key`    | Which attribute should the exception type be populated into                                       | `exception.type`.                                      |
-| `output_metrickit_exception_message_attribute_key` | Which attribute should the exception message be populated into                                    | `exception.message`.                                   |
-| `preserve_stack_trace`                             | After the stack trace has been symbolicated should the original values be preserved as attributes | `true`                                                 |
+| Config Key                                         | Description                                                                                                | Example Value                                          |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `symbolicator_failure_attribute_key`               | Signals if the the symbolicator fails to fully symbolicate the stack trace                                 | `exception.symbolicator.failed`                        |
+| `stack_trace_attribute_key`                        | Which attribute should the stack trace of a generic stacktrace log be sourced from                         | `exception.stacktrace`                                 |
+| `original_stack_trace_key`                         | If the stack trace is being preserved, which key should it be copied to                                    | `exception.stacktrace.original`                        |
+| `build_uuid_attribute_key`                         | Which resource attribute should the binary UUID of a generic stacktrace log be sourced from                | `app.debug.build_uuid`                                 |
+| `app_executable_attribute_key`                     | Which resource attribute should the name of the app executable of a generic stacktrace log be sourced from | `app.bundle.executable`                                |
+| `metrickit_stack_trace_attribute_key`              | Which attribute should the json representation of a metrickit stacktrace log be sourced from               | `metrickit.diagnostic.crash.exception.stacktrace_json` |
+| `output_metrickit_stack_trace_attribute_key`       | Which attribute should the symbolicated metrickit stack trace be populated into                            | `exception.stacktrace`                                 |
+| `output_metrickit_exception_type_attribute_key`    | Which attribute should the exception type be populated into                                                | `exception.type`.                                      |
+| `output_metrickit_exception_message_attribute_key` | Which attribute should the exception message be populated into                                             | `exception.message`.                                   |
+| `preserve_stack_trace`                             | After the stack trace has been symbolicated should the original values be preserved as attributes          | `true`                                                 |
 
 
 #### Additional Options

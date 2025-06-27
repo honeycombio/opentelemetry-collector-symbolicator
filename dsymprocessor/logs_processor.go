@@ -67,7 +67,7 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rl pl
 
 			// if we have a stack trace, try symbolicating it
 			if _, ok := attributes.Get(sp.cfg.StackTraceAttributeKey); ok {
-				err := sp.processStackTraceAttributes(ctx, attributes)
+				err := sp.processStackTraceAttributes(ctx, attributes, rl.Resource().Attributes())
 				if err != nil {
 					attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 					attributes.PutStr("exception.symbolicator.error", err.Error())
@@ -105,7 +105,7 @@ func formatStackFrames(prefix, binaryName string, offset uint64, frames []*mappe
 	return strings.Join(lines, "\n")
 }
 
-func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context, attributes pcommon.Map) error {
+func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) error {
 	var ok bool
 	var stackTraceValue pcommon.Value
 	var binaryNameValue pcommon.Value
@@ -117,12 +117,12 @@ func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context
 	}
 	rawStackTrace := stackTraceValue.Str()
 
-	if buildUUIDValue, ok = attributes.Get(sp.cfg.BuildUUIDAttributeKey); !ok {
+	if buildUUIDValue, ok = resourceAttributes.Get(sp.cfg.BuildUUIDAttributeKey); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.BuildUUIDAttributeKey)
 	}
 	buildUUID := buildUUIDValue.Str()
 
-	if binaryNameValue, ok = attributes.Get(sp.cfg.AppExecutableAttributeKey); !ok {
+	if binaryNameValue, ok = resourceAttributes.Get(sp.cfg.AppExecutableAttributeKey); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.AppExecutableAttributeKey)
 	}
 	binaryName := binaryNameValue.Str()
@@ -147,11 +147,15 @@ func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context
 	return nil
 }
 
-// groups: line number, library name, hex address, uuid or binary name, offset
+// groups: stack index, library name, hex address, uuid or binary name, offset
 var stackLineRegex = regexp.MustCompile(`^([0-9]+)\s+([\w _\-\.]+[\w_\-\.])\s+(0x[\da-f]+)\s+([\w _\-\.]*) \+ (\d+)`)
 var uuidRegex = regexp.MustCompile(`[0-9A-Z]{8}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{12}`)
 
 func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line, binaryName, buildUUID string) (string, error) {
+	if !stackLineRegex.MatchString(line) {
+		// stacktrace line not formated the way we expect, skip it
+		return line, nil
+	}
 	matches := stackLineRegex.FindStringSubmatch(line)
 	matchIdxes := stackLineRegex.FindStringSubmatchIndex(line)
 	libName := matches[2]
