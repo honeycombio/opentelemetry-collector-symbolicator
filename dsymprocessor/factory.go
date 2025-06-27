@@ -18,6 +18,7 @@ var (
 func createDefaultConfig() component.Config {
 	return &Config{
 		SymbolicatorFailureAttributeKey:             "exception.symbolicator.failed",
+		SymbolicatorFailureMessageAttributeKey:      "exception.symbolicator.error",
 		StackTraceAttributeKey:                      "exception.stacktrace",
 		OriginalStackTraceKey:                       "exception.stacktrace.original",
 		AppExecutableAttributeKey:                   "app.bundle.executable",
