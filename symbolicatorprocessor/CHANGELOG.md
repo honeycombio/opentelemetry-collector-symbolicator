@@ -1,10 +1,5 @@
 # Symbolicator Processor changelog
 
-## v0.0.8 [beta] - 2025/06/27
-### ✨ Features
-
-- feat: include error message on the log when symbolication fails (#77) | @mustafahaddara
-
 ## v0.0.7 [beta] - 2025/06/16
 ### 🚧 Maintenance
 
