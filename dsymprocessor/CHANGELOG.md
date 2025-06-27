@@ -1,5 +1,10 @@
 # dSYM Processor changelog
 
+## v0.0.4 [beta] - 2025/06/27
+- feat: include error message on the log when symbolication fails (#77) | @mustafahaddara
+- fix: get app.debug.build_uuid and app.bundle.executable from the resource attributes, not the log attributes (#77) | @mustafahaddara
+- fix: do not crash when a line of the stack trace doesn't match our expected regex (#77) | @mustafahaddara
+
 ## v0.0.3 [beta] - 2025/06/26
 - feat: add exception.type and exception.message attributes to metrickit crashes (#76) | @mustafahaddara
 
