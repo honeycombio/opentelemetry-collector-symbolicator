@@ -54,22 +54,23 @@ urls: ["https://example.com/static/dist/main.c383b093b0b66825a9c3.js","https://e
 
 The following configuration options can also be provided to change the attributes used to look for stack traces and store them.
 
-| Config Key                           | Description                                                                                       | Example Value                                        |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `symbolicator_failure_attribute_key` | Signals if the the symbolicator fails to fully symbolicate the stack trace                        | `exception.symbolicator.failed`                      |
-| `columns_attribute_key`              | Which attribute should the columns of the stack trace be sourced from                             | `exception.structured_stacktrace.columns`            |
-| `functions_attribute_key`            | Which attribute should the functions of the stack trace be sourced from                           | `exception.structured_stacktrace.functions`          |
-| `lines_attribute_key`                | Which attribute should the lines of the stack trace be sourced from                               | `exception.structured_stacktrace.lines`              |
-| `urls_attribute_key`                 | Which attribute should the urls of the stack trace be sourced from                                | `exception.structured_stacktrace.urls`               |
-| `output_stack_trace_key`             | Which attribute should the symbolicated stack trace be populated into                             | `exception.stacktrace`                               |
-| `stack_type_key`                     | Which attribute contains the exception type                                                       | `exception.type`                                     |
-| `stack_message_key`                  | Which attribute contains the exception message                                                    | `exception.message`                                  |
-| `preserve_stack_trace`               | After the stack trace has been symbolicated should the original values be preserved as attributes | `true`                                               |
-| `original_stack_trace_key`           | If the stack trace is being preserved which key should it be copied to                            | `exception.stacktrace.original`                      |
-| `original_columns_attribute_key`     | If the stack trace is being preserved which key should the functions be copied to                 | `exception.structured_stacktrace.functions.original` |
-| `original_functions_attribute_key`   | If the stack trace is being preserved which key should the lines be copied to                     | `exception.structured_stacktrace.lines.original`     |
-| `original_lines_attribute_key`       | If the stack trace is being preserved which key should the columns be copied to                   | `exception.structured_stacktrace.columns.original`   |
-| `original_urls_attribute_key`        | If the stack trace is being preserved which key should the urls be copied to                      | `exception.structured_stacktrace.urls.original`      |
+| Config Key                                   | Description                                                                                       | Example Value                                        |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `symbolicator_failure_attribute_key`         | Signals if the the symbolicator fails to fully symbolicate the stack trace                        | `exception.symbolicator.failed`                      |
+| `symbolicator_failure_message_attribute_key` | Contains the error message if the the symbolicator fails to fully symbolicate the stack trace     | `exception.symbolicator.error`                       |
+| `columns_attribute_key`                      | Which attribute should the columns of the stack trace be sourced from                             | `exception.structured_stacktrace.columns`            |
+| `functions_attribute_key`                    | Which attribute should the functions of the stack trace be sourced from                           | `exception.structured_stacktrace.functions`          |
+| `lines_attribute_key`                        | Which attribute should the lines of the stack trace be sourced from                               | `exception.structured_stacktrace.lines`              |
+| `urls_attribute_key`                         | Which attribute should the urls of the stack trace be sourced from                                | `exception.structured_stacktrace.urls`               |
+| `output_stack_trace_key`                     | Which attribute should the symbolicated stack trace be populated into                             | `exception.stacktrace`                               |
+| `stack_type_key`                             | Which attribute contains the exception type                                                       | `exception.type`                                     |
+| `stack_message_key`                          | Which attribute contains the exception message                                                    | `exception.message`                                  |
+| `preserve_stack_trace`                       | After the stack trace has been symbolicated should the original values be preserved as attributes | `true`                                               |
+| `original_stack_trace_key`                   | If the stack trace is being preserved which key should it be copied to                            | `exception.stacktrace.original`                      |
+| `original_columns_attribute_key`             | If the stack trace is being preserved which key should the functions be copied to                 | `exception.structured_stacktrace.functions.original` |
+| `original_functions_attribute_key`           | If the stack trace is being preserved which key should the lines be copied to                     | `exception.structured_stacktrace.lines.original`     |
+| `original_lines_attribute_key`               | If the stack trace is being preserved which key should the columns be copied to                   | `exception.structured_stacktrace.columns.original`   |
+| `original_urls_attribute_key`                | If the stack trace is being preserved which key should the urls be copied to                      | `exception.structured_stacktrace.urls.original`      |
 
 #### Additional Options
 
@@ -166,18 +167,19 @@ Any frames that refer to unknown binaries will be left as-is.
 
 The following configuration options can also be provided to change the attributes used to look for stack traces and store them.
 
-| Config Key                                         | Description                                                                                       | Example Value                                          |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `symbolicator_failure_attribute_key`               | Signals if the the symbolicator fails to fully symbolicate the stack trace                        | `exception.symbolicator.failed`                        |
-| `stack_trace_attribute_key`                        | Which attribute should the stack trace of a generic stacktrace log be sourced from                | `exception.stacktrace`                                 |
-| `original_stack_trace_key`                         | If the stack trace is being preserved, which key should it be copied to                           | `exception.stacktrace.original`                        |
-| `build_uuid_attribute_key`                         | Which attribute should the binary UUID of a generic stacktrace log be sourced from                | `app.debug.build_uuid`                                 |
-| `app_executable_attribute_key`                     | Which attribute should the name of the app executable of a generic stacktrace log be sourced from | `app.bundle.executable`                                |
-| `metrickit_stack_trace_attribute_key`              | Which attribute should the json representation of a metrickit stacktrace log be sourced from      | `metrickit.diagnostic.crash.exception.stacktrace_json` |
-| `output_metrickit_stack_trace_attribute_key`       | Which attribute should the symbolicated metrickit stack trace be populated into                   | `exception.stacktrace`                                 |
-| `output_metrickit_exception_type_attribute_key`    | Which attribute should the exception type be populated into                                       | `exception.type`.                                      |
-| `output_metrickit_exception_message_attribute_key` | Which attribute should the exception message be populated into                                    | `exception.message`.                                   |
-| `preserve_stack_trace`                             | After the stack trace has been symbolicated should the original values be preserved as attributes | `true`                                                 |
+| Config Key                                         | Description                                                                                                | Example Value                                          |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `symbolicator_failure_attribute_key`               | Signals if the the symbolicator fails to fully symbolicate the stack trace                                 | `exception.symbolicator.failed`                        |
+| `symbolicator_failure_message_attribute_key`       | Contains the error message if the the symbolicator fails to fully symbolicate the stack trace              | `exception.symbolicator.error`                         |
+| `stack_trace_attribute_key`                        | Which attribute should the stack trace of a generic stacktrace log be sourced from                         | `exception.stacktrace`                                 |
+| `original_stack_trace_key`                         | If the stack trace is being preserved, which key should it be copied to                                    | `exception.stacktrace.original`                        |
+| `build_uuid_attribute_key`                         | Which resource attribute should the binary UUID of a generic stacktrace log be sourced from                | `app.debug.build_uuid`                                 |
+| `app_executable_attribute_key`                     | Which resource attribute should the name of the app executable of a generic stacktrace log be sourced from | `app.bundle.executable`                                |
+| `metrickit_stack_trace_attribute_key`              | Which attribute should the json representation of a metrickit stacktrace log be sourced from               | `metrickit.diagnostic.crash.exception.stacktrace_json` |
+| `output_metrickit_stack_trace_attribute_key`       | Which attribute should the symbolicated metrickit stack trace be populated into                            | `exception.stacktrace`                                 |
+| `output_metrickit_exception_type_attribute_key`    | Which attribute should the exception type be populated into                                                | `exception.type`.                                      |
+| `output_metrickit_exception_message_attribute_key` | Which attribute should the exception message be populated into                                             | `exception.message`.                                   |
+| `preserve_stack_trace`                             | After the stack trace has been symbolicated should the original values be preserved as attributes          | `true`                                                 |
 
 
 #### Additional Options

@@ -78,8 +78,7 @@ func TestProcessStackTrace(t *testing.T) {
 			log.Attributes().PutEmpty(cfg.BuildUUIDAttributeKey).SetStr("6A8CB813-45F6-3652-AD33-778FD1EAB196")
 			log.Attributes().PutEmpty(cfg.AppExecutableAttributeKey).SetStr("Chateaux Bufeaux")
 
-			err := processor.processStackTraceAttributes(ctx, log.Attributes())
-			assert.NoError(t, err)
+			processor.processStackTraceAttributes(ctx, log.Attributes(), log.Attributes())
 
 			symbolicated, found := log.Attributes().Get(cfg.StackTraceAttributeKey)
 			assert.True(t, found)
@@ -96,9 +95,11 @@ func TestProcessStackTrace(t *testing.T) {
 			assert.Equal(t, expected, symbolicated.Str())
 
 			// no failures
-			hasError, found := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-			assert.True(t, found)
-			assert.False(t, hasError.Bool())
+			_, hasFailure := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+			assert.False(t, hasFailure)
+			_, hasFailureMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
+			assert.False(t, hasFailureMessage)
+			
 
 			// original json is preserved based on key
 			originalStackTrace, found := log.Attributes().Get(cfg.OriginalStackTraceKey)
@@ -180,8 +181,7 @@ func TestProcessMetricKit(t *testing.T) {
 			log.SetEventName("metrickit.diagnostic.crash")
 			log.Attributes().PutEmpty(cfg.MetricKitStackTraceAttributeKey).SetStr(jsonstr)
 
-			err := processor.processMetricKitAttributes(ctx, log.Attributes())
-			assert.NoError(t, err)
+			processor.processMetricKitAttributes(ctx, log.Attributes())
 
 			symbolicated, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
 			assert.True(t, found)
@@ -194,9 +194,10 @@ func TestProcessMetricKit(t *testing.T) {
 			assert.Equal(t, expected, symbolicated.Str())
 
 			// no failures
-			hasError, found := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-			assert.True(t, found)
-			assert.False(t, hasError.Bool())
+			_, hasFailure := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+			assert.False(t, hasFailure)
+			_, hasFailureMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
+			assert.False(t, hasFailureMessage)
 
 			// original json is preserved based on key
 			metrickitJson, found := log.Attributes().Get(cfg.MetricKitStackTraceAttributeKey)
@@ -240,8 +241,7 @@ func TestMetricKitExceptionAttrs(t *testing.T) {
 	log.Attributes().PutEmpty("metrickit.diagnostic.crash.exception.mach_exception.name").SetStr("exception type")
 	log.Attributes().PutEmpty("metrickit.diagnostic.crash.exception.mach_exception.description").SetStr("message")
 
-	err := processor.processMetricKitAttributes(ctx, log.Attributes())
-	assert.NoError(t, err)
+	processor.processMetricKitAttributes(ctx, log.Attributes())
 
 	exceptionType, found := log.Attributes().Get(cfg.OutputMetricKitExceptionTypeAttributeKey)
 	assert.True(t, found)
@@ -255,8 +255,7 @@ func TestMetricKitExceptionAttrs(t *testing.T) {
 	log.Attributes().PutEmpty("metrickit.diagnostic.crash.exception.objc.type").SetStr("objc exception type")
 	log.Attributes().PutEmpty("metrickit.diagnostic.crash.exception.objc.message").SetStr("objc message")
 
-	err = processor.processMetricKitAttributes(ctx, log.Attributes())
-	assert.NoError(t, err)
+	processor.processMetricKitAttributes(ctx, log.Attributes())
 
 	exceptionType, found= log.Attributes().Get(cfg.OutputMetricKitExceptionTypeAttributeKey)
 	assert.True(t, found)
@@ -331,15 +330,18 @@ func TestProcessFailure_WrongKey(t *testing.T) {
 	log.SetEventName("metrickit.diagnostic.crash")
 	log.Attributes().PutEmpty("incorrect.attribute.key").SetStr(jsonstr)
 
-	err := processor.processMetricKitAttributes(ctx, log.Attributes())
-	assert.Error(t, err)
+	processor.processMetricKitAttributes(ctx, log.Attributes())
 
 	_, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
 	assert.False(t, found)
 
-	hasError, found := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-	assert.True(t, found)
-	assert.True(t, hasError.Bool())
+	// has error
+	hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+	assert.True(t, hasFailureAttr)
+	assert.True(t, hasFailure.Bool())
+	errorMessage, hasErrorMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
+	assert.True(t, hasErrorMessage)
+	assert.Equal(t, "Invalid state! Called processMetricKitAttributes while missing metrickit.diagnostic.crash.exception.stacktrace_json attribute", errorMessage.Str())
 }
 
 func TestProcessFailure_InvalidJson(t *testing.T) {
@@ -365,13 +367,16 @@ func TestProcessFailure_InvalidJson(t *testing.T) {
 	log.Attributes().PutEmpty("incorrect.attribute.key").SetStr(jsonstr)
 	
 
-	err := processor.processMetricKitAttributes(ctx, log.Attributes())
-	assert.Error(t, err)
+	processor.processMetricKitAttributes(ctx, log.Attributes())
 
 	_, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
 	assert.False(t, found)
 
-	hasError, found := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-	assert.True(t, found)
-	assert.True(t, hasError.Bool())
+	// has error
+	hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+	assert.True(t, hasFailureAttr)
+	assert.True(t, hasFailure.Bool())
+	errorMessage, hasErrorMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
+	assert.True(t, hasErrorMessage)
+	assert.Equal(t, "Invalid state! Called processMetricKitAttributes while missing metrickit.diagnostic.crash.exception.stacktrace_json attribute", errorMessage.Str())
 }

@@ -67,21 +67,13 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rl pl
 
 			// if we have a stack trace, try symbolicating it
 			if _, ok := attributes.Get(sp.cfg.StackTraceAttributeKey); ok {
-				err := sp.processStackTraceAttributes(ctx, attributes)
-				if err != nil {
-					sp.logger.Debug("Error processing span", zap.Error(err))
-				}
-
+				sp.processStackTraceAttributes(ctx, attributes, rl.Resource().Attributes())
 				continue
 			}
 
 			// no stack trace, let's check if there's a metrickit attribute
 			if _, ok := attributes.Get(sp.cfg.MetricKitStackTraceAttributeKey); ok {
-				err := sp.processMetricKitAttributes(ctx, attributes)
-				if err != nil {
-					sp.logger.Debug("Error processing span", zap.Error(err))
-				}
-
+				sp.processMetricKitAttributes(ctx, attributes)
 				continue
 			}
 
@@ -101,10 +93,16 @@ func formatStackFrames(prefix, binaryName string, offset uint64, frames []*mappe
 	return strings.Join(lines, "\n")
 }
 
-func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context, attributes pcommon.Map) error {
-	// set this true at the beginning. If we succeed, we'll hit the "set to false" call at the end of this function
-	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) {
+	err := sp.processStackTraceAttributesThrows(ctx, attributes, resourceAttributes)
+	if err != nil {
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+		attributes.PutStr("exception.symbolicator.error", err.Error())
+		sp.logger.Debug("Error processing span", zap.Error(err))
+	}
+}
 
+func (sp *symbolicatorProcessor) processStackTraceAttributesThrows(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) error {
 	var ok bool
 	var stackTraceValue pcommon.Value
 	var binaryNameValue pcommon.Value
@@ -116,12 +114,12 @@ func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context
 	}
 	rawStackTrace := stackTraceValue.Str()
 
-	if buildUUIDValue, ok = attributes.Get(sp.cfg.BuildUUIDAttributeKey); !ok {
+	if buildUUIDValue, ok = resourceAttributes.Get(sp.cfg.BuildUUIDAttributeKey); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.BuildUUIDAttributeKey)
 	}
 	buildUUID := buildUUIDValue.Str()
 
-	if binaryNameValue, ok = attributes.Get(sp.cfg.AppExecutableAttributeKey); !ok {
+	if binaryNameValue, ok = resourceAttributes.Get(sp.cfg.AppExecutableAttributeKey); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.AppExecutableAttributeKey)
 	}
 	binaryName := binaryNameValue.Str()
@@ -142,16 +140,19 @@ func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context
 		attributes.PutStr(sp.cfg.OriginalStackTraceKey, rawStackTrace)
 	}
 	attributes.PutStr(sp.cfg.StackTraceAttributeKey, strings.Join(res, "\n"))
-	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
 
 	return nil
 }
 
-// groups: line number, library name, hex address, uuid or binary name, offset
+// groups: stack index, library name, hex address, uuid or binary name, offset
 var stackLineRegex = regexp.MustCompile(`^([0-9]+)\s+([\w _\-\.]+[\w_\-\.])\s+(0x[\da-f]+)\s+([\w _\-\.]*) \+ (\d+)`)
 var uuidRegex = regexp.MustCompile(`[0-9A-Z]{8}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{12}`)
 
 func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line, binaryName, buildUUID string) (string, error) {
+	if !stackLineRegex.MatchString(line) {
+		// stacktrace line not formated the way we expect, skip it
+		return line, nil
+	}
 	matches := stackLineRegex.FindStringSubmatch(line)
 	matchIdxes := stackLineRegex.FindStringSubmatchIndex(line)
 	libName := matches[2]
@@ -218,10 +219,16 @@ type MetricKitCallStackFrame struct {
 	BinaryName                  string
 }
 
-func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context, attributes pcommon.Map) error {
-	// set this true at the beginning. If we succeed, we'll hit the "set to false" call at the end of this function
-	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context, attributes pcommon.Map) {
+	err := sp.processMetricKitAttributesThrows(ctx, attributes)
+	if err != nil {
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+		attributes.PutStr("exception.symbolicator.error", err.Error())
+		sp.logger.Debug("Error processing span", zap.Error(err))
+	}
+}
 
+func (sp *symbolicatorProcessor) processMetricKitAttributesThrows(ctx context.Context, attributes pcommon.Map) error {
 	var ok bool
 	var metrickitStackTraceValue pcommon.Value
 
@@ -266,9 +273,6 @@ func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context,
 	if !sp.cfg.PreserveStackTrace {
 		attributes.Remove(sp.cfg.MetricKitStackTraceAttributeKey)
 	}
-
-	// everything was a success, we can overwrite the `true` we put in at the beginning
-	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
 
 	// and we need to set exception.type and exception.message to make this a semantically valid exception
 	sp.setMetricKitExceptionAttrs(ctx, attributes)
