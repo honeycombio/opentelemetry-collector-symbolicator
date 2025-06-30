@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/storage v1.55.0
 	github.com/aws/aws-sdk-go-v2 v1.36.5
 	github.com/aws/aws-sdk-go-v2/config v1.29.17
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.81.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.82.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/honeycombio/symbolic-go v0.0.7
 	github.com/stretchr/testify v1.10.0
