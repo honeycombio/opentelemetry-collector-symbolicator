@@ -2,4 +2,21 @@ type: symbolicator
 status:
   class: processor
   stability:
-    stable: [traces] # seems like the processor only supports traces, not metrics or logs. I'll try to find out why.
+    stable: [traces] # TODO: Check in to see if we consider input traces "stable"
+
+telemetry:
+  metrics:
+    symbolicator_total_failed_frames:
+      enabled: true
+      description: Total number of frames the symbolicator failed to symbolicate.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
+    symbolicator_symbolication_duration:
+      enabled: true
+      description: Duration in seconds taken to symbolicate frames.
+      unit: "1"
+      sum:
+        value_type: double
+        monotonic: true
