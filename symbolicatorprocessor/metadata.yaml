@@ -1,0 +1,5 @@
+type: symbolicator
+status:
+  class: processor
+  stability:
+    stable: [traces] # seems like the processor only supports traces, not metrics or logs. I'll try to find out why.
