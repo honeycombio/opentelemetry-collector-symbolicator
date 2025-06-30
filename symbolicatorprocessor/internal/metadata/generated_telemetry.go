@@ -23,11 +23,17 @@ func Tracer(settings component.TelemetrySettings) trace.Tracer {
 // TelemetryBuilder provides an interface for components to report telemetry
 // as defined in metadata and user config.
 type TelemetryBuilder struct {
-	meter                             metric.Meter
-	mu                                sync.Mutex
-	registrations                     []metric.Registration
-	SymbolicatorSymbolicationDuration metric.Float64Counter
-	SymbolicatorTotalFailedFrames     metric.Int64Counter
+	meter                                   metric.Meter
+	mu                                      sync.Mutex
+	registrations                           []metric.Registration
+	ProcessMemoryRss                        metric.Int64Gauge
+	ProcessUptime                           metric.Float64Gauge
+	ProcessorIncomingItems                  metric.Int64Counter
+	ProcessorOutgoingItems                  metric.Int64Counter
+	SymbolicatorSourceMapCacheSize          metric.Int64Gauge
+	SymbolicatorSourceMapFetchFailuresTotal metric.Int64Counter
+	SymbolicatorSymbolicationDuration       metric.Float64Counter
+	SymbolicatorTotalFailedFrames           metric.Int64Counter
 }
 
 // TelemetryBuilderOption applies changes to default builder.
@@ -59,6 +65,42 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...Teleme
 	}
 	builder.meter = Meter(settings)
 	var err, errs error
+	builder.ProcessMemoryRss, err = builder.meter.Int64Gauge(
+		"otelcol_process_memory_rss",
+		metric.WithDescription("Memory usage of the processor in bytes."),
+		metric.WithUnit("1"),
+	)
+	errs = errors.Join(errs, err)
+	builder.ProcessUptime, err = builder.meter.Float64Gauge(
+		"otelcol_process_uptime",
+		metric.WithDescription("Uptime of the processor in seconds."),
+		metric.WithUnit("1"),
+	)
+	errs = errors.Join(errs, err)
+	builder.ProcessorIncomingItems, err = builder.meter.Int64Counter(
+		"otelcol_processor_incoming_items",
+		metric.WithDescription("Total number of items received by the processor."),
+		metric.WithUnit("1"),
+	)
+	errs = errors.Join(errs, err)
+	builder.ProcessorOutgoingItems, err = builder.meter.Int64Counter(
+		"otelcol_processor_outgoing_items",
+		metric.WithDescription("Total number of items sent by the processor."),
+		metric.WithUnit("1"),
+	)
+	errs = errors.Join(errs, err)
+	builder.SymbolicatorSourceMapCacheSize, err = builder.meter.Int64Gauge(
+		"otelcol_symbolicator_source_map_cache_size",
+		metric.WithDescription("Size of the source map cache in bytes."),
+		metric.WithUnit("1"),
+	)
+	errs = errors.Join(errs, err)
+	builder.SymbolicatorSourceMapFetchFailuresTotal, err = builder.meter.Int64Counter(
+		"otelcol_symbolicator_source_map_fetch_failures_total",
+		metric.WithDescription("Total number of source map fetch failures."),
+		metric.WithUnit("1"),
+	)
+	errs = errors.Join(errs, err)
 	builder.SymbolicatorSymbolicationDuration, err = builder.meter.Float64Counter(
 		"otelcol_symbolicator_symbolication_duration",
 		metric.WithDescription("Duration in seconds taken to symbolicate frames."),

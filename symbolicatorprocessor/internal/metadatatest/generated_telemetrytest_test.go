@@ -6,7 +6,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -19,8 +18,32 @@ func TestSetupTelemetry(t *testing.T) {
 	tb, err := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
 	require.NoError(t, err)
 	defer tb.Shutdown()
+	tb.ProcessMemoryRss.Record(context.Background(), 1)
+	tb.ProcessUptime.Record(context.Background(), 1)
+	tb.ProcessorIncomingItems.Add(context.Background(), 1)
+	tb.ProcessorOutgoingItems.Add(context.Background(), 1)
+	tb.SymbolicatorSourceMapCacheSize.Record(context.Background(), 1)
+	tb.SymbolicatorSourceMapFetchFailuresTotal.Add(context.Background(), 1)
 	tb.SymbolicatorSymbolicationDuration.Add(context.Background(), 1)
 	tb.SymbolicatorTotalFailedFrames.Add(context.Background(), 1)
+	AssertEqualProcessMemoryRss(t, testTel,
+		[]metricdata.DataPoint[int64]{{Value: 1}},
+		metricdatatest.IgnoreTimestamp())
+	AssertEqualProcessUptime(t, testTel,
+		[]metricdata.DataPoint[float64]{{Value: 1}},
+		metricdatatest.IgnoreTimestamp())
+	AssertEqualProcessorIncomingItems(t, testTel,
+		[]metricdata.DataPoint[int64]{{Value: 1}},
+		metricdatatest.IgnoreTimestamp())
+	AssertEqualProcessorOutgoingItems(t, testTel,
+		[]metricdata.DataPoint[int64]{{Value: 1}},
+		metricdatatest.IgnoreTimestamp())
+	AssertEqualSymbolicatorSourceMapCacheSize(t, testTel,
+		[]metricdata.DataPoint[int64]{{Value: 1}},
+		metricdatatest.IgnoreTimestamp())
+	AssertEqualSymbolicatorSourceMapFetchFailuresTotal(t, testTel,
+		[]metricdata.DataPoint[int64]{{Value: 1}},
+		metricdatatest.IgnoreTimestamp())
 	AssertEqualSymbolicatorSymbolicationDuration(t, testTel,
 		[]metricdata.DataPoint[float64]{{Value: 1}},
 		metricdatatest.IgnoreTimestamp())
