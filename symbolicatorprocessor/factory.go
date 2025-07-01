@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
@@ -60,7 +61,11 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 		return nil, err
 	}
 
-	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store)
+	tb, err := metadata.NewTelemetryBuilder(set.TelemetrySettings)
+	if err != nil {
+		return nil, err
+	}
+	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store, tb)
 	if err != nil {
 		return nil, err
 	}
