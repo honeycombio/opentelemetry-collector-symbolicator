@@ -18,22 +18,22 @@ var (
 // createDefaultConfig creates the default configuration for the processor.
 func createDefaultConfig() component.Config {
 	return &Config{
-		SymbolicatorFailureAttributeKey:             "exception.symbolicator.failed",
-		SymbolicatorFailureMessageAttributeKey:      "exception.symbolicator.error",
-		ColumnsAttributeKey:             "exception.structured_stacktrace.columns",
-		FunctionsAttributeKey:           "exception.structured_stacktrace.functions",
-		LinesAttributeKey:               "exception.structured_stacktrace.lines",
-		UrlsAttributeKey:                "exception.structured_stacktrace.urls",
-		OutputStackTraceKey:             "exception.stacktrace",
-		StackTypeKey:                    "exception.type",
-		StackMessageKey:                 "exception.message",
-		PreserveStackTrace:              true,
-		OriginalStackTraceKey:           "exception.stacktrace.original",
-		OriginalFunctionsAttributeKey:   "exception.structured_stacktrace.functions.original",
-		OriginalLinesAttributeKey:       "exception.structured_stacktrace.lines.original",
-		OriginalColumnsAttributeKey:     "exception.structured_stacktrace.columns.original",
-		OriginalUrlsAttributeKey:        "exception.structured_stacktrace.urls.original",
-		SourceMapStoreKey:               "file_store",
+		SymbolicatorFailureAttributeKey:        "exception.symbolicator.failed",
+		SymbolicatorFailureMessageAttributeKey: "exception.symbolicator.error",
+		ColumnsAttributeKey:                    "exception.structured_stacktrace.columns",
+		FunctionsAttributeKey:                  "exception.structured_stacktrace.functions",
+		LinesAttributeKey:                      "exception.structured_stacktrace.lines",
+		UrlsAttributeKey:                       "exception.structured_stacktrace.urls",
+		OutputStackTraceKey:                    "exception.stacktrace",
+		StackTypeKey:                           "exception.type",
+		StackMessageKey:                        "exception.message",
+		PreserveStackTrace:                     true,
+		OriginalStackTraceKey:                  "exception.stacktrace.original",
+		OriginalFunctionsAttributeKey:          "exception.structured_stacktrace.functions.original",
+		OriginalLinesAttributeKey:              "exception.structured_stacktrace.lines.original",
+		OriginalColumnsAttributeKey:            "exception.structured_stacktrace.columns.original",
+		OriginalUrlsAttributeKey:               "exception.structured_stacktrace.urls.original",
+		SourceMapStoreKey:                      "file_store",
 		LocalSourceMapConfiguration: &LocalSourceMapConfiguration{
 			Path: ".",
 		},
@@ -65,12 +65,12 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 	if err != nil {
 		return nil, err
 	}
-	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store, tb)
+	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store)
 	if err != nil {
 		return nil, err
 	}
 
-	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym)
+	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym, tb)
 	return processorhelper.NewTraces(ctx, set, cfg, next, processor.processTraces, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
 }
 

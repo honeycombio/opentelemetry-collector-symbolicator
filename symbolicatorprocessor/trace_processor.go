@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/processor"
@@ -30,14 +31,17 @@ type symbolicatorProcessor struct {
 	cfg *Config
 
 	symbolicator symbolicator
+
+	telemetryBuilder *metadata.TelemetryBuilder
 }
 
 // newSymbolicatorProcessor creates a new symbolicatorProcessor.
-func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Settings, symbolicator symbolicator) *symbolicatorProcessor {
+func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Settings, symbolicator symbolicator, tb *metadata.TelemetryBuilder) *symbolicatorProcessor {
 	return &symbolicatorProcessor{
-		cfg:          cfg,
-		logger:       set.Logger,
-		symbolicator: symbolicator,
+		cfg:              cfg,
+		logger:           set.Logger,
+		symbolicator:     symbolicator,
+		telemetryBuilder: tb,
 	}
 }
 
@@ -50,6 +54,7 @@ func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Tr
 		rs := td.ResourceSpans().At(i)
 		sp.processResourceSpans(ctx, rs)
 	}
+
 	return td, nil
 }
 

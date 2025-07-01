@@ -6,8 +6,10 @@ import (
 	"math"
 	"testing"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/processor"
 	"go.uber.org/zap/zaptest"
@@ -48,11 +50,17 @@ func TestProcess(t *testing.T) {
 	ctx := context.Background()
 	cfg := createDefaultConfig().(*Config)
 	s := &testSymbolicator{}
+
+	testTel := componenttest.NewTelemetry()
+	tb, err := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
+	assert.NoError(t, err)
+	defer tb.Shutdown()
+
 	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger: zaptest.NewLogger(t),
 		},
-	}, s)
+	}, s, tb)
 
 	tts := []struct {
 		Name                    string

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"github.com/honeycombio/symbolic-go"
 )
 
@@ -20,10 +19,9 @@ type basicSymbolicator struct {
 	timeout time.Duration
 	ch      chan struct{}
 	cache   *lru.Cache[string, *symbolic.SourceMapCache]
-	telemetryBuilder *metadata.TelemetryBuilder
 }
 
-func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCacheSize int, store sourceMapStore, tb *metadata.TelemetryBuilder) (*basicSymbolicator, error) {
+func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCacheSize int, store sourceMapStore) (*basicSymbolicator, error) {
 	cache, err := lru.New[string, *symbolic.SourceMapCache](sourceMapCacheSize) // Adjust the size as needed
 
 	if err != nil {
@@ -35,7 +33,6 @@ func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCac
 		// the channel is buffered to allow for a single request to be in progress at a time
 		ch:    make(chan struct{}, 1),
 		cache: cache,
-		telemetryBuilder: tb,
 	}, nil
 }
 
