@@ -6,7 +6,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -25,7 +24,7 @@ func TestSetupTelemetry(t *testing.T) {
 	tb.ProcessorOutgoingItems.Add(context.Background(), 1)
 	tb.SymbolicatorSourceMapCacheSize.Record(context.Background(), 1)
 	tb.SymbolicatorSourceMapFetchFailuresTotal.Add(context.Background(), 1)
-	tb.SymbolicatorSymbolicationDuration.Add(context.Background(), 1)
+	tb.SymbolicatorSymbolicationDuration.Record(context.Background(), 1)
 	tb.SymbolicatorTotalFailedFrames.Add(context.Background(), 1)
 	AssertEqualProcessMemoryRss(t, testTel,
 		[]metricdata.DataPoint[int64]{{Value: 1}},
@@ -46,7 +45,7 @@ func TestSetupTelemetry(t *testing.T) {
 		[]metricdata.DataPoint[int64]{{Value: 1}},
 		metricdatatest.IgnoreTimestamp())
 	AssertEqualSymbolicatorSymbolicationDuration(t, testTel,
-		[]metricdata.DataPoint[float64]{{Value: 1}},
+		[]metricdata.HistogramDataPoint[float64]{{}}, metricdatatest.IgnoreValue(),
 		metricdatatest.IgnoreTimestamp())
 	AssertEqualSymbolicatorTotalFailedFrames(t, testTel,
 		[]metricdata.DataPoint[int64]{{Value: 1}},

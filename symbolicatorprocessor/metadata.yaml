@@ -44,10 +44,9 @@ telemetry:
     symbolicator_symbolication_duration:
       enabled: true
       description: Duration in seconds taken to symbolicate frames.
-      unit: "1"
-      sum:
+      unit: s
+      histogram:
         value_type: double
-        monotonic: true
     symbolicator_source_map_fetch_failures_total:
       enabled: true
       description: Total number of source map fetch failures.

@@ -32,7 +32,7 @@ type TelemetryBuilder struct {
 	ProcessorOutgoingItems                  metric.Int64Counter
 	SymbolicatorSourceMapCacheSize          metric.Int64Gauge
 	SymbolicatorSourceMapFetchFailuresTotal metric.Int64Counter
-	SymbolicatorSymbolicationDuration       metric.Float64Counter
+	SymbolicatorSymbolicationDuration       metric.Float64Histogram
 	SymbolicatorTotalFailedFrames           metric.Int64Counter
 }
 
@@ -101,10 +101,10 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...Teleme
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)
-	builder.SymbolicatorSymbolicationDuration, err = builder.meter.Float64Counter(
+	builder.SymbolicatorSymbolicationDuration, err = builder.meter.Float64Histogram(
 		"otelcol_symbolicator_symbolication_duration",
 		metric.WithDescription("Duration in seconds taken to symbolicate frames."),
-		metric.WithUnit("1"),
+		metric.WithUnit("s"),
 	)
 	errs = errors.Join(errs, err)
 	builder.SymbolicatorTotalFailedFrames, err = builder.meter.Int64Counter(

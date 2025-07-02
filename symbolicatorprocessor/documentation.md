@@ -58,9 +58,9 @@ Total number of source map fetch failures.
 
 Duration in seconds taken to symbolicate frames.
 
-| Unit | Metric Type | Value Type | Monotonic |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Double | true |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| s | Histogram | Double |
 
 ### otelcol_symbolicator_total_failed_frames
 

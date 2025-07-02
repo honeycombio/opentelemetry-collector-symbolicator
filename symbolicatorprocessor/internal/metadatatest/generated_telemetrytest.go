@@ -111,14 +111,13 @@ func AssertEqualSymbolicatorSourceMapFetchFailuresTotal(t *testing.T, tt *compon
 	metricdatatest.AssertEqual(t, want, got, opts...)
 }
 
-func AssertEqualSymbolicatorSymbolicationDuration(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[float64], opts ...metricdatatest.Option) {
+func AssertEqualSymbolicatorSymbolicationDuration(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.HistogramDataPoint[float64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol_symbolicator_symbolication_duration",
 		Description: "Duration in seconds taken to symbolicate frames.",
-		Unit:        "1",
-		Data: metricdata.Sum[float64]{
+		Unit:        "s",
+		Data: metricdata.Histogram[float64]{
 			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
 			DataPoints:  dps,
 		},
 	}

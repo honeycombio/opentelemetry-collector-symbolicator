@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -51,11 +52,13 @@ func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Tr
 	sp.logger.Info("Processing traces")
 	sp.telemetryBuilder.ProcessorIncomingItems.Add(ctx, int64(td.SpanCount()))
 
+	startTime := time.Now()
 	for i := 0; i < td.ResourceSpans().Len(); i++ {
 		rs := td.ResourceSpans().At(i)
 		sp.processResourceSpans(ctx, rs)
 	}
 
+	sp.telemetryBuilder.SymbolicatorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds())
 	sp.telemetryBuilder.ProcessorOutgoingItems.Add(ctx, int64(td.SpanCount()))
 	return td, nil
 }
