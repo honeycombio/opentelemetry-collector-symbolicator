@@ -1,6 +1,6 @@
 .PHONY: builder
 builder:
-	go install go.opentelemetry.io/collector/cmd/builder@v0.128.0
+	go install go.opentelemetry.io/collector/cmd/builder@v0.129.0
 
 .PHONY: clean
 clean:
