@@ -85,7 +85,7 @@ func AssertEqualSymbolicatorSourceMapCacheSize(t *testing.T, tt *componenttest.T
 	want := metricdata.Metrics{
 		Name:        "otelcol_symbolicator_source_map_cache_size",
 		Description: "Size of the source map cache in bytes.",
-		Unit:        "1",
+		Unit:        "{sourcemaps}",
 		Data: metricdata.Gauge[int64]{
 			DataPoints: dps,
 		},
@@ -138,6 +138,22 @@ func AssertEqualSymbolicatorTotalFailedFrames(t *testing.T, tt *componenttest.Te
 		},
 	}
 	got, err := tt.GetMetric("otelcol_symbolicator_total_failed_frames")
+	require.NoError(t, err)
+	metricdatatest.AssertEqual(t, want, got, opts...)
+}
+
+func AssertEqualSymbolicatorTotalProcessedFrames(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
+	want := metricdata.Metrics{
+		Name:        "otelcol_symbolicator_total_processed_frames",
+		Description: "Total number of frames the symbolicator processed.",
+		Unit:        "1",
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints:  dps,
+		},
+	}
+	got, err := tt.GetMetric("otelcol_symbolicator_total_processed_frames")
 	require.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, opts...)
 }

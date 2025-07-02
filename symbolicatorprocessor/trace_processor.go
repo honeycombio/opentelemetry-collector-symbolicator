@@ -151,6 +151,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 
 	for i := 0; i < columns.Len(); i++ {
 		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
+		sp.telemetryBuilder.SymbolicatorTotalProcessedFrames.Add(ctx, 1)
 
 		if err != nil {
 			hasSymbolicationFailed = true

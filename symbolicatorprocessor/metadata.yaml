@@ -34,6 +34,13 @@ telemetry:
       gauge:
         value_type: int
         monotonic: true
+    symbolicator_total_processed_frames:
+      enabled: true
+      description: Total number of frames the symbolicator processed.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
     symbolicator_total_failed_frames:
       enabled: true
       description: Total number of frames the symbolicator failed to symbolicate.
@@ -57,7 +64,6 @@ telemetry:
     symbolicator_source_map_cache_size:
       enabled: true
       description: Size of the source map cache in bytes.
-      unit: "1"
+      unit: "{sourcemaps}"
       gauge:
         value_type: int
-        monotonic: true
