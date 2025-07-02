@@ -1,5 +1,11 @@
 # Symbolicator Processor changelog
 
+## v0.0.9 [beta] - 2025/07/02
+### 🚧 Maintenance
+- maint(deps): bump the aws group across 2 directories with 1 update (#79)
+- maint(deps): bump the otel group across 3 directories with 5 updates (#81)
+- maint: Update symbolic-go (#83)
+
 ## v0.0.8 [beta] - 2025/06/27
 ### ✨ Features
 
