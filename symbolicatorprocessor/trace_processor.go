@@ -49,12 +49,14 @@ func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Sett
 // in the processorhelper.NewTraces call in factory.go
 func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Traces) (ptrace.Traces, error) {
 	sp.logger.Info("Processing traces")
+	sp.telemetryBuilder.ProcessorIncomingItems.Add(ctx, int64(td.SpanCount()))
 
 	for i := 0; i < td.ResourceSpans().Len(); i++ {
 		rs := td.ResourceSpans().At(i)
 		sp.processResourceSpans(ctx, rs)
 	}
 
+	sp.telemetryBuilder.ProcessorOutgoingItems.Add(ctx, int64(td.SpanCount()))
 	return td, nil
 }
 
