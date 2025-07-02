@@ -54,7 +54,7 @@ telemetry:
       unit: s
       histogram:
         value_type: double
-    symbolicator_source_map_fetch_failures_total:
+    symbolicator_total_source_map_fetch_failures:
       enabled: true
       description: Total number of source map fetch failures.
       unit: "1"

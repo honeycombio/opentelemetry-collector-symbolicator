@@ -23,10 +23,10 @@ func TestSetupTelemetry(t *testing.T) {
 	tb.ProcessorIncomingItems.Add(context.Background(), 1)
 	tb.ProcessorOutgoingItems.Add(context.Background(), 1)
 	tb.SymbolicatorSourceMapCacheSize.Record(context.Background(), 1)
-	tb.SymbolicatorSourceMapFetchFailuresTotal.Add(context.Background(), 1)
 	tb.SymbolicatorSymbolicationDuration.Record(context.Background(), 1)
 	tb.SymbolicatorTotalFailedFrames.Add(context.Background(), 1)
 	tb.SymbolicatorTotalProcessedFrames.Add(context.Background(), 1)
+	tb.SymbolicatorTotalSourceMapFetchFailures.Add(context.Background(), 1)
 	AssertEqualProcessMemoryRss(t, testTel,
 		[]metricdata.DataPoint[int64]{{Value: 1}},
 		metricdatatest.IgnoreTimestamp())
@@ -42,9 +42,6 @@ func TestSetupTelemetry(t *testing.T) {
 	AssertEqualSymbolicatorSourceMapCacheSize(t, testTel,
 		[]metricdata.DataPoint[int64]{{Value: 1}},
 		metricdatatest.IgnoreTimestamp())
-	AssertEqualSymbolicatorSourceMapFetchFailuresTotal(t, testTel,
-		[]metricdata.DataPoint[int64]{{Value: 1}},
-		metricdatatest.IgnoreTimestamp())
 	AssertEqualSymbolicatorSymbolicationDuration(t, testTel,
 		[]metricdata.HistogramDataPoint[float64]{{}}, metricdatatest.IgnoreValue(),
 		metricdatatest.IgnoreTimestamp())
@@ -52,6 +49,9 @@ func TestSetupTelemetry(t *testing.T) {
 		[]metricdata.DataPoint[int64]{{Value: 1}},
 		metricdatatest.IgnoreTimestamp())
 	AssertEqualSymbolicatorTotalProcessedFrames(t, testTel,
+		[]metricdata.DataPoint[int64]{{Value: 1}},
+		metricdatatest.IgnoreTimestamp())
+	AssertEqualSymbolicatorTotalSourceMapFetchFailures(t, testTel,
 		[]metricdata.DataPoint[int64]{{Value: 1}},
 		metricdatatest.IgnoreTimestamp())
 

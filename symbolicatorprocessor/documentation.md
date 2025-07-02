@@ -46,14 +46,6 @@ Size of the source map cache in bytes.
 | ---- | ----------- | ---------- |
 | {sourcemaps} | Gauge | Int |
 
-### otelcol_symbolicator_source_map_fetch_failures_total
-
-Total number of source map fetch failures.
-
-| Unit | Metric Type | Value Type | Monotonic |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Int | true |
-
 ### otelcol_symbolicator_symbolication_duration
 
 Duration in seconds taken to symbolicate frames.
@@ -73,6 +65,14 @@ Total number of frames the symbolicator failed to symbolicate.
 ### otelcol_symbolicator_total_processed_frames
 
 Total number of frames the symbolicator processed.
+
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
+
+### otelcol_symbolicator_total_source_map_fetch_failures
+
+Total number of source map fetch failures.
 
 | Unit | Metric Type | Value Type | Monotonic |
 | ---- | ----------- | ---------- | --------- |

@@ -31,10 +31,10 @@ type TelemetryBuilder struct {
 	ProcessorIncomingItems                  metric.Int64Counter
 	ProcessorOutgoingItems                  metric.Int64Counter
 	SymbolicatorSourceMapCacheSize          metric.Int64Gauge
-	SymbolicatorSourceMapFetchFailuresTotal metric.Int64Counter
 	SymbolicatorSymbolicationDuration       metric.Float64Histogram
 	SymbolicatorTotalFailedFrames           metric.Int64Counter
 	SymbolicatorTotalProcessedFrames        metric.Int64Counter
+	SymbolicatorTotalSourceMapFetchFailures metric.Int64Counter
 }
 
 // TelemetryBuilderOption applies changes to default builder.
@@ -96,12 +96,6 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...Teleme
 		metric.WithUnit("{sourcemaps}"),
 	)
 	errs = errors.Join(errs, err)
-	builder.SymbolicatorSourceMapFetchFailuresTotal, err = builder.meter.Int64Counter(
-		"otelcol_symbolicator_source_map_fetch_failures_total",
-		metric.WithDescription("Total number of source map fetch failures."),
-		metric.WithUnit("1"),
-	)
-	errs = errors.Join(errs, err)
 	builder.SymbolicatorSymbolicationDuration, err = builder.meter.Float64Histogram(
 		"otelcol_symbolicator_symbolication_duration",
 		metric.WithDescription("Duration in seconds taken to symbolicate frames."),
@@ -117,6 +111,12 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...Teleme
 	builder.SymbolicatorTotalProcessedFrames, err = builder.meter.Int64Counter(
 		"otelcol_symbolicator_total_processed_frames",
 		metric.WithDescription("Total number of frames the symbolicator processed."),
+		metric.WithUnit("1"),
+	)
+	errs = errors.Join(errs, err)
+	builder.SymbolicatorTotalSourceMapFetchFailures, err = builder.meter.Int64Counter(
+		"otelcol_symbolicator_total_source_map_fetch_failures",
+		metric.WithDescription("Total number of source map fetch failures."),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)
