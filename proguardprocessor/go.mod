@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.29.17
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.82.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/honeycombio/symbolic-go v0.0.7
+	github.com/honeycombio/symbolic-go v0.0.8
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/collector/component v1.35.0
 	go.opentelemetry.io/collector/consumer v1.35.0
