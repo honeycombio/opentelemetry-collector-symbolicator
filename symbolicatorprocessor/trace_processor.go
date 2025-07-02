@@ -160,6 +160,8 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 			mappedFunctions.AppendEmpty().SetStr("")
 			mappedLines.AppendEmpty().SetInt(-1)
 			mappedUrls.AppendEmpty().SetStr("")
+
+			sp.telemetryBuilder.SymbolicatorTotalFailedFrames.Add(ctx, 1)
 		} else {
 			s := formatStackFrame(mappedStackFrame)
 			stack = append(stack, s)
