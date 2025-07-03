@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/processor"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -56,11 +57,15 @@ func TestProcess(t *testing.T) {
 	assert.NoError(t, err)
 	defer tb.Shutdown()
 
+	attributes := attribute.NewSet(
+		attribute.String("processor_type", "symbolicator"),
+	)
+
 	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger: zaptest.NewLogger(t),
 		},
-	}, s, tb)
+	}, s, tb, attributes)
 
 	tts := []struct {
 		Name                    string

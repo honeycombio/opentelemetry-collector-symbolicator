@@ -9,6 +9,7 @@ import (
 	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component/componenttest"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -25,9 +26,13 @@ func TestSymbolicator(t *testing.T) {
 	assert.NoError(t, err)
 	defer tb.Shutdown()
 
+	attributes := attribute.NewSet(
+		attribute.String("processor_type", "symbolicator"),
+	)
+
 	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
-	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb)
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb, attributes)
 
 	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile)
 	line := formatStackFrame(sf)
@@ -53,9 +58,13 @@ func TestSymbolicatorCache(t *testing.T) {
 	assert.NoError(t, err)
 	defer tb.Shutdown()
 
+	attributes := attribute.NewSet(
+		attribute.String("processor_type", "symbolicator"),
+	)
+
 	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
-	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb)
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb, attributes)
 
 	// Cache should be empty to start
 	assert.Equal(t, 0, sym.cache.Len())

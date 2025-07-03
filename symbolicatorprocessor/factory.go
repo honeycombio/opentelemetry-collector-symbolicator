@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var (
@@ -61,24 +62,20 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 		return nil, err
 	}
 
-	// Set up resource attributes for the processor
-	rb := metadata.NewResourceBuilder(metadata.DefaultResourceAttributesConfig())
-	rb.SetProcessorType(typeStr.String())
-	res := rb.Emit()
-
-	res.CopyTo(set.TelemetrySettings.Resource)
-
 	tb, err := metadata.NewTelemetryBuilder(set.TelemetrySettings)
 	if err != nil {
 		return nil, err
 	}
-
-	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store, tb)
+	// Set up resource attributes for telemetry
+	attributeSet := attribute.NewSet(
+		attribute.String("processor_type", typeStr.String()),
+	)
+	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store, tb, attributeSet)
 	if err != nil {
 		return nil, err
 	}
 
-	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym, tb)
+	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym, tb, attributeSet)
 	return processorhelper.NewTraces(ctx, set, cfg, next, processor.processTraces, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
 }
 
