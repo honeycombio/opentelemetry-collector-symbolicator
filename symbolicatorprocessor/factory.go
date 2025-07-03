@@ -61,10 +61,18 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 		return nil, err
 	}
 
+	// Set up resource attributes for the processor
+	rb := metadata.NewResourceBuilder(metadata.DefaultResourceAttributesConfig())
+	rb.SetProcessorType(typeStr.String())
+	res := rb.Emit()
+
+	res.CopyTo(set.TelemetrySettings.Resource)
+
 	tb, err := metadata.NewTelemetryBuilder(set.TelemetrySettings)
 	if err != nil {
 		return nil, err
 	}
+
 	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store, tb)
 	if err != nil {
 		return nil, err

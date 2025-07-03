@@ -4,7 +4,14 @@ status:
   stability:
     stable: [traces] # TODO: Check in to see if we consider input traces "stable"
 
+resource_attributes:
+  processor_type:
+    enabled: true
+    description: Type of the processor.
+    type: string
+
 telemetry:
+  # metrics about internal performance of the symbolicator processor
   metrics:
     processor_incoming_items:
       enabled: true
