@@ -37,10 +37,10 @@ func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCac
 		store:   store,
 		timeout: timeout,
 		// the channel is buffered to allow for a single request to be in progress at a time
-		ch:    make(chan struct{}, 1),
-		cache: cache,
+		ch:               make(chan struct{}, 1),
+		cache:            cache,
 		telemetryBuilder: tb,
-		attributes: metric.WithAttributeSet(attributes),
+		attributes:       metric.WithAttributeSet(attributes),
 	}, nil
 }
 
