@@ -12,39 +12,7 @@
 
 The following telemetry is emitted by this component.
 
-### otelcol_process_memory_rss
-
-Memory usage of the processor in bytes.
-
-| Unit | Metric Type | Value Type |
-| ---- | ----------- | ---------- |
-| 1 | Gauge | Int |
-
-### otelcol_process_uptime
-
-Uptime of the processor in seconds.
-
-| Unit | Metric Type | Value Type |
-| ---- | ----------- | ---------- |
-| 1 | Gauge | Double |
-
-### otelcol_processor_incoming_items
-
-Total number of items received by the processor.
-
-| Unit | Metric Type | Value Type | Monotonic |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Int | true |
-
-### otelcol_processor_outgoing_items
-
-Total number of items sent by the processor.
-
-| Unit | Metric Type | Value Type | Monotonic |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Int | true |
-
-### otelcol_symbolicator_source_map_cache_size
+### otelcol_processor_source_map_cache_size
 
 Size of the source map cache in bytes.
 
@@ -52,7 +20,7 @@ Size of the source map cache in bytes.
 | ---- | ----------- | ---------- |
 | {sourcemaps} | Gauge | Int |
 
-### otelcol_symbolicator_symbolication_duration
+### otelcol_processor_symbolication_duration
 
 Duration in seconds taken to symbolicate frames.
 
@@ -60,7 +28,7 @@ Duration in seconds taken to symbolicate frames.
 | ---- | ----------- | ---------- |
 | s | Histogram | Double |
 
-### otelcol_symbolicator_total_failed_frames
+### otelcol_processor_total_failed_frames
 
 Total number of frames the symbolicator failed to symbolicate.
 
@@ -68,7 +36,7 @@ Total number of frames the symbolicator failed to symbolicate.
 | ---- | ----------- | ---------- | --------- |
 | 1 | Sum | Int | true |
 
-### otelcol_symbolicator_total_processed_frames
+### otelcol_processor_total_processed_frames
 
 Total number of frames the symbolicator processed.
 
@@ -76,7 +44,7 @@ Total number of frames the symbolicator processed.
 | ---- | ----------- | ---------- | --------- |
 | 1 | Sum | Int | true |
 
-### otelcol_symbolicator_total_source_map_fetch_failures
+### otelcol_processor_total_source_map_fetch_failures
 
 Total number of source map fetch failures.
 

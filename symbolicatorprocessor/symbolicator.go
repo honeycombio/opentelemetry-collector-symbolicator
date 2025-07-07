@@ -89,13 +89,13 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 	}()
 
 	smc, ok := ns.cache.Get(url)
-	ns.telemetryBuilder.SymbolicatorSourceMapCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
+	ns.telemetryBuilder.ProcessorSourceMapCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 
 	if !ok {
 		source, sMap, err := ns.store.GetSourceMap(ctx, url)
 
 		if err != nil {
-			ns.telemetryBuilder.SymbolicatorTotalSourceMapFetchFailures.Add(ctx, 1, ns.attributes)
+			ns.telemetryBuilder.ProcessorTotalSourceMapFetchFailures.Add(ctx, 1, ns.attributes)
 		}
 
 		smc, err = symbolic.NewSourceMapCache(string(source), string(sMap))
@@ -107,6 +107,6 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 	}
 
 	// If the cache size has changed, we should record the new size
-	ns.telemetryBuilder.SymbolicatorSourceMapCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
+	ns.telemetryBuilder.ProcessorSourceMapCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 	return smc.Lookup(uint32(line), uint32(column), 0)
 }

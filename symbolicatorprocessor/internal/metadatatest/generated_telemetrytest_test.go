@@ -18,40 +18,24 @@ func TestSetupTelemetry(t *testing.T) {
 	tb, err := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
 	require.NoError(t, err)
 	defer tb.Shutdown()
-	tb.ProcessMemoryRss.Record(context.Background(), 1)
-	tb.ProcessUptime.Record(context.Background(), 1)
-	tb.ProcessorIncomingItems.Add(context.Background(), 1)
-	tb.ProcessorOutgoingItems.Add(context.Background(), 1)
-	tb.SymbolicatorSourceMapCacheSize.Record(context.Background(), 1)
-	tb.SymbolicatorSymbolicationDuration.Record(context.Background(), 1)
-	tb.SymbolicatorTotalFailedFrames.Add(context.Background(), 1)
-	tb.SymbolicatorTotalProcessedFrames.Add(context.Background(), 1)
-	tb.SymbolicatorTotalSourceMapFetchFailures.Add(context.Background(), 1)
-	AssertEqualProcessMemoryRss(t, testTel,
+	tb.ProcessorSourceMapCacheSize.Record(context.Background(), 1)
+	tb.ProcessorSymbolicationDuration.Record(context.Background(), 1)
+	tb.ProcessorTotalFailedFrames.Add(context.Background(), 1)
+	tb.ProcessorTotalProcessedFrames.Add(context.Background(), 1)
+	tb.ProcessorTotalSourceMapFetchFailures.Add(context.Background(), 1)
+	AssertEqualProcessorSourceMapCacheSize(t, testTel,
 		[]metricdata.DataPoint[int64]{{Value: 1}},
 		metricdatatest.IgnoreTimestamp())
-	AssertEqualProcessUptime(t, testTel,
-		[]metricdata.DataPoint[float64]{{Value: 1}},
-		metricdatatest.IgnoreTimestamp())
-	AssertEqualProcessorIncomingItems(t, testTel,
-		[]metricdata.DataPoint[int64]{{Value: 1}},
-		metricdatatest.IgnoreTimestamp())
-	AssertEqualProcessorOutgoingItems(t, testTel,
-		[]metricdata.DataPoint[int64]{{Value: 1}},
-		metricdatatest.IgnoreTimestamp())
-	AssertEqualSymbolicatorSourceMapCacheSize(t, testTel,
-		[]metricdata.DataPoint[int64]{{Value: 1}},
-		metricdatatest.IgnoreTimestamp())
-	AssertEqualSymbolicatorSymbolicationDuration(t, testTel,
+	AssertEqualProcessorSymbolicationDuration(t, testTel,
 		[]metricdata.HistogramDataPoint[float64]{{}}, metricdatatest.IgnoreValue(),
 		metricdatatest.IgnoreTimestamp())
-	AssertEqualSymbolicatorTotalFailedFrames(t, testTel,
+	AssertEqualProcessorTotalFailedFrames(t, testTel,
 		[]metricdata.DataPoint[int64]{{Value: 1}},
 		metricdatatest.IgnoreTimestamp())
-	AssertEqualSymbolicatorTotalProcessedFrames(t, testTel,
+	AssertEqualProcessorTotalProcessedFrames(t, testTel,
 		[]metricdata.DataPoint[int64]{{Value: 1}},
 		metricdatatest.IgnoreTimestamp())
-	AssertEqualSymbolicatorTotalSourceMapFetchFailures(t, testTel,
+	AssertEqualProcessorTotalSourceMapFetchFailures(t, testTel,
 		[]metricdata.DataPoint[int64]{{Value: 1}},
 		metricdatatest.IgnoreTimestamp())
 

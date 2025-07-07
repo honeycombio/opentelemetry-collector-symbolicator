@@ -54,7 +54,6 @@ func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Sett
 // in the processorhelper.NewTraces call in factory.go
 func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Traces) (ptrace.Traces, error) {
 	sp.logger.Info("Processing traces")
-	sp.telemetryBuilder.ProcessorIncomingItems.Add(ctx, int64(td.SpanCount()), sp.attributes)
 
 	startTime := time.Now()
 	for i := 0; i < td.ResourceSpans().Len(); i++ {
@@ -62,8 +61,7 @@ func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Tr
 		sp.processResourceSpans(ctx, rs)
 	}
 
-	sp.telemetryBuilder.SymbolicatorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
-	sp.telemetryBuilder.ProcessorOutgoingItems.Add(ctx, int64(td.SpanCount()), sp.attributes)
+	sp.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
 	return td, nil
 }
 
@@ -155,7 +153,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 
 	for i := 0; i < columns.Len(); i++ {
 		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
-		sp.telemetryBuilder.SymbolicatorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
+		sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
 
 		if err != nil {
 			hasSymbolicationFailed = true
@@ -166,7 +164,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 			mappedLines.AppendEmpty().SetInt(-1)
 			mappedUrls.AppendEmpty().SetStr("")
 
-			sp.telemetryBuilder.SymbolicatorTotalFailedFrames.Add(ctx, 1, sp.attributes)
+			sp.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, sp.attributes)
 		} else {
 			s := formatStackFrame(mappedStackFrame)
 			stack = append(stack, s)

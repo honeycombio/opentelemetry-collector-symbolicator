@@ -82,7 +82,7 @@ func setUpResourceAttributes() attribute.Set {
 	config := metadata.DefaultResourceAttributesConfig()
 
 	if config.ProcessorType.Enabled {
-		attributes = append(attributes, attribute.String("processor_type", typeStr.String()))
+		attributes = append(attributes, attribute.String("otelcol_processor_type", typeStr.String()))
 	}
 
 	return attribute.NewSet(attributes...)

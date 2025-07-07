@@ -21,83 +21,23 @@ func NewSettings(tt *componenttest.Telemetry) processor.Settings {
 	return set
 }
 
-func AssertEqualProcessMemoryRss(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
+func AssertEqualProcessorSourceMapCacheSize(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
-		Name:        "otelcol_process_memory_rss",
-		Description: "Memory usage of the processor in bytes.",
-		Unit:        "1",
-		Data: metricdata.Gauge[int64]{
-			DataPoints: dps,
-		},
-	}
-	got, err := tt.GetMetric("otelcol_process_memory_rss")
-	require.NoError(t, err)
-	metricdatatest.AssertEqual(t, want, got, opts...)
-}
-
-func AssertEqualProcessUptime(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[float64], opts ...metricdatatest.Option) {
-	want := metricdata.Metrics{
-		Name:        "otelcol_process_uptime",
-		Description: "Uptime of the processor in seconds.",
-		Unit:        "1",
-		Data: metricdata.Gauge[float64]{
-			DataPoints: dps,
-		},
-	}
-	got, err := tt.GetMetric("otelcol_process_uptime")
-	require.NoError(t, err)
-	metricdatatest.AssertEqual(t, want, got, opts...)
-}
-
-func AssertEqualProcessorIncomingItems(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
-	want := metricdata.Metrics{
-		Name:        "otelcol_processor_incoming_items",
-		Description: "Total number of items received by the processor.",
-		Unit:        "1",
-		Data: metricdata.Sum[int64]{
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
-			DataPoints:  dps,
-		},
-	}
-	got, err := tt.GetMetric("otelcol_processor_incoming_items")
-	require.NoError(t, err)
-	metricdatatest.AssertEqual(t, want, got, opts...)
-}
-
-func AssertEqualProcessorOutgoingItems(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
-	want := metricdata.Metrics{
-		Name:        "otelcol_processor_outgoing_items",
-		Description: "Total number of items sent by the processor.",
-		Unit:        "1",
-		Data: metricdata.Sum[int64]{
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
-			DataPoints:  dps,
-		},
-	}
-	got, err := tt.GetMetric("otelcol_processor_outgoing_items")
-	require.NoError(t, err)
-	metricdatatest.AssertEqual(t, want, got, opts...)
-}
-
-func AssertEqualSymbolicatorSourceMapCacheSize(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
-	want := metricdata.Metrics{
-		Name:        "otelcol_symbolicator_source_map_cache_size",
+		Name:        "otelcol_processor_source_map_cache_size",
 		Description: "Size of the source map cache in bytes.",
 		Unit:        "{sourcemaps}",
 		Data: metricdata.Gauge[int64]{
 			DataPoints: dps,
 		},
 	}
-	got, err := tt.GetMetric("otelcol_symbolicator_source_map_cache_size")
+	got, err := tt.GetMetric("otelcol_processor_source_map_cache_size")
 	require.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, opts...)
 }
 
-func AssertEqualSymbolicatorSymbolicationDuration(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.HistogramDataPoint[float64], opts ...metricdatatest.Option) {
+func AssertEqualProcessorSymbolicationDuration(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.HistogramDataPoint[float64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
-		Name:        "otelcol_symbolicator_symbolication_duration",
+		Name:        "otelcol_processor_symbolication_duration",
 		Description: "Duration in seconds taken to symbolicate frames.",
 		Unit:        "s",
 		Data: metricdata.Histogram[float64]{
@@ -105,14 +45,14 @@ func AssertEqualSymbolicatorSymbolicationDuration(t *testing.T, tt *componenttes
 			DataPoints:  dps,
 		},
 	}
-	got, err := tt.GetMetric("otelcol_symbolicator_symbolication_duration")
+	got, err := tt.GetMetric("otelcol_processor_symbolication_duration")
 	require.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, opts...)
 }
 
-func AssertEqualSymbolicatorTotalFailedFrames(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
+func AssertEqualProcessorTotalFailedFrames(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
-		Name:        "otelcol_symbolicator_total_failed_frames",
+		Name:        "otelcol_processor_total_failed_frames",
 		Description: "Total number of frames the symbolicator failed to symbolicate.",
 		Unit:        "1",
 		Data: metricdata.Sum[int64]{
@@ -121,14 +61,14 @@ func AssertEqualSymbolicatorTotalFailedFrames(t *testing.T, tt *componenttest.Te
 			DataPoints:  dps,
 		},
 	}
-	got, err := tt.GetMetric("otelcol_symbolicator_total_failed_frames")
+	got, err := tt.GetMetric("otelcol_processor_total_failed_frames")
 	require.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, opts...)
 }
 
-func AssertEqualSymbolicatorTotalProcessedFrames(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
+func AssertEqualProcessorTotalProcessedFrames(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
-		Name:        "otelcol_symbolicator_total_processed_frames",
+		Name:        "otelcol_processor_total_processed_frames",
 		Description: "Total number of frames the symbolicator processed.",
 		Unit:        "1",
 		Data: metricdata.Sum[int64]{
@@ -137,14 +77,14 @@ func AssertEqualSymbolicatorTotalProcessedFrames(t *testing.T, tt *componenttest
 			DataPoints:  dps,
 		},
 	}
-	got, err := tt.GetMetric("otelcol_symbolicator_total_processed_frames")
+	got, err := tt.GetMetric("otelcol_processor_total_processed_frames")
 	require.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, opts...)
 }
 
-func AssertEqualSymbolicatorTotalSourceMapFetchFailures(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
+func AssertEqualProcessorTotalSourceMapFetchFailures(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
-		Name:        "otelcol_symbolicator_total_source_map_fetch_failures",
+		Name:        "otelcol_processor_total_source_map_fetch_failures",
 		Description: "Total number of source map fetch failures.",
 		Unit:        "1",
 		Data: metricdata.Sum[int64]{
@@ -153,7 +93,7 @@ func AssertEqualSymbolicatorTotalSourceMapFetchFailures(t *testing.T, tt *compon
 			DataPoints:  dps,
 		},
 	}
-	got, err := tt.GetMetric("otelcol_symbolicator_total_source_map_fetch_failures")
+	got, err := tt.GetMetric("otelcol_processor_total_source_map_fetch_failures")
 	require.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, opts...)
 }

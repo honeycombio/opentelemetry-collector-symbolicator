@@ -13,62 +13,34 @@ resource_attributes:
 telemetry:
   # metrics about internal performance of the symbolicator processor
   metrics:
-    processor_incoming_items:
-      enabled: true
-      description: Total number of items received by the processor.
-      unit: "1"
-      sum:
-        value_type: int
-        monotonic: true
-    processor_outgoing_items:
-      enabled: true
-      description: Total number of items sent by the processor.
-      unit: "1"
-      sum:
-        value_type: int
-        monotonic: true
-    process_uptime:
-      enabled: true
-      description: Uptime of the processor in seconds.
-      unit: "1"
-      gauge:
-        value_type: double
-        monotonic: true
-    process_memory_rss:
-      enabled: true
-      description: Memory usage of the processor in bytes.
-      unit: "1"
-      gauge:
-        value_type: int
-        monotonic: true
-    symbolicator_total_processed_frames:
+    processor_total_processed_frames:
       enabled: true
       description: Total number of frames the symbolicator processed.
       unit: "1"
       sum:
         value_type: int
         monotonic: true
-    symbolicator_total_failed_frames:
+    processor_total_failed_frames:
       enabled: true
       description: Total number of frames the symbolicator failed to symbolicate.
       unit: "1"
       sum:
         value_type: int
         monotonic: true
-    symbolicator_symbolication_duration:
+    processor_symbolication_duration:
       enabled: true
       description: Duration in seconds taken to symbolicate frames.
       unit: s
       histogram:
         value_type: double
-    symbolicator_total_source_map_fetch_failures:
+    processor_total_source_map_fetch_failures:
       enabled: true
       description: Total number of source map fetch failures.
       unit: "1"
       sum:
         value_type: int
         monotonic: true
-    symbolicator_source_map_cache_size:
+    processor_source_map_cache_size:
       enabled: true
       description: Size of the source map cache in bytes.
       unit: "{sourcemaps}"
