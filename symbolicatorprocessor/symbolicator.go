@@ -96,6 +96,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 
 		if err != nil {
 			ns.telemetryBuilder.ProcessorTotalSourceMapFetchFailures.Add(ctx, 1, ns.attributes)
+			return nil, err
 		}
 
 		smc, err = symbolic.NewSourceMapCache(string(source), string(sMap))
