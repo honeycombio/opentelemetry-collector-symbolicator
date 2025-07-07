@@ -5,6 +5,12 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: "symbolicator-telemetry-scrape"
+          static_configs:
+            - targets: ["0.0.0.0:8888"]
 
 processors:
   symbolicator:
@@ -24,6 +30,10 @@ service:
       receivers: [otlp]
       processors: [symbolicator]
       exporters: [debug]
+    metrics:
+      receivers: [prometheus]
+      processors: [batch]
+      exporters: [debug]
     logs:
       receivers: [otlp]
       processors: [dsymprocessor, batch]
@@ -31,3 +41,5 @@ service:
   telemetry:
     logs:
       level: debug
+    metrics:
+      level: detailed
