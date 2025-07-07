@@ -17,6 +17,7 @@ processors:
   dsymprocessor:
     local_dsyms:
       path: ./test_assets
+  proguard_symbolicator:
   batch:
 
 exporters:

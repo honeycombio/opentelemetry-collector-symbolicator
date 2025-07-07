@@ -1,6 +1,6 @@
 .PHONY: builder
 builder:
-	go install go.opentelemetry.io/collector/cmd/builder@v0.128.0
+	go install go.opentelemetry.io/collector/cmd/builder@v0.129.0
 
 .PHONY: clean
 clean:
@@ -20,4 +20,4 @@ run: build
 
 .PHONY: test
 test: build
-	go test ./symbolicatorprocessor/ ./dsymprocessor
+	go test ./symbolicatorprocessor/ ./dsymprocessor ./proguardprocessor

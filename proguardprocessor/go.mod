@@ -1,4 +1,4 @@
-module github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor
+module github.com/honeycombio/opentelemetry-collector-symbolicator/proguardprocessor
 
 go 1.23.7
 
