@@ -72,19 +72,23 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 	attrs := lr.Attributes()
 
 	if classes, ok = getSlice(p.cfg.ClassesAttributeKey, attrs); !ok {
+		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ClassesAttributeKey)
 	}
 
 	if methods, ok = getSlice(p.cfg.MethodsAttributeKey, attrs); !ok {
+		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.MethodsAttributeKey)
 	}
 
 	if lines, ok = getSlice(p.cfg.LinesAttributeKey, attrs); !ok {
+		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.LinesAttributeKey)
 	}
 
 	// Ensure all slices are the same length
 	if classes.Len() != methods.Len() || classes.Len() != lines.Len() {
+		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
 		return fmt.Errorf("%w: (%s %d) (%s %d) (%s %d)", errMismatchedLength,
 			p.cfg.ClassesAttributeKey, classes.Len(),
 			p.cfg.MethodsAttributeKey, methods.Len(),
@@ -94,6 +98,7 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 
 	uuidValue, ok := attrs.Get(p.cfg.ProguardUUIDAttributeKey)
 	if !ok {
+		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
 	}
 
