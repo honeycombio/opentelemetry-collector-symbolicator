@@ -20,7 +20,6 @@ processors:
     path: ./proguardprocessor
 
 receivers:
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.129.0
   - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.129.0
 
 providers:
