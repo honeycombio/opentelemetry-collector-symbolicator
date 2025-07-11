@@ -1,5 +1,11 @@
 # dSYM Processor changelog
 
+## Unreleased
+
+### 🚧 Maintenance
+
+- chore: set symbolication failed attr to false for successful symbolications (#86) | @jairo-mendoza
+
 ## v0.0.5 [beta] - 2025/07/02
 ### 🚧 Maintenance
 - maint(deps): bump the aws group across 2 directories with 1 update (#79)

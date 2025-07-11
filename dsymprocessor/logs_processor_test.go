@@ -95,8 +95,9 @@ func TestProcessStackTrace(t *testing.T) {
 			assert.Equal(t, expected, symbolicated.Str())
 
 			// no failures
-			_, hasFailure := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-			assert.False(t, hasFailure)
+			hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+			assert.True(t, hasFailureAttr)			
+			assert.False(t, hasFailure.Bool())
 			_, hasFailureMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
 			assert.False(t, hasFailureMessage)
 			
@@ -194,8 +195,9 @@ func TestProcessMetricKit(t *testing.T) {
 			assert.Equal(t, expected, symbolicated.Str())
 
 			// no failures
-			_, hasFailure := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-			assert.False(t, hasFailure)
+			hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+			assert.True(t, hasFailureAttr)			
+			assert.False(t, hasFailure.Bool())
 			_, hasFailureMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
 			assert.False(t, hasFailureMessage)
 

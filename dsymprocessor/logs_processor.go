@@ -99,6 +99,8 @@ func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context
 		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 		attributes.PutStr("exception.symbolicator.error", err.Error())
 		sp.logger.Debug("Error processing span", zap.Error(err))
+	} else {
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
 	}
 }
 
@@ -225,6 +227,8 @@ func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context,
 		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 		attributes.PutStr("exception.symbolicator.error", err.Error())
 		sp.logger.Debug("Error processing span", zap.Error(err))
+	} else {
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
 	}
 }
 
