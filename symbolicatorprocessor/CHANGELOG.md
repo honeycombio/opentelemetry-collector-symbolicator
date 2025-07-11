@@ -1,5 +1,9 @@
 # Symbolicator Processor changelog
 
+## Unreleased
+### ✨ Features
+- feat: Add internal processor telemetry to symbolicatorprocessor
+
 ## v0.0.9 [beta] - 2025/07/02
 ### 🚧 Maintenance
 - maint(deps): bump the aws group across 2 directories with 1 update (#79)

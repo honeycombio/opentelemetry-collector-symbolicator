@@ -7,7 +7,10 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"github.com/honeycombio/symbolic-go"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type sourceMapStore interface {
@@ -19,9 +22,12 @@ type basicSymbolicator struct {
 	timeout time.Duration
 	ch      chan struct{}
 	cache   *lru.Cache[string, *symbolic.SourceMapCache]
+
+	telemetryBuilder *metadata.TelemetryBuilder
+	attributes       metric.MeasurementOption
 }
 
-func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCacheSize int, store sourceMapStore) (*basicSymbolicator, error) {
+func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCacheSize int, store sourceMapStore, tb *metadata.TelemetryBuilder, attributes attribute.Set) (*basicSymbolicator, error) {
 	cache, err := lru.New[string, *symbolic.SourceMapCache](sourceMapCacheSize) // Adjust the size as needed
 
 	if err != nil {
@@ -31,8 +37,10 @@ func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCac
 		store:   store,
 		timeout: timeout,
 		// the channel is buffered to allow for a single request to be in progress at a time
-		ch:    make(chan struct{}, 1),
-		cache: cache,
+		ch:               make(chan struct{}, 1),
+		cache:            cache,
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
 	}, nil
 }
 
@@ -81,11 +89,13 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 	}()
 
 	smc, ok := ns.cache.Get(url)
+	ns.telemetryBuilder.ProcessorSourceMapCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 
 	if !ok {
 		source, sMap, err := ns.store.GetSourceMap(ctx, url)
 
 		if err != nil {
+			ns.telemetryBuilder.ProcessorTotalSourceMapFetchFailures.Add(ctx, 1, ns.attributes)
 			return nil, err
 		}
 
@@ -97,5 +107,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 		ns.cache.Add(url, smc)
 	}
 
+	// If the cache size has changed, we should record the new size
+	ns.telemetryBuilder.ProcessorSourceMapCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 	return smc.Lookup(uint32(line), uint32(column), 0)
 }
