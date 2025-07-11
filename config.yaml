@@ -32,7 +32,3 @@ service:
   telemetry:
     logs:
       level: debug
-    metrics:
-      readers:
-        - periodic:
-            exporter: [debug]
