@@ -79,14 +79,14 @@ func formatStackFrame(sf *mappedStackFrame) string {
 }
 
 // processAttributes takes the attributes of a span and returns an error if symbolication failed.
-func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attrs pcommon.Map) error {
-	err := sp.processThrow(ctx, attrs)
+func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map) error {
+	err := sp.processThrow(ctx, attributes)
 
 	if err != nil {
-		attrs.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
 		return err
 	} else {
-		attrs.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
 		return nil
 	}
 }
@@ -94,21 +94,21 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attrs pc
 // processThrow takes the attributes and determines if they contain
 // required stacktrace information. If they do, it symbolicates the stack
 // trace and adds it to the attributes.
-func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attr pcommon.Map) error {
+func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pcommon.Map) error {
 	var ok bool
 	var symbolicationError error
 	var lines, columns, functions, urls pcommon.Slice
 
-	if columns, ok = getSlice(sp.cfg.ColumnsAttributeKey, attr); !ok {
+	if columns, ok = getSlice(sp.cfg.ColumnsAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.ColumnsAttributeKey)
 	}
-	if functions, ok = getSlice(sp.cfg.FunctionsAttributeKey, attr); !ok {
+	if functions, ok = getSlice(sp.cfg.FunctionsAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.FunctionsAttributeKey)
 	}
-	if lines, ok = getSlice(sp.cfg.LinesAttributeKey, attr); !ok {
+	if lines, ok = getSlice(sp.cfg.LinesAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.LinesAttributeKey)
 	}
-	if urls, ok = getSlice(sp.cfg.UrlsAttributeKey, attr); !ok {
+	if urls, ok = getSlice(sp.cfg.UrlsAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.UrlsAttributeKey)
 	}
 
@@ -124,31 +124,31 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attr pcommon.
 
 	// Preserve original stack trace
 	if sp.cfg.PreserveStackTrace {
-		var origColumns = attr.PutEmptySlice(sp.cfg.OriginalColumnsAttributeKey)
+		var origColumns = attributes.PutEmptySlice(sp.cfg.OriginalColumnsAttributeKey)
 		columns.CopyTo(origColumns)
 
-		var origFunctions = attr.PutEmptySlice(sp.cfg.OriginalFunctionsAttributeKey)
+		var origFunctions = attributes.PutEmptySlice(sp.cfg.OriginalFunctionsAttributeKey)
 		functions.CopyTo(origFunctions)
 
-		var origLines = attr.PutEmptySlice(sp.cfg.OriginalLinesAttributeKey)
+		var origLines = attributes.PutEmptySlice(sp.cfg.OriginalLinesAttributeKey)
 		lines.CopyTo(origLines)
 
-		var origUrls = attr.PutEmptySlice(sp.cfg.OriginalUrlsAttributeKey)
+		var origUrls = attributes.PutEmptySlice(sp.cfg.OriginalUrlsAttributeKey)
 		urls.CopyTo(origUrls)
 
-		var origStackTraceStr, _ = attr.Get(sp.cfg.OutputStackTraceKey)
-		attr.PutStr(sp.cfg.OriginalStackTraceKey, origStackTraceStr.Str())
+		var origStackTraceStr, _ = attributes.Get(sp.cfg.OutputStackTraceKey)
+		attributes.PutStr(sp.cfg.OriginalStackTraceKey, origStackTraceStr.Str())
 	}
 
 	// Update with symbolicated stack trace
 	var stack []string
-	var mappedColumns = attr.PutEmptySlice(sp.cfg.ColumnsAttributeKey)
-	var mappedFunctions = attr.PutEmptySlice(sp.cfg.FunctionsAttributeKey)
-	var mappedLines = attr.PutEmptySlice(sp.cfg.LinesAttributeKey)
-	var mappedUrls = attr.PutEmptySlice(sp.cfg.UrlsAttributeKey)
+	var mappedColumns = attributes.PutEmptySlice(sp.cfg.ColumnsAttributeKey)
+	var mappedFunctions = attributes.PutEmptySlice(sp.cfg.FunctionsAttributeKey)
+	var mappedLines = attributes.PutEmptySlice(sp.cfg.LinesAttributeKey)
+	var mappedUrls = attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
 
-	var stackType, _ = attr.Get(sp.cfg.StackTypeKey)
-	var stackMessage, _ = attr.Get(sp.cfg.StackMessageKey)
+	var stackType, _ = attributes.Get(sp.cfg.StackTypeKey)
+	var stackMessage, _ = attributes.Get(sp.cfg.StackMessageKey)
 
 	stack = append(stack, fmt.Sprintf("%s: %s", stackType.Str(), stackMessage.Str()))
 
@@ -175,9 +175,9 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attr pcommon.
 	}
 
 	if symbolicationError != nil {
-		attr.PutStr(sp.cfg.SymbolicatorFailureMessageAttributeKey, symbolicationError.Error())
+		attributes.PutStr(sp.cfg.SymbolicatorFailureMessageAttributeKey, symbolicationError.Error())
 	}
-	attr.PutStr(sp.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
+	attributes.PutStr(sp.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
 
 	if hasSymbolicationFailed {
 		return errPartialSymbolication

@@ -67,32 +67,32 @@ func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.Sc
 }
 
 func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.LogRecord) error {
-	attrs := lr.Attributes()
+	attributes := lr.Attributes()
 
-	err := p.processLogRecordThrow(ctx, attrs)
+	err := p.processLogRecordThrow(ctx, attributes)
 
 	if err != nil {
-		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
+		attributes.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
 		return err
 	} else {
-		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, false)
+		attributes.PutBool(p.cfg.SymbolicatorFailureAttributeKey, false)
 		return nil
 	}
 }
 
-func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attrs pcommon.Map) error {
+func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attributes pcommon.Map) error {
 	var ok bool
 	var classes, methods, lines pcommon.Slice
 
-	if classes, ok = getSlice(p.cfg.ClassesAttributeKey, attrs); !ok {
+	if classes, ok = getSlice(p.cfg.ClassesAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ClassesAttributeKey)
 	}
 
-	if methods, ok = getSlice(p.cfg.MethodsAttributeKey, attrs); !ok {
+	if methods, ok = getSlice(p.cfg.MethodsAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.MethodsAttributeKey)
 	}
 
-	if lines, ok = getSlice(p.cfg.LinesAttributeKey, attrs); !ok {
+	if lines, ok = getSlice(p.cfg.LinesAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.LinesAttributeKey)
 	}
 
@@ -115,16 +115,16 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attrs
 	}
 
 	if p.cfg.PreserveStackTrace {
-		classes.CopyTo(attrs.PutEmptySlice(p.cfg.OriginalClassesAttributeKey))
-		methods.CopyTo(attrs.PutEmptySlice(p.cfg.OriginalMethodsAttributeKey))
-		lines.CopyTo(attrs.PutEmptySlice(p.cfg.OriginalLinesAttributeKey))
+		classes.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalClassesAttributeKey))
+		methods.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalMethodsAttributeKey))
+		lines.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalLinesAttributeKey))
 
-		if originalStackTrace, ok := attrs.Get(p.cfg.OutputStackTraceKey); ok {
-			attrs.PutStr(p.cfg.OriginalStackTraceKey, originalStackTrace.Str())
+		if originalStackTrace, ok := attributes.Get(p.cfg.OutputStackTraceKey); ok {
+			attributes.PutStr(p.cfg.OriginalStackTraceKey, originalStackTrace.Str())
 		}
 	}
 
-	uuidValue, ok := attrs.Get(p.cfg.ProguardUUIDAttributeKey)
+	uuidValue, ok := attributes.Get(p.cfg.ProguardUUIDAttributeKey)
 	if !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
 	}
@@ -132,9 +132,9 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attrs
 	uuid := uuidValue.Str()
 
 	var stack []string
-	var mappedClasses = attrs.PutEmptySlice(p.cfg.ClassesAttributeKey)
-	var mappedMethods = attrs.PutEmptySlice(p.cfg.MethodsAttributeKey)
-	var mappedLines = attrs.PutEmptySlice(p.cfg.LinesAttributeKey)
+	var mappedClasses = attributes.PutEmptySlice(p.cfg.ClassesAttributeKey)
+	var mappedMethods = attributes.PutEmptySlice(p.cfg.MethodsAttributeKey)
+	var mappedLines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
 
 	var symbolicationFailed bool
 	for i := 0; i < classes.Len(); i++ {
@@ -163,7 +163,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attrs
 		}
 	}
 
-	attrs.PutStr(p.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
+	attributes.PutStr(p.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
 
 	if symbolicationFailed {
 		return errPartialSymbolication
