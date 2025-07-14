@@ -7,6 +7,7 @@
 | Name | Description | Values | Enabled |
 | ---- | ----------- | ------ | ------- |
 | processor_type | Type of the processor. | Any Str | true |
+| processor_version | Version of the processor. | Any Str | true |
 
 ## Internal Telemetry
 

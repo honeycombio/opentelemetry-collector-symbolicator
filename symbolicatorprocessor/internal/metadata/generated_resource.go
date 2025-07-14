@@ -28,6 +28,13 @@ func (rb *ResourceBuilder) SetProcessorType(val string) {
 	}
 }
 
+// SetProcessorVersion sets provided value as "processor_version" attribute.
+func (rb *ResourceBuilder) SetProcessorVersion(val string) {
+	if rb.config.ProcessorVersion.Enabled {
+		rb.res.Attributes().PutStr("processor_version", val)
+	}
+}
+
 // Emit returns the built resource and resets the internal builder state.
 func (rb *ResourceBuilder) Emit() pcommon.Resource {
 	r := rb.res

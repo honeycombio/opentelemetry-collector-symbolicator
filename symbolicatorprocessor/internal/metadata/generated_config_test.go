@@ -26,13 +26,15 @@ func TestResourceAttributesConfig(t *testing.T) {
 		{
 			name: "all_set",
 			want: ResourceAttributesConfig{
-				ProcessorType: ResourceAttributeConfig{Enabled: true},
+				ProcessorType:    ResourceAttributeConfig{Enabled: true},
+				ProcessorVersion: ResourceAttributeConfig{Enabled: true},
 			},
 		},
 		{
 			name: "none_set",
 			want: ResourceAttributesConfig{
-				ProcessorType: ResourceAttributeConfig{Enabled: false},
+				ProcessorType:    ResourceAttributeConfig{Enabled: false},
+				ProcessorVersion: ResourceAttributeConfig{Enabled: false},
 			},
 		},
 	}

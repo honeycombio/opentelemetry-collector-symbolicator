@@ -16,6 +16,10 @@ var (
 	typeStr = component.MustNewType("symbolicator")
 )
 
+const (
+	processorVersion = "0.0.9"
+)
+
 // createDefaultConfig creates the default configuration for the processor.
 func createDefaultConfig() component.Config {
 	return &Config{
@@ -83,6 +87,9 @@ func setUpResourceAttributes() attribute.Set {
 
 	if config.ProcessorType.Enabled {
 		attributes = append(attributes, attribute.String("otelcol_processor_type", typeStr.String()))
+	}
+	if config.ProcessorVersion.Enabled {
+		attributes = append(attributes, attribute.String("otelcol_processor_version", processorVersion))
 	}
 
 	return attribute.NewSet(attributes...)
