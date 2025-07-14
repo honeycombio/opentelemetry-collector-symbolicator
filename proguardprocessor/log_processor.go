@@ -16,6 +16,7 @@ import (
 var (
 	errMissingAttribute = errors.New("missing attribute")
 	errMismatchedLength = errors.New("mismatched stacktrace attribute lengths")
+	errPartialSymbolication = errors.New("symbolication failed for some stack frames")
 )
 
 // symbolicator interface is used to symbolicate stack traces.
@@ -66,29 +67,37 @@ func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.Sc
 }
 
 func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.LogRecord) error {
-	var ok, symbolicationFailed bool
-	var classes, methods, lines pcommon.Slice
-
 	attrs := lr.Attributes()
 
-	if classes, ok = getSlice(p.cfg.ClassesAttributeKey, attrs); !ok {
+	err := p.processLogRecordThrow(ctx, attrs)
+
+	if err != nil {
 		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
+		return err
+	} else {
+		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, false)
+		return nil
+	}
+}
+
+func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attrs pcommon.Map) error {
+	var ok bool
+	var classes, methods, lines pcommon.Slice
+
+	if classes, ok = getSlice(p.cfg.ClassesAttributeKey, attrs); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ClassesAttributeKey)
 	}
 
 	if methods, ok = getSlice(p.cfg.MethodsAttributeKey, attrs); !ok {
-		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.MethodsAttributeKey)
 	}
 
 	if lines, ok = getSlice(p.cfg.LinesAttributeKey, attrs); !ok {
-		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.LinesAttributeKey)
 	}
 
 	// Ensure all slices are the same length
 	if classes.Len() != methods.Len() || classes.Len() != lines.Len() {
-		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
 		return fmt.Errorf("%w: (%s %d) (%s %d) (%s %d)", errMismatchedLength,
 			p.cfg.ClassesAttributeKey, classes.Len(),
 			p.cfg.MethodsAttributeKey, methods.Len(),
@@ -96,13 +105,14 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 		)
 	}
 
-	uuidValue, ok := attrs.Get(p.cfg.ProguardUUIDAttributeKey)
-	if !ok {
-		attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
+	// Ensure all slices are the same length
+	if classes.Len() != methods.Len() || classes.Len() != lines.Len() {
+		return fmt.Errorf("%w: (%s %d) (%s %d) (%s %d)", errMismatchedLength,
+			p.cfg.ClassesAttributeKey, classes.Len(),
+			p.cfg.MethodsAttributeKey, methods.Len(),
+			p.cfg.LinesAttributeKey, lines.Len(),
+		)
 	}
-
-	uuid := uuidValue.Str()
 
 	if p.cfg.PreserveStackTrace {
 		classes.CopyTo(attrs.PutEmptySlice(p.cfg.OriginalClassesAttributeKey))
@@ -114,11 +124,19 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 		}
 	}
 
+	uuidValue, ok := attrs.Get(p.cfg.ProguardUUIDAttributeKey)
+	if !ok {
+		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
+	}
+
+	uuid := uuidValue.Str()
+
 	var stack []string
 	var mappedClasses = attrs.PutEmptySlice(p.cfg.ClassesAttributeKey)
 	var mappedMethods = attrs.PutEmptySlice(p.cfg.MethodsAttributeKey)
 	var mappedLines = attrs.PutEmptySlice(p.cfg.LinesAttributeKey)
 
+	var symbolicationFailed bool
 	for i := 0; i < classes.Len(); i++ {
 		line := lines.At(i).Int()
 
@@ -145,10 +163,13 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 		}
 	}
 
-	attrs.PutBool(p.cfg.SymbolicatorFailureAttributeKey, symbolicationFailed)
 	attrs.PutStr(p.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
 
-	return nil
+	if symbolicationFailed {
+		return errPartialSymbolication
+	} else {
+		return nil
+	}
 }
 
 func newProguardLogsProcessor(ctx context.Context, cfg *Config, store fileStore, set processor.Settings, symbolicator symbolicator) (*proguardLogsProcessor, error) {

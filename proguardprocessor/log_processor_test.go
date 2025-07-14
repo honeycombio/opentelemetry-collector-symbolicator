@@ -218,7 +218,7 @@ func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
 
 	err = processor.processLogRecord(context.Background(), lr)
 
-	assert.NoError(t, err)
+	assert.Error(t, err)
 
 	stackTrace, ok := attrs.Get("stack_trace")
 	assert.True(t, ok)
@@ -266,7 +266,7 @@ func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
 
 	err = processor.processLogRecord(context.Background(), lr)
 
-	assert.NoError(t, err)
+	assert.Error(t, err)
 
 	stackTrace, ok := attrs.Get("stack_trace")
 	assert.True(t, ok)
