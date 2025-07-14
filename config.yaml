@@ -32,4 +32,3 @@ service:
   telemetry:
     logs:
       level: debug
-    metrics:
