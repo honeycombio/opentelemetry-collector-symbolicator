@@ -1,6 +1,6 @@
 # Releasing
 
-- `Add steps to prepare release`
+- `Add steps to prepare release` (update `processorVersion` for `symbolicatorprocessor` package)
 - Update relevant `CHANGELOG.md` files in each processor directory with the changes since the last release.
 - Commit changes, push, and open a release preparation pull request for review.
 - Once the pull request is merged, fetch the updated `main` branch.
