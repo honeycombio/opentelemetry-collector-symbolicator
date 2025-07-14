@@ -17,6 +17,7 @@ import (
 
 var (
 	errMissingAttribute = errors.New("missing attribute")
+	errPartialSymbolication = errors.New("symbolication failed for some stack frames")
 )
 
 // symbolicator interface is used to symbolicate stack traces.
@@ -128,11 +129,13 @@ func (sp *symbolicatorProcessor) processStackTraceAttributesThrows(ctx context.C
 
 	lines := strings.Split(rawStackTrace, "\n")
 	res := make([]string, len(lines))
+	symbolicationFailed := false
 	for idx, line := range lines {
 		symbolicated, err := sp.symbolicateStackLine(ctx, line, binaryName, buildUUID)
 		if err != nil {
 			sp.logger.Debug("could not symbolicate line")
 			res[idx] = line
+			symbolicationFailed = true
 			continue
 		}
 		res[idx] = symbolicated
@@ -143,7 +146,11 @@ func (sp *symbolicatorProcessor) processStackTraceAttributesThrows(ctx context.C
 	}
 	attributes.PutStr(sp.cfg.StackTraceAttributeKey, strings.Join(res, "\n"))
 
-	return nil
+	if symbolicationFailed {
+		return errPartialSymbolication
+	} else {
+		return nil
+	}
 }
 
 // groups: stack index, library name, hex address, uuid or binary name, offset
