@@ -5,10 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/processor"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
 )
 
@@ -31,14 +35,19 @@ type symbolicatorProcessor struct {
 	cfg *Config
 
 	symbolicator symbolicator
+
+	telemetryBuilder *metadata.TelemetryBuilder
+	attributes       metric.MeasurementOption
 }
 
 // newSymbolicatorProcessor creates a new symbolicatorProcessor.
-func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Settings, symbolicator symbolicator) *symbolicatorProcessor {
+func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Settings, symbolicator symbolicator, tb *metadata.TelemetryBuilder, attributes attribute.Set) *symbolicatorProcessor {
 	return &symbolicatorProcessor{
-		cfg:          cfg,
-		logger:       set.Logger,
-		symbolicator: symbolicator,
+		cfg:              cfg,
+		logger:           set.Logger,
+		symbolicator:     symbolicator,
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
 	}
 }
 
@@ -47,10 +56,13 @@ func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Sett
 func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Traces) (ptrace.Traces, error) {
 	sp.logger.Info("Processing traces")
 
+	startTime := time.Now()
 	for i := 0; i < td.ResourceSpans().Len(); i++ {
 		rs := td.ResourceSpans().At(i)
 		sp.processResourceSpans(ctx, rs)
 	}
+
+	sp.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
 	return td, nil
 }
 
@@ -155,6 +167,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	var hasSymbolicationFailed bool
 	for i := 0; i < columns.Len(); i++ {
 		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
+		sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
 
 		if err != nil {
 			hasSymbolicationFailed = true
@@ -164,6 +177,8 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 			mappedFunctions.AppendEmpty().SetStr("")
 			mappedLines.AppendEmpty().SetInt(-1)
 			mappedUrls.AppendEmpty().SetStr("")
+
+			sp.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, sp.attributes)
 		} else {
 			s := formatStackFrame(mappedStackFrame)
 			stack = append(stack, s)

@@ -1,6 +1,8 @@
 package symbolicatorprocessor
 
-import "time"
+import (
+	"time"
+)
 
 // Config defines configuration for the symbolicator processor.
 type Config struct {
