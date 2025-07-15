@@ -19,6 +19,7 @@ import (
 var (
 	errMissingAttribute = errors.New("missing attribute")
 	errMismatchedLength = errors.New("mismatched stacktrace attribute lengths")
+	errPartialSymbolication = errors.New("symbolication failed for some stack frames")
 )
 
 // symbolicator interface is used to symbolicate stack traces.
@@ -89,12 +90,24 @@ func formatStackFrame(sf *mappedStackFrame) string {
 	return fmt.Sprintf("    at %s(%s:%d:%d)", sf.FunctionName, sf.URL, sf.Line, sf.Col)
 }
 
-// processAttributes takes the attributes and determines if they contain
+// processAttributes takes the attributes of a span and returns an error if symbolication failed.
+func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map) error {
+	err := sp.processThrow(ctx, attributes)
+
+	if err != nil {
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
+		return err
+	} else {
+		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
+		return nil
+	}
+}
+
+// processThrow takes the attributes and determines if they contain
 // required stacktrace information. If they do, it symbolicates the stack
 // trace and adds it to the attributes.
-func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map) error {
+func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pcommon.Map) error {
 	var ok bool
-	var hasSymbolicationFailed bool
 	var symbolicationError error
 	var lines, columns, functions, urls pcommon.Slice
 
@@ -151,6 +164,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 
 	stack = append(stack, fmt.Sprintf("%s: %s", stackType.Str(), stackMessage.Str()))
 
+	var hasSymbolicationFailed bool
 	for i := 0; i < columns.Len(); i++ {
 		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
 		sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
@@ -175,13 +189,16 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 		}
 	}
 
-	attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, hasSymbolicationFailed)
 	if symbolicationError != nil {
 		attributes.PutStr(sp.cfg.SymbolicatorFailureMessageAttributeKey, symbolicationError.Error())
 	}
 	attributes.PutStr(sp.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
 
-	return nil
+	if hasSymbolicationFailed {
+		return errPartialSymbolication
+	} else {
+		return nil
+	}
 }
 
 // getSlice retrieves a slice from a map, returning an empty slice if the key is not found.
