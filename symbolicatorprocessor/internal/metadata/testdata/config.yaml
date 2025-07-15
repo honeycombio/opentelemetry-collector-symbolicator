@@ -1,0 +1,13 @@
+default:
+all_set:
+  resource_attributes:
+    processor_type:
+      enabled: true
+    processor_version:
+      enabled: true
+none_set:
+  resource_attributes:
+    processor_type:
+      enabled: false
+    processor_version:
+      enabled: false
