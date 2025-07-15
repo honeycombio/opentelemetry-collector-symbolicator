@@ -4,7 +4,7 @@
 
 ### 🚧 Maintenance
 
-- chore: set symbolication failed attr to false for successful symbolications (#86) | @jairo-mendoza
+- chore: improve parity for symbolication failure across the 3 processors (#86) | @jairo-mendoza
 
 ## v0.0.5 [beta] - 2025/07/02
 ### 🚧 Maintenance

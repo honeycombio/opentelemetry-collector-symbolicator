@@ -1,8 +1,14 @@
 # Symbolicator Processor changelog
 
 ## Unreleased
+
 ### ✨ Features
+
 - feat: Add internal processor telemetry to symbolicatorprocessor
+
+### 🚧 Maintenance
+
+- chore: improve parity for symbolication failure across the 3 processors (#86) | @jairo-mendoza
 
 ## v0.0.9 [beta] - 2025/07/02
 ### 🚧 Maintenance
