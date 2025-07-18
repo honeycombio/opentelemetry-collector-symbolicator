@@ -88,7 +88,7 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rl pl
 func formatStackFrames(prefix, binaryName string, offset uint64, frames []*mappedDSYMStackFrame) string {
 	lines := make([]string, len(frames))
 	for i, loc := range frames {
-		lines[i] = fmt.Sprintf("%s %s() (in %s) (%s:%d) + %d", prefix, loc.symbol, binaryName, loc.path, loc.line, offset)
+		lines[i] = fmt.Sprintf("%s %s (in %s) (%s:%d) + %d", prefix, loc.symbol, binaryName, loc.path, loc.line, offset)
 	}
 
 	return strings.Join(lines, "\n")
@@ -208,7 +208,7 @@ func isUUID(maybeUUID string) bool {
 func formatMetricKitStackFrames(frame MetricKitCallStackFrame, frames []*mappedDSYMStackFrame) string {
 	lines := make([]string, len(frames))
 	for i, loc := range frames {
-		lines[i] = fmt.Sprintf("%s\t\t\t0x%X %s() (%s:%d) + %d", frame.BinaryName, frame.OffsetIntoBinaryTextSegment, loc.symbol, loc.path, loc.line, loc.symAddr)
+		lines[i] = fmt.Sprintf("%s\t\t\t0x%X %s (%s:%d) + %d", frame.BinaryName, frame.OffsetIntoBinaryTextSegment, loc.symbol, loc.path, loc.line, loc.symAddr)
 	}
 
 	return strings.Join(lines, "\n")
