@@ -25,7 +25,7 @@ func TestDSYMSymbolicator(t *testing.T) {
 	line := formatMetricKitStackFrames(baseFrame, sf)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "chateaux-bufeaux			0x18854 main() (/Users/mustafa/hny/chateaux-bufeaux-ios/Chateaux Bufeaux/Chateaux_BufeauxApp.swift:0) + 100372", line)
+	assert.Equal(t, "chateaux-bufeaux			0x18854 main (/Users/mustafa/hny/chateaux-bufeaux-ios/Chateaux Bufeaux/Chateaux_BufeauxApp.swift:0) + 100372", line)
 
 	// UUID doesn't exist
 	_, err = sym.symbolicateFrame(ctx, "2DBDCA05-2BAA-3BFE-9EF3-15A157D84058", "Chateaux Bufeaux", baseFrame.OffsetIntoBinaryTextSegment)
@@ -60,7 +60,7 @@ func TestDSYMSymbolicatorCache(t *testing.T) {
 	line := formatMetricKitStackFrames(baseFrame, sf)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "chateaux-bufeaux			0x18854 main() (/Users/mustafa/hny/chateaux-bufeaux-ios/Chateaux Bufeaux/Chateaux_BufeauxApp.swift:0) + 100372", line)
+	assert.Equal(t, "chateaux-bufeaux			0x18854 main (/Users/mustafa/hny/chateaux-bufeaux-ios/Chateaux Bufeaux/Chateaux_BufeauxApp.swift:0) + 100372", line)
 
 	// Cache should have one entry
 	assert.Equal(t, 1, sym.cache.Len())

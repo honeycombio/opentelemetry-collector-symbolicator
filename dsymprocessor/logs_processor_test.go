@@ -86,10 +86,10 @@ func TestProcessStackTrace(t *testing.T) {
 			expected := `0   CoreFoundation                      0x00000001835df228 7821F73C-378B-3A10-BE90-EF526B7DBA93 + 1155624
 1   libobjc.A.dylib                     0x0000000180a79abc objc_exception_throw + 88
 2   CoreFoundation                      0x00000001835e15fc 7821F73C-378B-3A10-BE90-EF526B7DBA93 + 1164796
-3   Chateaux Bufeaux                    0x00000001025a0758 main() (in Chateaux Bufeaux) (MyFile.swift:1) + 231256
-4   Chateaux Bufeaux                    0x00000001025a0834 main() (in Chateaux Bufeaux) (MyFile.swift:1) + 231476
-5   Chateaux Bufeaux                    0x000000010259f2ac main() (in Chateaux Bufeaux) (MyFile.swift:1) + 225964
-6   Chateaux Bufeaux                    0x0000000102577fd1 main() (in Chateaux Bufeaux) (MyFile.swift:1) + 65489
+3   Chateaux Bufeaux                    0x00000001025a0758 main (in Chateaux Bufeaux) (MyFile.swift:1) + 231256
+4   Chateaux Bufeaux                    0x00000001025a0834 main (in Chateaux Bufeaux) (MyFile.swift:1) + 231476
+5   Chateaux Bufeaux                    0x000000010259f2ac main (in Chateaux Bufeaux) (MyFile.swift:1) + 225964
+6   Chateaux Bufeaux                    0x0000000102577fd1 main (in Chateaux Bufeaux) (MyFile.swift:1) + 65489
 7   libswift_Concurrency.dylib          0x000000018f0a9241 DCB9E73A-92BA-3782-BC6D-3E1906622689 + 414273`
 
 			assert.Equal(t, expected, symbolicated.Str())
@@ -188,7 +188,7 @@ func TestProcessMetricKit(t *testing.T) {
 			assert.True(t, found)
 
 			expected := `dyld(189FE480-5D5B-3B89-9289-58BC88624420) +68312
-    Chateaux Bufeaux			0x18854 main() (MyFile.swift:1) + 1
+    Chateaux Bufeaux			0x18854 main (MyFile.swift:1) + 1
     SwiftUI(6527276E-A3D1-30FB-BA68-ACA33324D618) +933200
     SwiftUI(6527276E-A3D1-30FB-BA68-ACA33324D618) +933484`
 

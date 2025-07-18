@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 🐛 Fixes
+- fix: stack traces no longer have extra `()` characters (#88) | @mustafahaddara
+
 ### 🚧 Maintenance
 
 - chore: improve parity for symbolication failure across the 3 processors (#86) | @jairo-mendoza
