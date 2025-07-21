@@ -1,4 +1,4 @@
-type: symbolicator
+type: source_map_symbolicator
 status:
   class: processor
   stability:

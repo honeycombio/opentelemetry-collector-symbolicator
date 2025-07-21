@@ -25,7 +25,7 @@ func (rac *ResourceAttributeConfig) Unmarshal(parser *confmap.Conf) error {
 	return nil
 }
 
-// ResourceAttributesConfig provides config for symbolicator resource attributes.
+// ResourceAttributesConfig provides config for source_map_symbolicator resource attributes.
 type ResourceAttributesConfig struct {
 	ProcessorType    ResourceAttributeConfig `mapstructure:"processor_type"`
 	ProcessorVersion ResourceAttributeConfig `mapstructure:"processor_version"`
