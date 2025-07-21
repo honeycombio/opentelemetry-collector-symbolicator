@@ -9,9 +9,9 @@ exporters:
 
 processors:
   - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.129.0
-  - gomod: github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor v0.0.0
-    name: symbolicatorprocessor
-    path: ./symbolicatorprocessor
+  - gomod: github.com/honeycombio/opentelemetry-collector-symbolicator/sourcemapprocessor v0.0.0
+    name: sourcemapprocessor
+    path: ./sourcemapprocessor
   - gomod: github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor v0.0.0
     name: dsymprocessor
     path: ./dsymprocessor

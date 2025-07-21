@@ -2,7 +2,7 @@ version: 2
 updates:
   - package-ecosystem: "gomod"
     directories:
-      - "/symbolicatorprocessor"
+      - "/sourcemapprocessor"
       - "/dsymprocessor"
       - "/proguardprocessor"
     schedule:

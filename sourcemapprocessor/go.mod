@@ -1,4 +1,4 @@
-module github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor
+module github.com/honeycombio/opentelemetry-collector-symbolicator/sourcemapprocessor
 
 go 1.23.7
 

@@ -89,7 +89,7 @@ using [mdatagen](https://github.com/open-telemetry/opentelemetry-collector/tree/
 - Total source map fetch failures
 - The size of the source map cache in bytes
 
-To see the full list of the custom telemetry collected, see [documentation.md](./symbolicatorprocessor/documentation.md) in the `symbolicatorprocessor` package.
+To see the full list of the custom telemetry collected, see [documentation.md](./sourcemapprocessor/documentation.md) in the `sourcemapprocessor` package.
 
 To actually send your internal telemetry to a backend, make sure to enable the `metrics` service in your **collector's** yaml config file. Here is an example of a
 collector config sending metrics to a Honeycomb endpoint:

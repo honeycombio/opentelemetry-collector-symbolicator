@@ -1,4 +1,4 @@
-package symbolicatorprocessor
+package sourcemapprocessor
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/sourcemapprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/processor"
@@ -27,7 +27,7 @@ type symbolicator interface {
 	symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error)
 }
 
-// symbolicatorProcessor is a processor that finds and symbolicates stack
+// sourcemapprocessor is a processor that finds and symbolicates stack
 // traces that it finds in the attributes of spans.
 type symbolicatorProcessor struct {
 	logger *zap.Logger
