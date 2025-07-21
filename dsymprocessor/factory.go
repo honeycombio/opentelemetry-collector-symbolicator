@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	typeStr = component.MustNewType("dsymprocessor")
+	typeStr = component.MustNewType("dsym_symbolicator")
 )
 
 // createDefaultConfig creates the default configuration for the processor.

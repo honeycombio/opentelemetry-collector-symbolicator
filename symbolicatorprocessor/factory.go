@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	typeStr = component.MustNewType("symbolicator")
+	typeStr = component.MustNewType("source_map_symbolicator")
 )
 
 const (

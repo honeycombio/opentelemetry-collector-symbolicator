@@ -7,8 +7,8 @@ receivers:
         endpoint: 0.0.0.0:4318
 
 processors:
-  symbolicator:
-  dsymprocessor:
+  source_map_symbolicator:
+  dsym_symbolicator:
     local_dsyms:
       path: ./test_assets
   proguard_symbolicator:
@@ -23,11 +23,11 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [symbolicator]
+      processors: [source_map_symbolicator]
       exporters: [debug]
     logs:
       receivers: [otlp]
-      processors: [dsymprocessor, batch]
+      processors: [dsym_symbolicator, proguard_symbolicator, batch]
       exporters: [debug]
   telemetry:
     logs:
