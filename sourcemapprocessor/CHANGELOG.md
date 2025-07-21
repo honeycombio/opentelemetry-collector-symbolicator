@@ -6,6 +6,11 @@
 
 - feat: Add internal processor telemetry to symbolicatorprocessor
 
+### 🚨 Breaking Changes
+
+- chore: rename symbolicatorprocessor to sourcemapprocessor
+- chore: rename top-level config key from `symbolicator` to `source_map_symbolicator`
+
 ### 🚧 Maintenance
 
 - chore: improve parity for symbolication failure across the 3 processors (#86) | @jairo-mendoza
