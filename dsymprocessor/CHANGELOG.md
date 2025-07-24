@@ -9,6 +9,10 @@
 
 - chore: improve parity for symbolication failure across the 3 processors (#86) | @jairo-mendoza
 
+### 🚨 Breaking Changes
+
+- chore: rename top-level config key from `dsymprocessor` to `dsym_symbolicator`
+
 ## v0.0.5 [beta] - 2025/07/02
 ### 🚧 Maintenance
 - maint(deps): bump the aws group across 2 directories with 1 update (#79)

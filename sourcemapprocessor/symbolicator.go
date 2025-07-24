@@ -1,4 +1,4 @@
-package symbolicatorprocessor
+package sourcemapprocessor
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor/internal/metadata"
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/sourcemapprocessor/internal/metadata"
 	"github.com/honeycombio/symbolic-go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"

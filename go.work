@@ -6,5 +6,5 @@ use (
 	./dsymprocessor
 	./otelcol-dev
 	./proguardprocessor
-	./symbolicatorprocessor
+	./sourcemapprocessor
 )

@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	Type      = component.MustNewType("symbolicator")
-	ScopeName = "github.com/honeycombio/opentelemetry-collector-symbolicator/symbolicatorprocessor"
+	Type      = component.MustNewType("source_map_symbolicator")
+	ScopeName = "github.com/honeycombio/opentelemetry-collector-symbolicator/sourcemapprocessor"
 )
 
 const (

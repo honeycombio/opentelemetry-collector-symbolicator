@@ -15,7 +15,7 @@ Register the plugin in the processors section of your open telemetry collector c
 
 ```yaml
     processors:
-      symbolicator:
+      source_map_symbolicator:
 ```
 
 ### JavaScript source and source map files
@@ -89,7 +89,7 @@ using [mdatagen](https://github.com/open-telemetry/opentelemetry-collector/tree/
 - Total source map fetch failures
 - The size of the source map cache in bytes
 
-To see the full list of the custom telemetry collected, see [documentation.md](./symbolicatorprocessor/documentation.md) in the `symbolicatorprocessor` package.
+To see the full list of the custom telemetry collected, see [documentation.md](./sourcemapprocessor/documentation.md) in the `sourcemapprocessor` package.
 
 To actually send your internal telemetry to a backend, make sure to enable the `metrics` service in your **collector's** yaml config file. Here is an example of a
 collector config sending metrics to a Honeycomb endpoint:
@@ -125,7 +125,7 @@ Register the plugin in the processors section of your open telemetry collector c
 
 ```yaml
     processors:
-      dsymsymbolicator:
+      dsym_symbolicator:
 ```
 
 ### dSYM files
@@ -310,7 +310,7 @@ The default configuration will load the source(map) files (this must include bot
 
 ```yaml
     processors:
-      symbolicator:
+      source_map_symbolicator:
         # source_map_store is used to configure which store to use, in this case local disk
         source_map_store: file_store
         local_source_maps:
@@ -331,7 +331,7 @@ You can also load the source(map) files (this must include both the JavaScript s
 
 ```yaml
     processors:
-      symbolicator:
+      source_map_symbolicator:
         # source_map_store is used to configure which store to use, in this case S3
         source_map_store: s3_store
         # s3_source_maps is used to configure the sourcing of source maps from S3
@@ -358,7 +358,7 @@ You can also load the source(map) files from a GCS bucket.
 
 ```yaml
     processors:
-      symbolicator:
+      source_map_symbolicator:
         # source_map_store is used to configure which store to use, in this case GCS
         source_map_store: gcs_store
         # gcs_source_maps is used to configure the sourcing of source maps from GCS

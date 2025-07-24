@@ -1,4 +1,4 @@
-package symbolicatorprocessor
+package sourcemapprocessor
 
 import (
 	"context"

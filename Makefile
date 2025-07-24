@@ -20,4 +20,4 @@ run: build
 
 .PHONY: test
 test: build
-	go test ./symbolicatorprocessor/ ./dsymprocessor ./proguardprocessor
+	go test ./sourcemapprocessor/ ./dsymprocessor ./proguardprocessor
