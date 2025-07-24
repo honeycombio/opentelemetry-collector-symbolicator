@@ -2,18 +2,21 @@
 
 ## Unreleased
 
+## v0.0.10 [beta] - 2025/07/24
+
 ### ✨ Features
 
-- feat: Add internal processor telemetry to symbolicatorprocessor
+- feat: Add internal processor telemetry to symbolicatorprocessor (#80) | @jairo-mendoza
 
 ### 🚨 Breaking Changes
 
-- chore: rename symbolicatorprocessor to sourcemapprocessor
-- chore: rename top-level config key from `symbolicator` to `source_map_symbolicator`
+- chore: rename symbolicatorprocessor to sourcemapprocessor (#89) | @mustafahaddara
+- chore: rename top-level config key from `symbolicator` to `source_map_symbolicator` (#89) | @mustafahaddara
 
 ### 🚧 Maintenance
 
 - chore: improve parity for symbolication failure across the 3 processors (#86) | @jairo-mendoza
+- maint(deps): bump the aws group across 3 directories with 1 update (#85)
 
 ## v0.0.9 [beta] - 2025/07/02
 ### 🚧 Maintenance
