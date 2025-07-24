@@ -2,16 +2,19 @@
 
 ## Unreleased
 
+## v0.0.6 [beta] - 2025/07/24
+
 ### 🐛 Fixes
 - fix: stack traces no longer have extra `()` characters (#88) | @mustafahaddara
 
 ### 🚧 Maintenance
 
 - chore: improve parity for symbolication failure across the 3 processors (#86) | @jairo-mendoza
+- maint(deps): bump the aws group across 3 directories with 1 update (#85)
 
 ### 🚨 Breaking Changes
 
-- chore: rename top-level config key from `dsymprocessor` to `dsym_symbolicator`
+- chore: rename top-level config key from `dsymprocessor` to `dsym_symbolicator` (#89) | @mustafahaddara
 
 ## v0.0.5 [beta] - 2025/07/02
 ### 🚧 Maintenance
