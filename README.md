@@ -344,6 +344,10 @@ You can also load the source(map) files (this must include both the JavaScript s
           prefix: source-maps
 ```
 
+#### Authentication
+We use the standard [aws-sdk-go-v2](https://github.com/aws/aws-sdk-go-v2) library for interacting with S3. It automatically loads the [relevant environment variables](https://docs.aws.amazon.com/sdkref/latest/guide/environment-variables.html) for interacting with AWS S3 with a particular IAM role. To use a private S3 bucket, set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables, and the collector will do the rest.
+
+
 #### How does the S3 store source the files?
 
 Each line of the stack trace includes the URL of the file it originated from.
@@ -368,6 +372,9 @@ You can also load the source(map) files from a GCS bucket.
           # (optional) prefix is used to nest the files in a sub key of the bucket
           prefix: source-maps
 ```
+
+#### Authentication
+We use the standard Google Cloud [storage](https://pkg.go.dev/cloud.google.com/go/storage) library for interacting with GCS, which uses the standard [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials) for interacting with GCS. To use a private GCS bucket, set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable, and the collector will do the rest.
 
 #### How does the GCS store source the files?
 
