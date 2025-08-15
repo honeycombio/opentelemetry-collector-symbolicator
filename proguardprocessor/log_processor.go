@@ -37,7 +37,8 @@ func (p *proguardLogsProcessor) ProcessLogs(ctx context.Context, logs plog.Logs)
 		rl := logs.ResourceLogs().At(i)
 
 		if err := p.processResourceLogs(ctx, rl); err != nil {
-			return logs, err
+			// Log the error but continue processing other resource logs
+			p.logger.Warn("Error processing resource logs", zap.Error(err), zap.Int("resource_index", i))
 		}
 	}
 
@@ -48,7 +49,8 @@ func (p *proguardLogsProcessor) processResourceLogs(ctx context.Context, rl plog
 	for j := 0; j < rl.ScopeLogs().Len(); j++ {
 		sl := rl.ScopeLogs().At(j)
 		if err := p.processScopeLogs(ctx, sl); err != nil {
-			return err
+			// Log the error but continue processing other scope logs
+			p.logger.Warn("Error processing scope logs", zap.Error(err), zap.Int("scope_index", j))
 		}
 	}
 
@@ -59,7 +61,8 @@ func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.Sc
 	for k := 0; k < sl.LogRecords().Len(); k++ {
 		lr := sl.LogRecords().At(k)
 		if err := p.processLogRecord(ctx, lr); err != nil {
-			return err
+			// Log the error but continue processing other log records
+			p.logger.Warn("Error processing log record", zap.Error(err), zap.Int("record_index", k))
 		}
 	}
 

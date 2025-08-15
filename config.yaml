@@ -5,6 +5,11 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "*"
+          allowed_headers: # <-- the sweet sweet proper setting
+            - "*"
 
 processors:
   source_map_symbolicator:
@@ -12,23 +17,29 @@ processors:
     local_dsyms:
       path: ./test_assets
   proguard_symbolicator:
+    local_store:
+      path: ./test_assets
   batch:
 
 exporters:
   # NOTE: Prior to v0.86.0 use `logging` instead of `debug`.
   debug:
     verbosity: detailed
+  otlp:
+    endpoint: "api.honeycomb.io:443"
+    headers:
+      "x-honeycomb-team": "7PuwcQA0b80MDeNtw8ELvB"
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [source_map_symbolicator]
-      exporters: [debug]
+      exporters: [debug, otlp]
     logs:
       receivers: [otlp]
-      processors: [dsym_symbolicator, proguard_symbolicator, batch]
-      exporters: [debug]
+      processors: [proguard_symbolicator, batch]
+      exporters: [debug, otlp]
   telemetry:
     logs:
       level: debug

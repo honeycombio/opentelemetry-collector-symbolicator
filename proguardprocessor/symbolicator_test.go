@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 type mockSymbolicatorStore struct {
@@ -55,7 +56,8 @@ func TestNewBasicSymbolicator(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			symbolicator, err := newBasicSymbolicator(ctx, tt.timeout, tt.cacheSize, tt.store)
+			logger := zap.NewNop()
+			symbolicator, err := newBasicSymbolicator(ctx, tt.timeout, tt.cacheSize, tt.store, logger)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -77,8 +79,9 @@ func TestBasicSymbolicator_Symbolicate_Success(t *testing.T) {
 	mockStore := &mockSymbolicatorStore{}
 	ctx := context.Background()
 	uuid := "test-uuid"
+	logger := zap.NewNop()
 
-	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore)
+	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore, logger)
 	require.NoError(t, err)
 
 	// Note: This test would require a working symbolic.NewProguardMapper implementation
@@ -93,8 +96,9 @@ func TestBasicSymbolicator_Symbolicate_StoreError(t *testing.T) {
 	mockStore := &mockSymbolicatorStore{
 		err: expectedError,
 	}
+	logger := zap.NewNop()
 
-	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore)
+	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore, logger)
 	require.NoError(t, err)
 
 	result, err := symbolicator.symbolicate(ctx, uuid, "com.example.Test", "methodA", 1)
@@ -108,9 +112,10 @@ func TestBasicSymbolicator_LimitedSymbolicate_Timeout(t *testing.T) {
 	mockStore := &mockSymbolicatorStore{}
 	ctx := context.Background()
 	uuid := "test-uuid"
+	logger := zap.NewNop()
 
 	// Create symbolicator with very short timeout
-	symbolicator, err := newBasicSymbolicator(ctx, 1*time.Nanosecond, 10, mockStore)
+	symbolicator, err := newBasicSymbolicator(ctx, 1*time.Nanosecond, 10, mockStore, logger)
 	require.NoError(t, err)
 
 	// First, occupy the channel to cause timeout
@@ -130,8 +135,9 @@ func TestBasicSymbolicator_LimitedSymbolicate_CacheHit(t *testing.T) {
 	mockStore := &mockSymbolicatorStore{}
 	ctx := context.Background()
 	uuid := "test-uuid"
+	logger := zap.NewNop()
 
-	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore)
+	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore, logger)
 	require.NoError(t, err)
 
 	// First call - should hit the store
@@ -153,8 +159,9 @@ func TestBasicSymbolicator_LargeLineNumber(t *testing.T) {
 	mockStore := &mockSymbolicatorStore{}
 	ctx := context.Background()
 	uuid := "test-uuid"
+	logger := zap.NewNop()
 
-	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore)
+	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore, logger)
 	require.NoError(t, err)
 
 	// Test with a very large line number

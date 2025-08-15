@@ -19,15 +19,18 @@ var (
 
 func createDefaultConfig() component.Config {
 	return &Config{
-		ClassesAttributeKey:         "exception.structured_stacktrace.classes",
-		MethodsAttributeKey:         "exception.structured_stacktrace.methods",
-		LinesAttributeKey:           "exception.structured_stacktrace.lines",
-		PreserveStackTrace:          true,
-		OriginalClassesAttributeKey: "exception.structured_stacktrace.classes.original",
-		OriginalMethodsAttributeKey: "exception.structured_stacktrace.methods.original",
-		OriginalLinesAttributeKey:   "exception.structured_stacktrace.lines.original",
-		ProguardUUIDAttributeKey:    "app.debug.proguard_uuid",
-		ProguardStoreKey:            "file_store",
+		SymbolicatorFailureAttributeKey: "exception.symbolication.failed",
+		ClassesAttributeKey:             "exception.structured_stacktrace.classes",
+		MethodsAttributeKey:             "exception.structured_stacktrace.methods",
+		LinesAttributeKey:               "exception.structured_stacktrace.lines",
+		OutputStackTraceKey:             "exception.stacktrace",
+		PreserveStackTrace:              true,
+		OriginalClassesAttributeKey:     "exception.structured_stacktrace.classes.original",
+		OriginalMethodsAttributeKey:     "exception.structured_stacktrace.methods.original",
+		OriginalLinesAttributeKey:       "exception.structured_stacktrace.lines.original",
+		OriginalStackTraceKey:           "exception.stacktrace.original",
+		ProguardUUIDAttributeKey:        "app.debug.proguard_uuid",
+		ProguardStoreKey:                "file_store",
 		LocalProguardConfiguration: &LocalStoreConfiguration{
 			Path: ".",
 		},
@@ -59,7 +62,7 @@ func createLogsProcessor(ctx context.Context, set processor.Settings, cfg compon
 		return nil, err
 	}
 
-	symbolicator, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.ProguardCacheSize, store)
+	symbolicator, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.ProguardCacheSize, store, set.Logger)
 	if err != nil {
 		return nil, err
 	}
