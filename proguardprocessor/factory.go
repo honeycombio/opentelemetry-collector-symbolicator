@@ -19,17 +19,17 @@ var (
 
 func createDefaultConfig() component.Config {
 	return &Config{
-		ClassesAttributeKey:         "exception.structured_stacktrace.classes",
-		MethodsAttributeKey:         "exception.structured_stacktrace.methods",
-		LinesAttributeKey:           "exception.structured_stacktrace.lines",
-		ExceptionTypeKey:            "exception.type",
-		ExceptionMessageKey:         "exception.message",
-		PreserveStackTrace:          true,
-		OriginalClassesAttributeKey: "exception.structured_stacktrace.classes.original",
-		OriginalMethodsAttributeKey: "exception.structured_stacktrace.methods.original",
-		OriginalLinesAttributeKey:   "exception.structured_stacktrace.lines.original",
-		ProguardUUIDAttributeKey:    "app.debug.proguard_uuid",
-		ProguardStoreKey:            "file_store",
+		ClassesAttributeKey:          "exception.structured_stacktrace.classes",
+		MethodsAttributeKey:          "exception.structured_stacktrace.methods",
+		LinesAttributeKey:            "exception.structured_stacktrace.lines",
+		ExceptionTypeAttributeKey:    "exception.type",
+		ExceptionMessageAttributeKey: "exception.message",
+		PreserveStackTrace:           true,
+		OriginalClassesAttributeKey:  "exception.structured_stacktrace.classes.original",
+		OriginalMethodsAttributeKey:  "exception.structured_stacktrace.methods.original",
+		OriginalLinesAttributeKey:    "exception.structured_stacktrace.lines.original",
+		ProguardUUIDAttributeKey:     "app.debug.proguard_uuid",
+		ProguardStoreKey:             "file_store",
 		LocalProguardConfiguration: &LocalStoreConfiguration{
 			Path: ".",
 		},
