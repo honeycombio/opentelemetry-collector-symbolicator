@@ -139,7 +139,16 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	var mappedMethods = attributes.PutEmptySlice(p.cfg.MethodsAttributeKey)
 	var mappedLines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
 
+	// Add exception type and message
+	var exceptionType, hasType = attributes.Get(p.cfg.StackTypeKey)
+	var exceptionMessage, hasMessage = attributes.Get(p.cfg.StackMessageKey)
 	var symbolicationFailed bool
+	if hasType && hasMessage {
+		stack = append(stack, fmt.Sprintf("%s: %s", exceptionType.Str(), exceptionMessage.Str()))
+	} else {
+		symbolicationFailed = true
+	}
+
 	for i := 0; i < classes.Len(); i++ {
 		line := lines.At(i).Int()
 
@@ -162,7 +171,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			mappedMethods.AppendEmpty().SetStr(mappedClass.MethodName)
 			mappedLines.AppendEmpty().SetInt(mappedClass.LineNumber)
 
-			stack = append(stack, fmt.Sprintf("at %s.%s(%s:%d)", mappedClass.ClassName, mappedClass.MethodName, mappedClass.SourceFile, mappedClass.LineNumber))
+			stack = append(stack, fmt.Sprintf("\tat %s.%s(%s:%d)", mappedClass.ClassName, mappedClass.MethodName, mappedClass.SourceFile, mappedClass.LineNumber))
 		}
 	}
 
