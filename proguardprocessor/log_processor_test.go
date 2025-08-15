@@ -59,6 +59,8 @@ func TestNewProguardLogsProcessor(t *testing.T) {
 func TestProcessLogs_Success(t *testing.T) {
 	ctx := context.Background()
 	cfg := &Config{
+		ExceptionTypeAttributeKey:       "exception_type",
+		ExceptionMessageAttributeKey:    "exception_message",
 		ClassesAttributeKey:             "classes",
 		MethodsAttributeKey:             "methods",
 		LinesAttributeKey:               "lines",
@@ -90,6 +92,8 @@ func TestProcessLogs_Success(t *testing.T) {
 
 	attrs := lr.Attributes()
 	attrs.PutStr("uuid", "test-uuid")
+	attrs.PutStr("exception_type", "java.lang.RuntimeException")
+	attrs.PutStr("exception_message", "Test exception")
 
 	classes := attrs.PutEmptySlice("classes")
 	classes.AppendEmpty().SetStr("com.example.Class")
@@ -108,6 +112,7 @@ func TestProcessLogs_Success(t *testing.T) {
 	processedAttrs := result.ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0).Attributes()
 	stackTrace, ok := processedAttrs.Get("stack_trace")
 	assert.True(t, ok)
+	assert.Contains(t, stackTrace.Str(), "java.lang.RuntimeException: Test exception")
 	assert.Contains(t, stackTrace.Str(), "at com.example.DeobfuscatedClass.originalMethod(Source.java:100)")
 
 	failed, ok := processedAttrs.Get("symbolication_failed")
@@ -331,7 +336,7 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 	originalStackTrace, ok := attrs.Get("original_stack_trace")
 	assert.True(t, ok)
 	assert.Equal(t, "existing stack trace", originalStackTrace.Str())
-	
+
 	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
 	assert.True(t, hasFailureAttr)
 	assert.False(t, hasFailure.Bool())

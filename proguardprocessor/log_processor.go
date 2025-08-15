@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	errMissingAttribute = errors.New("missing attribute")
-	errMismatchedLength = errors.New("mismatched stacktrace attribute lengths")
+	errMissingAttribute     = errors.New("missing attribute")
+	errMismatchedLength     = errors.New("mismatched stacktrace attribute lengths")
 	errPartialSymbolication = errors.New("symbolication failed for some stack frames")
 )
 
@@ -138,10 +138,12 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 
 	var symbolicationFailed bool
 
-	var exceptionType, _ = attributes.Get(p.cfg.ExceptionTypeKey)
-	var exceptionMessage, _ = attributes.Get(p.cfg.ExceptionMessageKey)
+	var exceptionType, hasExceptionType = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
+	var exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
 
-	stack = append(stack, fmt.Sprintf("%s: %s", exceptionType.Str(), exceptionMessage.Str()))
+	if hasExceptionType && hasExceptionMessage {
+		stack = append(stack, fmt.Sprintf("%s: %s", exceptionType.Str(), exceptionMessage.Str()))
+	}
 
 	for i := 0; i < classes.Len(); i++ {
 		line := lines.At(i).Int()
