@@ -22,6 +22,8 @@ func createDefaultConfig() component.Config {
 		ClassesAttributeKey:         "exception.structured_stacktrace.classes",
 		MethodsAttributeKey:         "exception.structured_stacktrace.methods",
 		LinesAttributeKey:           "exception.structured_stacktrace.lines",
+		ExceptionTypeKey:            "exception.type",
+		ExceptionMessageKey:         "exception.message",
 		PreserveStackTrace:          true,
 		OriginalClassesAttributeKey: "exception.structured_stacktrace.classes.original",
 		OriginalMethodsAttributeKey: "exception.structured_stacktrace.methods.original",

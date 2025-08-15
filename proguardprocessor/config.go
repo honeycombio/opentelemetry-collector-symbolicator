@@ -23,6 +23,12 @@ type Config struct {
 	// will be written to.
 	OutputStackTraceKey string `mapstructure:"output_stack_trace_key"`
 
+	// ExceptionTypeKey is the attribute key that contains the type of the exception.
+	ExceptionTypeKey string `mapstructure:"exception_type_key"`
+
+	// ExceptionMessageKey is the attribute key that contains the message of the exception.
+	ExceptionMessageKey string `mapstructure:"exception_message_key"`
+
 	// preserveStackTrace is a config option that determines whether to keep the
 	// original stack trace in the output.
 	PreserveStackTrace bool `mapstructure:"preserve_stack_trace"`
