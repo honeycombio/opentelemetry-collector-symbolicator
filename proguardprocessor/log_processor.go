@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	errMissingAttribute = errors.New("missing attribute")
-	errMismatchedLength = errors.New("mismatched stacktrace attribute lengths")
+	errMissingAttribute     = errors.New("missing attribute")
+	errMismatchedLength     = errors.New("mismatched stacktrace attribute lengths")
 	errPartialSymbolication = errors.New("symbolication failed for some stack frames")
 )
 
@@ -137,11 +137,19 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	var mappedLines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
 
 	var symbolicationFailed bool
+
+	var exceptionType, hasExceptionType = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
+	var exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
+
+	if hasExceptionType && hasExceptionMessage {
+		stack = append(stack, fmt.Sprintf("%s: %s", exceptionType.Str(), exceptionMessage.Str()))
+	}
+
 	for i := 0; i < classes.Len(); i++ {
 		line := lines.At(i).Int()
 
 		if line < 0 || line > math.MaxUint32 {
-			stack = append(stack, fmt.Sprintf("Invalid line number %d for %s.%s", line, classes.At(i).Str(), methods.At(i).Str()))
+			stack = append(stack, fmt.Sprintf("\tInvalid line number %d for %s.%s", line, classes.At(i).Str(), methods.At(i).Str()))
 			symbolicationFailed = true
 			continue
 		}
@@ -149,7 +157,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		// maybe we should change this to take uint32?
 		mappedClass, err := p.symbolicator.symbolicate(ctx, uuid, classes.At(i).Str(), methods.At(i).Str(), int(line))
 		if err != nil {
-			stack = append(stack, fmt.Sprintf("Failed to symbolicate %s.%s(%d): %v", classes.At(i).Str(), methods.At(i).Str(), line, err))
+			stack = append(stack, fmt.Sprintf("\tFailed to symbolicate %s.%s(%d): %v", classes.At(i).Str(), methods.At(i).Str(), line, err))
 			symbolicationFailed = true
 			continue
 		}
@@ -159,7 +167,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			mappedMethods.AppendEmpty().SetStr(mappedClass.MethodName)
 			mappedLines.AppendEmpty().SetInt(mappedClass.LineNumber)
 
-			stack = append(stack, fmt.Sprintf("at %s.%s(%s:%d)", mappedClass.ClassName, mappedClass.MethodName, mappedClass.SourceFile, mappedClass.LineNumber))
+			stack = append(stack, fmt.Sprintf("\tat %s.%s(%s:%d)", mappedClass.ClassName, mappedClass.MethodName, mappedClass.SourceFile, mappedClass.LineNumber))
 		}
 	}
 

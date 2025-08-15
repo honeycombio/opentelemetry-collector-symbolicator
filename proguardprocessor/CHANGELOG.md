@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- feat: add exception type and message to outputted stacktraces
+
 ## v0.0.3 [beta] - 2025/07/24
 
 ### 🚧 Maintenance

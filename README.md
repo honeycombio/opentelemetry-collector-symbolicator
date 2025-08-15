@@ -276,6 +276,8 @@ The following configuration options can also be provided to change the attribute
 | `methods_attribute_key`              | Which attribute should the methods of the stack trace be sourced from                             | `exception.structured_stacktrace.methods`.           |
 | `lines_attribute_key`                | Which attribute should the lines of the stack trace be sourced from                               | `exception.structured_stacktrace.lines`              |
 | `output_stack_trace_key`             | Which attribute should the symbolicated stack trace be populated into                             | `exception.stacktrace`                               |
+| `exception_type_attribute_key`       | Which attribute should the exception type be sourced from                                         | `exception.type`                                     |
+| `exception_message_attribute_key`    | Which attribute should the exception message be sourced from                                      | `exception.message`                                  |
 | `preserve_stack_trace`               | After the stack trace has been symbolicated should the original values be preserved as attributes | `true`                                               |
 | `original_classes_attribute_key`     | If the stack trace is being preserved which key should the classes be copied to                   | `exception.structured_stacktrace.classes.original`   |
 | `original_methods_attribute_key`     | If the stack trace is being preserved which key should the methods be copied to                   | `exception.structured_stacktrace.methods.original`   |
