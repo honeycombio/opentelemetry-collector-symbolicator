@@ -35,48 +35,36 @@ func (p *proguardLogsProcessor) ProcessLogs(ctx context.Context, logs plog.Logs)
 
 	for i := 0; i < logs.ResourceLogs().Len(); i++ {
 		rl := logs.ResourceLogs().At(i)
-
-		if err := p.processResourceLogs(ctx, rl); err != nil {
-			return logs, err
-		}
+		p.processResourceLogs(ctx, rl)
 	}
 
 	return logs, nil
 }
 
-func (p *proguardLogsProcessor) processResourceLogs(ctx context.Context, rl plog.ResourceLogs) error {
+func (p *proguardLogsProcessor) processResourceLogs(ctx context.Context, rl plog.ResourceLogs) {
 	for j := 0; j < rl.ScopeLogs().Len(); j++ {
 		sl := rl.ScopeLogs().At(j)
-		if err := p.processScopeLogs(ctx, sl); err != nil {
-			return err
-		}
+		p.processScopeLogs(ctx, sl)
 	}
-
-	return nil
 }
 
-func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.ScopeLogs) error {
+func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.ScopeLogs) {
 	for k := 0; k < sl.LogRecords().Len(); k++ {
 		lr := sl.LogRecords().At(k)
-		if err := p.processLogRecord(ctx, lr); err != nil {
-			return err
-		}
+		p.processLogRecord(ctx, lr)
 	}
-
-	return nil
 }
 
-func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.LogRecord) error {
+func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.LogRecord) {
 	attributes := lr.Attributes()
 
 	err := p.processLogRecordThrow(ctx, attributes)
 
 	if err != nil {
 		attributes.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
-		return err
+		attributes.PutStr(p.cfg.SymbolicatorErrorAttributeKey, err.Error())
 	} else {
 		attributes.PutBool(p.cfg.SymbolicatorFailureAttributeKey, false)
-		return nil
 	}
 }
 

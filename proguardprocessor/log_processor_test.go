@@ -126,6 +126,8 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 		MethodsAttributeKey:      "methods",
 		LinesAttributeKey:        "lines",
 		ProguardUUIDAttributeKey: "uuid",
+		SymbolicatorFailureAttributeKey: "symbolication_failed",
+		SymbolicatorErrorAttributeKey: "symbolication_error",
 	}
 
 	processor := &proguardLogsProcessor{
@@ -137,13 +139,14 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 	attrs := lr.Attributes()
 	attrs.PutStr("uuid", "test-uuid")
 
-	err := processor.processLogRecord(context.Background(), lr)
+	processor.processLogRecord(context.Background(), lr)
 
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "missing attribute: classes")
 	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
 	assert.True(t, hasFailureAttr)
 	assert.True(t, hasFailure.Bool())
+	errorMsg, hasErrorMsgAttr := attrs.Get(cfg.SymbolicatorErrorAttributeKey)
+	assert.True(t, hasErrorMsgAttr)
+	assert.Equal(t, "missing attribute: classes", errorMsg.Str())
 }
 
 func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
@@ -152,6 +155,8 @@ func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
 		MethodsAttributeKey:      "methods",
 		LinesAttributeKey:        "lines",
 		ProguardUUIDAttributeKey: "uuid",
+		SymbolicatorFailureAttributeKey: "symbolication_failed",
+		SymbolicatorErrorAttributeKey: "symbolication_error",
 	}
 
 	processor := &proguardLogsProcessor{
@@ -173,14 +178,14 @@ func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(42)
 
-	err := processor.processLogRecord(context.Background(), lr)
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "mismatched stacktrace attribute lengths")
+	processor.processLogRecord(context.Background(), lr)
 
 	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
 	assert.True(t, hasFailureAttr)
 	assert.True(t, hasFailure.Bool())
+	errorMsg, hasErrorMsgAttr := attrs.Get(cfg.SymbolicatorErrorAttributeKey)
+	assert.True(t, hasErrorMsgAttr)
+	assert.Contains(t, errorMsg.Str(), "mismatched stacktrace attribute lengths")
 }
 
 func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
@@ -206,7 +211,7 @@ func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
 		err: assert.AnError,
 	}
 
-	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
+	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
@@ -221,9 +226,7 @@ func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(42)
 
-	err = processor.processLogRecord(context.Background(), lr)
-
-	assert.Error(t, err)
+	processor.processLogRecord(context.Background(), lr)
 
 	stackTrace, ok := attrs.Get("stack_trace")
 	assert.True(t, ok)
@@ -232,6 +235,10 @@ func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
 	failed, ok := attrs.Get("symbolication_failed")
 	assert.True(t, ok)
 	assert.True(t, failed.Bool())
+
+	errorMsg, hasErrorMsgAttr := attrs.Get(cfg.SymbolicatorErrorAttributeKey)
+	assert.True(t, hasErrorMsgAttr)
+	assert.Equal(t, "symbolication failed for some stack frames", errorMsg.Str())
 }
 
 func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
@@ -254,7 +261,7 @@ func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
 	store := &mockLogProcessorStore{}
 	symbolicator := &mockLogProcessorSymbolicator{}
 
-	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
+	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
@@ -269,9 +276,7 @@ func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(-1)
 
-	err = processor.processLogRecord(context.Background(), lr)
-
-	assert.Error(t, err)
+	processor.processLogRecord(context.Background(), lr)
 
 	stackTrace, ok := attrs.Get("stack_trace")
 	assert.True(t, ok)
@@ -280,6 +285,10 @@ func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
 	failed, ok := attrs.Get("symbolication_failed")
 	assert.True(t, ok)
 	assert.True(t, failed.Bool())
+
+	errorMsg, hasErrorMsgAttr := attrs.Get(cfg.SymbolicatorErrorAttributeKey)
+	assert.True(t, hasErrorMsgAttr)
+	assert.Equal(t, "symbolication failed for some stack frames", errorMsg.Str())
 }
 
 func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
@@ -307,7 +316,7 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 	store := &mockLogProcessorStore{}
 	symbolicator := &mockLogProcessorSymbolicator{}
 
-	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
+	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
@@ -323,9 +332,7 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(42)
 
-	err = processor.processLogRecord(context.Background(), lr)
-
-	assert.NoError(t, err)
+	processor.processLogRecord(context.Background(), lr)
 
 	// Check original attributes are preserved
 	originalClasses, ok := attrs.Get("original_classes")
@@ -348,6 +355,8 @@ func TestProcessLogRecord_MissingUUID(t *testing.T) {
 		MethodsAttributeKey:      "methods",
 		LinesAttributeKey:        "lines",
 		ProguardUUIDAttributeKey: "uuid",
+		SymbolicatorFailureAttributeKey: "symbolication_failed",
+		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}
 
 	processor := &proguardLogsProcessor{
@@ -367,14 +376,15 @@ func TestProcessLogRecord_MissingUUID(t *testing.T) {
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(42)
 
-	err := processor.processLogRecord(context.Background(), lr)
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "missing attribute: uuid")
+	processor.processLogRecord(context.Background(), lr)
 
 	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
 	assert.True(t, hasFailureAttr)
 	assert.True(t, hasFailure.Bool())
+
+	errorMsg, hasErrorMsgAttr := attrs.Get(cfg.SymbolicatorErrorAttributeKey)
+	assert.True(t, hasErrorMsgAttr)
+	assert.Equal(t, "missing attribute: uuid", errorMsg.Str())
 }
 
 func TestGetSlice(t *testing.T) {
