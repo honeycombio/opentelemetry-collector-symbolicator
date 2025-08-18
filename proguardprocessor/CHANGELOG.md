@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- feat: add exception type and message to outputted stacktraces
+- fix: fix processor not partial symbolicating stacktraces (#101) | @jairo-mendoza
+- feat: add exception type and message to outputted stacktraces (#99) | @jairo-mendoza
 
 ## v0.0.3 [beta] - 2025/07/24
 
