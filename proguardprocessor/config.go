@@ -7,6 +7,10 @@ type Config struct {
 	// true if the symbolicator fails to fully symbolicate a stack trace.
 	SymbolicatorFailureAttributeKey string `mapstructure:"symbolicator_failure_attribute_key"`
 
+	// SymbolicatorErrorAttributeKey is the attribute key that contains the error
+	// message if the symbolicator fails to fully symbolicate a stack trace.
+	SymbolicatorErrorAttributeKey string `mapstructure:"symbolicator_error_attribute_key"`
+
 	// ClassesAttributeKey is the attribute key that contains the class names
 	// of the stack trace.
 	ClassesAttributeKey string `mapstructure:"classes_attribute_key"`
