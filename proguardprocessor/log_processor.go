@@ -136,7 +136,8 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	for i := 0; i < classes.Len(); i++ {
 		line := lines.At(i).Int()
 
-		if line < 0 || line > math.MaxUint32 {
+		// -2 is a special value line number indicating a native method per the android docs
+		if (line < 0 && line != -2) || line > math.MaxUint32 {
 			stack = append(stack, fmt.Sprintf("\tInvalid line number %d for %s.%s", line, classes.At(i).Str(), methods.At(i).Str()))
 			symbolicationFailed = true
 			continue
