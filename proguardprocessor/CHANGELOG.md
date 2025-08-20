@@ -1,6 +1,6 @@
 # Proguard Processor changelog
 
-## Unreleased
+## v0.0.4 [beta] - 2025/08/20
 
 - chore: allow special negative line number in proguard processor (#102) | @jairo-mendoza
 - fix: fix processor not partial symbolicating stacktraces (#101) | @jairo-mendoza
