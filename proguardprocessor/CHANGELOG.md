@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- chore: allow special negative line number in proguard processor (#102) | @jairo-mendoza
 - fix: fix processor not partial symbolicating stacktraces (#101) | @jairo-mendoza
 - feat: add exception type and message to outputted stacktraces (#99) | @jairo-mendoza
 
