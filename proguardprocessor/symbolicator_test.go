@@ -6,8 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/proguardprocessor/internal/metadata"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/noop"
+	"go.uber.org/zap/zaptest"
 )
 
 type mockSymbolicatorStore struct {
@@ -19,6 +24,17 @@ type mockSymbolicatorStore struct {
 func (m *mockSymbolicatorStore) GetProguardMapping(ctx context.Context, uuid string) ([]byte, error) {
 	m.calls++
 	return m.mapping[uuid], m.err
+}
+
+func createMockSymbolicatorTelemetry(t *testing.T) (*metadata.TelemetryBuilder, attribute.Set) {
+	settings := component.TelemetrySettings{
+		Logger: zaptest.NewLogger(t),
+		MeterProvider: noop.NewMeterProvider(),
+	}
+	tb, err := metadata.NewTelemetryBuilder(settings)
+	assert.NoError(t, err)
+	attributes := attribute.NewSet()
+	return tb, attributes
 }
 
 func TestNewBasicSymbolicator(t *testing.T) {
@@ -55,7 +71,8 @@ func TestNewBasicSymbolicator(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			symbolicator, err := newBasicSymbolicator(ctx, tt.timeout, tt.cacheSize, tt.store)
+			tb, attributes := createMockSymbolicatorTelemetry(t)
+			symbolicator, err := newBasicSymbolicator(ctx, tt.timeout, tt.cacheSize, tt.store, tb, attributes)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -77,8 +94,9 @@ func TestBasicSymbolicator_Symbolicate_Success(t *testing.T) {
 	mockStore := &mockSymbolicatorStore{}
 	ctx := context.Background()
 	uuid := "test-uuid"
+	tb, attributes := createMockSymbolicatorTelemetry(t)
 
-	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore)
+	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore, tb, attributes)
 	require.NoError(t, err)
 
 	// Note: This test would require a working symbolic.NewProguardMapper implementation
@@ -93,8 +111,9 @@ func TestBasicSymbolicator_Symbolicate_StoreError(t *testing.T) {
 	mockStore := &mockSymbolicatorStore{
 		err: expectedError,
 	}
+	tb, attributes := createMockSymbolicatorTelemetry(t)
 
-	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore)
+	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore, tb, attributes)
 	require.NoError(t, err)
 
 	result, err := symbolicator.symbolicate(ctx, uuid, "com.example.Test", "methodA", 1)
@@ -108,9 +127,10 @@ func TestBasicSymbolicator_LimitedSymbolicate_Timeout(t *testing.T) {
 	mockStore := &mockSymbolicatorStore{}
 	ctx := context.Background()
 	uuid := "test-uuid"
+	tb, attributes := createMockSymbolicatorTelemetry(t)
 
 	// Create symbolicator with very short timeout
-	symbolicator, err := newBasicSymbolicator(ctx, 1*time.Nanosecond, 10, mockStore)
+	symbolicator, err := newBasicSymbolicator(ctx, 1*time.Nanosecond, 10, mockStore, tb, attributes)
 	require.NoError(t, err)
 
 	// First, occupy the channel to cause timeout
@@ -130,8 +150,9 @@ func TestBasicSymbolicator_LimitedSymbolicate_CacheHit(t *testing.T) {
 	mockStore := &mockSymbolicatorStore{}
 	ctx := context.Background()
 	uuid := "test-uuid"
+	tb, attributes := createMockSymbolicatorTelemetry(t)
 
-	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore)
+	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore, tb, attributes)
 	require.NoError(t, err)
 
 	// First call - should hit the store
@@ -153,8 +174,9 @@ func TestBasicSymbolicator_LargeLineNumber(t *testing.T) {
 	mockStore := &mockSymbolicatorStore{}
 	ctx := context.Background()
 	uuid := "test-uuid"
+	tb, attributes := createMockSymbolicatorTelemetry(t)
 
-	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore)
+	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore, tb, attributes)
 	require.NoError(t, err)
 
 	// Test with a very large line number

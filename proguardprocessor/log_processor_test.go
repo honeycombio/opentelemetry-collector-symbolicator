@@ -4,11 +4,15 @@ import (
 	"context"
 	"testing"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/proguardprocessor/internal/metadata"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/processor"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -30,6 +34,17 @@ func (m *mockLogProcessorSymbolicator) symbolicate(ctx context.Context, uuid, cl
 	return m.frames, m.err
 }
 
+func createMockTelemetry(t *testing.T) (*metadata.TelemetryBuilder, attribute.Set) {
+	settings := component.TelemetrySettings{
+		Logger: zaptest.NewLogger(t),
+		MeterProvider: noop.NewMeterProvider(),
+	}
+	tb, err := metadata.NewTelemetryBuilder(settings)
+	assert.NoError(t, err)
+	attributes := attribute.NewSet()
+	return tb, attributes
+}
+
 func TestNewProguardLogsProcessor(t *testing.T) {
 	ctx := context.Background()
 	cfg := &Config{
@@ -46,8 +61,9 @@ func TestNewProguardLogsProcessor(t *testing.T) {
 
 	store := &mockLogProcessorStore{}
 	symbolicator := &mockLogProcessorSymbolicator{}
+	tb, attributes := createMockTelemetry(t)
 
-	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
+	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, processor)
@@ -82,8 +98,9 @@ func TestProcessLogs_Success(t *testing.T) {
 		},
 		err: nil,
 	}
+	tb, attributes := createMockTelemetry(t)
 
-	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
+	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
 
 	logs := plog.NewLogs()
 	rl := logs.ResourceLogs().AppendEmpty()
@@ -129,10 +146,13 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 		SymbolicatorErrorAttributeKey: "symbolication_error",
 	}
+	tb, attributes := createMockTelemetry(t)
 
 	processor := &proguardLogsProcessor{
-		cfg:    cfg,
-		logger: zaptest.NewLogger(t),
+		cfg:              cfg,
+		logger:           zaptest.NewLogger(t),
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
 	}
 
 	lr := plog.NewLogRecord()
@@ -158,10 +178,13 @@ func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 		SymbolicatorErrorAttributeKey: "symbolication_error",
 	}
+	tb, attributes := createMockTelemetry(t)
 
 	processor := &proguardLogsProcessor{
-		cfg:    cfg,
-		logger: zaptest.NewLogger(t),
+		cfg:              cfg,
+		logger:           zaptest.NewLogger(t),
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
 	}
 
 	lr := plog.NewLogRecord()
@@ -210,8 +233,9 @@ func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
 	symbolicator := &mockLogProcessorSymbolicator{
 		err: assert.AnError,
 	}
+	tb, attributes := createMockTelemetry(t)
 
-	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
+	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
@@ -260,8 +284,9 @@ func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
 
 	store := &mockLogProcessorStore{}
 	symbolicator := &mockLogProcessorSymbolicator{}
+	tb, attributes := createMockTelemetry(t)
 
-	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
+	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
@@ -315,8 +340,9 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 
 	store := &mockLogProcessorStore{}
 	symbolicator := &mockLogProcessorSymbolicator{}
+	tb, attributes := createMockTelemetry(t)
 
-	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator)
+	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
@@ -358,10 +384,13 @@ func TestProcessLogRecord_MissingUUID(t *testing.T) {
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}
+	tb, attributes := createMockTelemetry(t)
 
 	processor := &proguardLogsProcessor{
-		cfg:    cfg,
-		logger: zaptest.NewLogger(t),
+		cfg:              cfg,
+		logger:           zaptest.NewLogger(t),
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
 	}
 
 	lr := plog.NewLogRecord()
