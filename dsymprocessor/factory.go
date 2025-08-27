@@ -14,6 +14,10 @@ var (
 	typeStr = component.MustNewType("dsym_symbolicator")
 )
 
+const (
+	processorVersion = "0.0.6"
+)
+
 // createDefaultConfig creates the default configuration for the processor.
 func createDefaultConfig() component.Config {
 	return &Config{

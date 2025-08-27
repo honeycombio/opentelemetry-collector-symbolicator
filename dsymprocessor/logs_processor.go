@@ -95,6 +95,10 @@ func formatStackFrames(prefix, binaryName string, offset uint64, frames []*mappe
 }
 
 func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) {
+	// Add processor type and version as attributes
+	attributes.PutStr("honeycomb.processor_type", typeStr.String())
+	attributes.PutStr("honeycomb.processor_version", processorVersion)
+
 	err := sp.processStackTraceAttributesThrows(ctx, attributes, resourceAttributes)
 	if err != nil {
 		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
@@ -229,6 +233,10 @@ type MetricKitCallStackFrame struct {
 }
 
 func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context, attributes pcommon.Map) {
+	// Add processor type and version as attributes
+	attributes.PutStr("honeycomb.processor_type", typeStr.String())
+	attributes.PutStr("honeycomb.processor_version", processorVersion)
+
 	err := sp.processMetricKitAttributesThrows(ctx, attributes)
 	if err != nil {
 		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)

@@ -94,6 +94,15 @@ func TestProcessStackTrace(t *testing.T) {
 
 			assert.Equal(t, expected, symbolicated.Str())
 
+			// Verify processor type and version attributes are included
+			processorTypeAttr, ok := log.Attributes().Get("honeycomb.processor_type")
+			assert.True(t, ok)
+			assert.Equal(t, "dsym_symbolicator", processorTypeAttr.Str())
+
+			processorVersionAttr, ok := log.Attributes().Get("honeycomb.processor_version")
+			assert.True(t, ok)
+			assert.Equal(t, processorVersion, processorVersionAttr.Str())
+
 			// no failures
 			hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
 			assert.True(t, hasFailureAttr)			
@@ -193,6 +202,15 @@ func TestProcessMetricKit(t *testing.T) {
     SwiftUI(6527276E-A3D1-30FB-BA68-ACA33324D618) +933484`
 
 			assert.Equal(t, expected, symbolicated.Str())
+
+			// Verify processor type and version attributes are included
+			processorTypeAttr, ok := log.Attributes().Get("honeycomb.processor_type")
+			assert.True(t, ok)
+			assert.Equal(t, "dsym_symbolicator", processorTypeAttr.Str())
+
+			processorVersionAttr, ok := log.Attributes().Get("honeycomb.processor_version")
+			assert.True(t, ok)
+			assert.Equal(t, processorVersion, processorVersionAttr.Str())
 
 			// no failures
 			hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
