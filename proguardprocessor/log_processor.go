@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/proguardprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/processor"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
 )
 
@@ -28,16 +32,21 @@ type proguardLogsProcessor struct {
 	cfg          *Config
 	logger       *zap.Logger
 	symbolicator symbolicator
+
+	telemetryBuilder *metadata.TelemetryBuilder
+	attributes       metric.MeasurementOption
 }
 
 func (p *proguardLogsProcessor) ProcessLogs(ctx context.Context, logs plog.Logs) (plog.Logs, error) {
 	p.logger.Info("Processing logs")
 
+	startTime := time.Now()
 	for i := 0; i < logs.ResourceLogs().Len(); i++ {
 		rl := logs.ResourceLogs().At(i)
 		p.processResourceLogs(ctx, rl)
 	}
 
+	p.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), p.attributes)
 	return logs, nil
 }
 
@@ -141,9 +150,12 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 
 		// maybe we should change this to take uint32?
 		mappedClass, err := p.symbolicator.symbolicate(ctx, uuid, classes.At(i).Str(), methods.At(i).Str(), int(line))
+		p.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, p.attributes)
+
 		if err != nil {
 			stack = append(stack, fmt.Sprintf("\tFailed to symbolicate %s.%s(%d): %v", classes.At(i).Str(), methods.At(i).Str(), line, err))
 			symbolicationFailed = true
+			p.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, p.attributes)
 			continue
 		}
 		// Not a symbolication failure but no mapping found or needed; use original stacktrace data
@@ -181,11 +193,13 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	}
 }
 
-func newProguardLogsProcessor(ctx context.Context, cfg *Config, store fileStore, set processor.Settings, symbolicator symbolicator) (*proguardLogsProcessor, error) {
+func newProguardLogsProcessor(ctx context.Context, cfg *Config, store fileStore, set processor.Settings, symbolicator symbolicator, tb *metadata.TelemetryBuilder, attributes attribute.Set) (*proguardLogsProcessor, error) {
 	return &proguardLogsProcessor{
-		cfg:          cfg,
-		logger:       set.Logger,
-		symbolicator: symbolicator,
+		cfg:              cfg,
+		logger:           set.Logger,
+		symbolicator:     symbolicator,
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
 	}, nil
 }
 

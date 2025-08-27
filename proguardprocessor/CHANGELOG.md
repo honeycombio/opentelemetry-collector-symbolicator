@@ -1,5 +1,9 @@
 # Proguard Processor changelog
 
+## Unreleased
+
+- feat: add telemetry support to proguard symbolicator
+
 ## v0.0.4 [beta] - 2025/08/20
 
 - chore: allow special negative line number in proguard processor (#102) | @jairo-mendoza
@@ -14,10 +18,13 @@
 - maint(deps): bump the aws group across 3 directories with 1 update (#85)
 
 ## v0.0.2 [beta] - 2025/07/02
+
 ### 🚧 Maintenance
+
 - maint: Update symbolic-go (#83)
 
 ## v0.0.1 [beta] - 2025/07/02
+
 ### ✨ Features
 
 - Initial release!

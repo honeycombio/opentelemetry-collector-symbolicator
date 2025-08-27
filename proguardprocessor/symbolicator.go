@@ -7,7 +7,10 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/proguardprocessor/internal/metadata"
 	"github.com/honeycombio/symbolic-go"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type fileStore interface {
@@ -19,9 +22,12 @@ type basicSymbolicator struct {
 	timeout time.Duration
 	ch      chan struct{}
 	cache   *lru.Cache[string, *symbolic.ProguardMapper]
+
+	telemetryBuilder *metadata.TelemetryBuilder
+	attributes       metric.MeasurementOption
 }
 
-func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize int, store fileStore) (*basicSymbolicator, error) {
+func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize int, store fileStore, tb *metadata.TelemetryBuilder, attributes attribute.Set) (*basicSymbolicator, error) {
 	cache, err := lru.New[string, *symbolic.ProguardMapper](cacheSize) // Adjust the size as needed
 
 	if err != nil {
@@ -31,8 +37,10 @@ func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize in
 		store:   store,
 		timeout: timeout,
 		// the channel is buffered to allow for a single request to be in progress at a time
-		ch:    make(chan struct{}, 1),
-		cache: cache,
+		ch:               make(chan struct{}, 1),
+		cache:            cache,
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
 	}, nil
 }
 
@@ -82,11 +90,13 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, uuid, class
 	}()
 
 	pm, ok := ns.cache.Get(uuid)
+	ns.telemetryBuilder.ProcessorProguardCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 
 	if !ok {
 		pmf, err := ns.store.GetProguardMapping(ctx, uuid)
 
 		if err != nil {
+			ns.telemetryBuilder.ProcessorTotalProguardFetchFailures.Add(ctx, 1, ns.attributes)
 			return nil, err
 		}
 
@@ -113,5 +123,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, uuid, class
 		ns.cache.Add(uuid, pm)
 	}
 
+	// If the cache size has changed, we should record the new size
+	ns.telemetryBuilder.ProcessorProguardCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 	return pm.RemapFrame(class, method, line)
 }
