@@ -184,15 +184,24 @@ func TestProcessLogs_KeepAllStackFrames(t *testing.T) {
 
 	classes := attrs.PutEmptySlice("classes")
 	classes.AppendEmpty().SetStr("com.example.Class")
+	classes.AppendEmpty().SetStr("com.example.Test")
+	classes.AppendEmpty().SetStr("com.example.Unknown")
 
 	methods := attrs.PutEmptySlice("methods")
 	methods.AppendEmpty().SetStr("method1")
+	methods.AppendEmpty().SetStr("method2")
+	methods.AppendEmpty().SetStr("unknownMethod")
 
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(42)
+	lines.AppendEmpty().SetInt(-2)
+	lines.AppendEmpty().SetInt(-1)
 
 	sourceFiles := attrs.PutEmptySlice("source_files")
 	sourceFiles.AppendEmpty().SetStr("Class.java")
+	sourceFiles.AppendEmpty().SetStr("Test.java")
+	// Unknown source file
+	sourceFiles.AppendEmpty()
 
 	result, err := processor.ProcessLogs(ctx, logs)
 
@@ -203,8 +212,12 @@ func TestProcessLogs_KeepAllStackFrames(t *testing.T) {
 	stackTrace, ok := processedAttrs.Get("stack_trace")
 	assert.True(t, ok)
 	assert.Contains(t, stackTrace.Str(), "java.lang.RuntimeException: Test exception")
-	// Stack trace should include the original class, method, line number, and source file.
+	// Stack trace should include the original class, method, line number, and source file if no symbolication is needed.
 	assert.Contains(t, stackTrace.Str(), "at com.example.Class.method1(Class.java:42)")
+	// Stack frames with -2 line number are treated as native methods.
+	assert.Contains(t, stackTrace.Str(), "at com.example.Test.method2(Native Method)")
+	// Stack frames with -1 line number are treated as unknown source files.
+	assert.Contains(t, stackTrace.Str(), "at com.example.Unknown.unknownMethod(Unknown Source)")
 
 	// This should not count as a symbolication failure
 	failed, ok := processedAttrs.Get("symbolication_failed")
