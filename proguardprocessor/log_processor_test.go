@@ -142,6 +142,76 @@ func TestProcessLogs_Success(t *testing.T) {
 	assert.False(t, failed.Bool())
 }
 
+func TestProcessLogs_KeepAllStackFrames(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{
+		ExceptionTypeAttributeKey:       "exception_type",
+		ExceptionMessageAttributeKey:    "exception_message",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:   "source_files",
+		ProguardUUIDAttributeKey:        "uuid",
+		OutputStackTraceKey:             "stack_trace",
+		SymbolicatorFailureAttributeKey: "symbolication_failed",
+	}
+
+	settings := processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}
+
+	store := &mockLogProcessorStore{}
+	// If no mapping found/needed, the symbolicator returns an empty frame list without error.
+	symbolicator := &mockLogProcessorSymbolicator{
+		frames: []*mappedStackFrame{},
+		err: nil,
+	}
+	tb, attributes := createMockTelemetry(t)
+
+	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
+
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	sl := rl.ScopeLogs().AppendEmpty()
+	lr := sl.LogRecords().AppendEmpty()
+
+	attrs := lr.Attributes()
+	attrs.PutStr("uuid", "test-uuid")
+	attrs.PutStr("exception_type", "java.lang.RuntimeException")
+	attrs.PutStr("exception_message", "Test exception")
+
+	classes := attrs.PutEmptySlice("classes")
+	classes.AppendEmpty().SetStr("com.example.Class")
+
+	methods := attrs.PutEmptySlice("methods")
+	methods.AppendEmpty().SetStr("method1")
+
+	lines := attrs.PutEmptySlice("lines")
+	lines.AppendEmpty().SetInt(42)
+
+	sourceFiles := attrs.PutEmptySlice("source_files")
+	sourceFiles.AppendEmpty().SetStr("Class.java")
+
+	result, err := processor.ProcessLogs(ctx, logs)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+
+	processedAttrs := result.ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0).Attributes()
+	stackTrace, ok := processedAttrs.Get("stack_trace")
+	assert.True(t, ok)
+	assert.Contains(t, stackTrace.Str(), "java.lang.RuntimeException: Test exception")
+	// Stack trace should include the original class, method, line number, and source file.
+	assert.Contains(t, stackTrace.Str(), "at com.example.Class.method1(Class.java:42)")
+
+	// This should not count as a symbolication failure
+	failed, ok := processedAttrs.Get("symbolication_failed")
+	assert.True(t, ok)
+	assert.False(t, failed.Bool())
+}
+
 func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 	cfg := &Config{
 		ClassesAttributeKey:      "classes",
