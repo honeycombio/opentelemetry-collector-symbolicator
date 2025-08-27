@@ -71,7 +71,7 @@ func TestProcessStackTrace(t *testing.T) {
 			logs := plog.NewLogs()
 			resourceLog := logs.ResourceLogs().AppendEmpty()
 			scopeLog := resourceLog.ScopeLogs().AppendEmpty()
-			
+
 			log := scopeLog.LogRecords().AppendEmpty()
 			log.SetEventName("error")
 			log.Attributes().PutEmpty(cfg.StackTraceAttributeKey).SetStr(stacktrace)
@@ -105,11 +105,10 @@ func TestProcessStackTrace(t *testing.T) {
 
 			// no failures
 			hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-			assert.True(t, hasFailureAttr)			
+			assert.True(t, hasFailureAttr)
 			assert.False(t, hasFailure.Bool())
 			_, hasFailureMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
 			assert.False(t, hasFailureMessage)
-			
 
 			// original json is preserved based on key
 			originalStackTrace, found := log.Attributes().Get(cfg.OriginalStackTraceKey)
@@ -186,7 +185,7 @@ func TestProcessMetricKit(t *testing.T) {
 			logs := plog.NewLogs()
 			resourceLog := logs.ResourceLogs().AppendEmpty()
 			scopeLog := resourceLog.ScopeLogs().AppendEmpty()
-			
+
 			log := scopeLog.LogRecords().AppendEmpty()
 			log.SetEventName("metrickit.diagnostic.crash")
 			log.Attributes().PutEmpty(cfg.MetricKitStackTraceAttributeKey).SetStr(jsonstr)
@@ -214,7 +213,7 @@ func TestProcessMetricKit(t *testing.T) {
 
 			// no failures
 			hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-			assert.True(t, hasFailureAttr)			
+			assert.True(t, hasFailureAttr)
 			assert.False(t, hasFailure.Bool())
 			_, hasFailureMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
 			assert.False(t, hasFailureMessage)
@@ -254,7 +253,7 @@ func TestMetricKitExceptionAttrs(t *testing.T) {
 	logs := plog.NewLogs()
 	resourceLog := logs.ResourceLogs().AppendEmpty()
 	scopeLog := resourceLog.ScopeLogs().AppendEmpty()
-	
+
 	log := scopeLog.LogRecords().AppendEmpty()
 	log.SetEventName("metrickit.diagnostic.crash")
 	log.Attributes().PutEmpty(cfg.MetricKitStackTraceAttributeKey).SetStr(jsonstr)
@@ -277,7 +276,7 @@ func TestMetricKitExceptionAttrs(t *testing.T) {
 
 	processor.processMetricKitAttributes(ctx, log.Attributes())
 
-	exceptionType, found= log.Attributes().Get(cfg.OutputMetricKitExceptionTypeAttributeKey)
+	exceptionType, found = log.Attributes().Get(cfg.OutputMetricKitExceptionTypeAttributeKey)
 	assert.True(t, found)
 	assert.Equal(t, "objc exception type", exceptionType.Str())
 
@@ -345,7 +344,7 @@ func TestProcessFailure_WrongKey(t *testing.T) {
 	logs := plog.NewLogs()
 	resourceLog := logs.ResourceLogs().AppendEmpty()
 	scopeLog := resourceLog.ScopeLogs().AppendEmpty()
-	
+
 	log := scopeLog.LogRecords().AppendEmpty()
 	log.SetEventName("metrickit.diagnostic.crash")
 	log.Attributes().PutEmpty("incorrect.attribute.key").SetStr(jsonstr)
@@ -381,11 +380,10 @@ func TestProcessFailure_InvalidJson(t *testing.T) {
 	logs := plog.NewLogs()
 	resourceLog := logs.ResourceLogs().AppendEmpty()
 	scopeLog := resourceLog.ScopeLogs().AppendEmpty()
-	
+
 	log := scopeLog.LogRecords().AppendEmpty()
 	log.SetEventName("metrickit.diagnostic.crash")
 	log.Attributes().PutEmpty("incorrect.attribute.key").SetStr(jsonstr)
-	
 
 	processor.processMetricKitAttributes(ctx, log.Attributes())
 

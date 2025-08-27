@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	errMissingAttribute = errors.New("missing attribute")
+	errMissingAttribute     = errors.New("missing attribute")
 	errPartialSymbolication = errors.New("symbolication failed for some stack frames")
 )
 

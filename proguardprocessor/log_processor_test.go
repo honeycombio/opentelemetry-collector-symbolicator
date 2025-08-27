@@ -36,7 +36,7 @@ func (m *mockLogProcessorSymbolicator) symbolicate(ctx context.Context, uuid, cl
 
 func createMockTelemetry(t *testing.T) (*metadata.TelemetryBuilder, attribute.Set) {
 	settings := component.TelemetrySettings{
-		Logger: zaptest.NewLogger(t),
+		Logger:        zaptest.NewLogger(t),
 		MeterProvider: noop.NewMeterProvider(),
 	}
 	tb, err := metadata.NewTelemetryBuilder(settings)
@@ -142,7 +142,6 @@ func TestProcessLogs_Success(t *testing.T) {
 	assert.Contains(t, stackTrace.Str(), "java.lang.RuntimeException: Test exception")
 	assert.Contains(t, stackTrace.Str(), "at com.example.DeobfuscatedClass.originalMethod(Source.java:100)")
 
-
 	failed, ok := processedAttrs.Get("symbolication_failed")
 	assert.True(t, ok)
 	assert.False(t, failed.Bool())
@@ -150,12 +149,12 @@ func TestProcessLogs_Success(t *testing.T) {
 
 func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 	cfg := &Config{
-		ClassesAttributeKey:      "classes",
-		MethodsAttributeKey:      "methods",
-		LinesAttributeKey:        "lines",
-		ProguardUUIDAttributeKey: "uuid",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		ProguardUUIDAttributeKey:        "uuid",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
-		SymbolicatorErrorAttributeKey: "symbolication_error",
+		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}
 	tb, attributes := createMockTelemetry(t)
 
@@ -191,12 +190,12 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 
 func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
 	cfg := &Config{
-		ClassesAttributeKey:      "classes",
-		MethodsAttributeKey:      "methods",
-		LinesAttributeKey:        "lines",
-		ProguardUUIDAttributeKey: "uuid",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		ProguardUUIDAttributeKey:        "uuid",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
-		SymbolicatorErrorAttributeKey: "symbolication_error",
+		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}
 	tb, attributes := createMockTelemetry(t)
 
@@ -397,10 +396,10 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 
 func TestProcessLogRecord_MissingUUID(t *testing.T) {
 	cfg := &Config{
-		ClassesAttributeKey:      "classes",
-		MethodsAttributeKey:      "methods",
-		LinesAttributeKey:        "lines",
-		ProguardUUIDAttributeKey: "uuid",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		ProguardUUIDAttributeKey:        "uuid",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}

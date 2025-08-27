@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	errMissingAttribute = errors.New("missing attribute")
-	errMismatchedLength = errors.New("mismatched stacktrace attribute lengths")
+	errMissingAttribute     = errors.New("missing attribute")
+	errMismatchedLength     = errors.New("mismatched stacktrace attribute lengths")
 	errPartialSymbolication = errors.New("symbolication failed for some stack frames")
 )
 
