@@ -6,15 +6,21 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/proguardprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var (
 	typeStr            = component.MustNewType("proguard_symbolicator")
 	ErrorInvalidConfig = errors.New("invalid configuration for proguard processor")
+)
+
+const (
+	processorVersion = "0.0.4"
 )
 
 func createDefaultConfig() component.Config {
@@ -65,18 +71,38 @@ func createLogsProcessor(ctx context.Context, set processor.Settings, cfg compon
 		return nil, err
 	}
 
-	symbolicator, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.ProguardCacheSize, store)
+	tb, err := metadata.NewTelemetryBuilder(set.TelemetrySettings)
+	if err != nil {
+		return nil, err
+	}
+	// Set up resource attributes for telemetry
+	attributeSet := setUpResourceAttributes()
+	symbolicator, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.ProguardCacheSize, store, tb, attributeSet)
 	if err != nil {
 		return nil, err
 	}
 
-	processor, err := newProguardLogsProcessor(ctx, symCfg, store, set, symbolicator)
+	processor, err := newProguardLogsProcessor(ctx, symCfg, store, set, symbolicator, tb, attributeSet)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return processorhelper.NewLogs(ctx, set, cfg, next, processor.ProcessLogs, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
+}
+
+func setUpResourceAttributes() attribute.Set {
+	attributes := []attribute.KeyValue{}
+	config := metadata.DefaultResourceAttributesConfig()
+
+	if config.ProcessorType.Enabled {
+		attributes = append(attributes, attribute.String("otelcol_processor_type", typeStr.String()))
+	}
+	if config.ProcessorVersion.Enabled {
+		attributes = append(attributes, attribute.String("otelcol_processor_version", processorVersion))
+	}
+
+	return attribute.NewSet(attributes...)
 }
 
 func NewFactory() processor.Factory {
