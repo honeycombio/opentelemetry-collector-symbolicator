@@ -28,7 +28,7 @@ func (m *mockSymbolicatorStore) GetProguardMapping(ctx context.Context, uuid str
 
 func createMockSymbolicatorTelemetry(t *testing.T) (*metadata.TelemetryBuilder, attribute.Set) {
 	settings := component.TelemetrySettings{
-		Logger: zaptest.NewLogger(t),
+		Logger:        zaptest.NewLogger(t),
 		MeterProvider: noop.NewMeterProvider(),
 	}
 	tb, err := metadata.NewTelemetryBuilder(settings)

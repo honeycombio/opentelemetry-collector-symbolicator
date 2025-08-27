@@ -36,7 +36,7 @@ func (m *mockLogProcessorSymbolicator) symbolicate(ctx context.Context, uuid, cl
 
 func createMockTelemetry(t *testing.T) (*metadata.TelemetryBuilder, attribute.Set) {
 	settings := component.TelemetrySettings{
-		Logger: zaptest.NewLogger(t),
+		Logger:        zaptest.NewLogger(t),
 		MeterProvider: noop.NewMeterProvider(),
 	}
 	tb, err := metadata.NewTelemetryBuilder(settings)
@@ -81,7 +81,7 @@ func TestProcessLogs_Success(t *testing.T) {
 		ClassesAttributeKey:             "classes",
 		MethodsAttributeKey:             "methods",
 		LinesAttributeKey:               "lines",
-		SourceFilesAttributeKey:   "source_files",
+		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
 		OutputStackTraceKey:             "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
@@ -150,7 +150,7 @@ func TestProcessLogs_KeepAllStackFrames(t *testing.T) {
 		ClassesAttributeKey:             "classes",
 		MethodsAttributeKey:             "methods",
 		LinesAttributeKey:               "lines",
-		SourceFilesAttributeKey:   "source_files",
+		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
 		OutputStackTraceKey:             "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
@@ -166,7 +166,7 @@ func TestProcessLogs_KeepAllStackFrames(t *testing.T) {
 	// If no mapping found/needed, the symbolicator returns an empty frame list without error.
 	symbolicator := &mockLogProcessorSymbolicator{
 		frames: []*mappedStackFrame{},
-		err: nil,
+		err:    nil,
 	}
 	tb, attributes := createMockTelemetry(t)
 
@@ -227,13 +227,13 @@ func TestProcessLogs_KeepAllStackFrames(t *testing.T) {
 
 func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 	cfg := &Config{
-		ClassesAttributeKey:      "classes",
-		MethodsAttributeKey:      "methods",
-		LinesAttributeKey:        "lines",
-		SourceFilesAttributeKey:  "source_files",
-		ProguardUUIDAttributeKey: "uuid",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		ProguardUUIDAttributeKey:        "uuid",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
-		SymbolicatorErrorAttributeKey: "symbolication_error",
+		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}
 	tb, attributes := createMockTelemetry(t)
 
@@ -260,13 +260,13 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 
 func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
 	cfg := &Config{
-		ClassesAttributeKey:      "classes",
-		MethodsAttributeKey:      "methods",
-		LinesAttributeKey:        "lines",
-		SourceFilesAttributeKey:  "source_files",
-		ProguardUUIDAttributeKey: "uuid",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		ProguardUUIDAttributeKey:        "uuid",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
-		SymbolicatorErrorAttributeKey: "symbolication_error",
+		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}
 	tb, attributes := createMockTelemetry(t)
 
@@ -482,11 +482,11 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 
 func TestProcessLogRecord_MissingUUID(t *testing.T) {
 	cfg := &Config{
-		ClassesAttributeKey:      "classes",
-		MethodsAttributeKey:      "methods",
-		LinesAttributeKey:        "lines",
-		SourceFilesAttributeKey: "source_files",
-		ProguardUUIDAttributeKey: "uuid",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		ProguardUUIDAttributeKey:        "uuid",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}
