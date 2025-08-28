@@ -1,0 +1,52 @@
+type: dsym_symbolicator
+status:
+  class: processor
+  stability:
+    stable: [logs] # TODO: Check in to see if we consider input logs "stable"
+
+resource_attributes:
+  processor_type:
+    enabled: true
+    description: Type of the processor.
+    type: string
+  processor_version:
+    enabled: true
+    description: Version of the processor.
+    type: string
+
+telemetry:
+  # metrics about internal performance of the symbolicator processor
+  metrics:
+    processor_total_processed_frames:
+      enabled: true
+      description: Total number of frames the symbolicator processed.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
+    processor_total_failed_frames:
+      enabled: true
+      description: Total number of frames the symbolicator failed to symbolicate.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
+    processor_symbolication_duration:
+      enabled: true
+      description: Duration in seconds taken to symbolicate frames.
+      unit: s
+      histogram:
+        value_type: double
+    processor_total_dsym_fetch_failures:
+      enabled: true
+      description: Total number of dSYM fetch failures.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
+    processor_dsym_cache_size:
+      enabled: true
+      description: Size of the dSYM cache in bytes.
+      unit: "{dsyms}"
+      gauge:
+        value_type: int

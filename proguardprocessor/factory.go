@@ -30,6 +30,7 @@ func createDefaultConfig() component.Config {
 		ClassesAttributeKey:             "exception.structured_stacktrace.classes",
 		MethodsAttributeKey:             "exception.structured_stacktrace.methods",
 		LinesAttributeKey:               "exception.structured_stacktrace.lines",
+		SourceFilesAttributeKey:         "exception.structured_stacktrace.source_files",
 		OutputStackTraceKey:             "exception.stacktrace",
 		ExceptionTypeAttributeKey:       "exception.type",
 		ExceptionMessageAttributeKey:    "exception.message",

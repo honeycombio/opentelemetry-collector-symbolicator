@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: add internal telemetry to dsym processor (#108) | @jairo-mendoza
 - feat: emit processor version and type as attributes from all processors (#107) | @jairo-mendoza
 
 ## v0.0.6 [beta] - 2025/07/24

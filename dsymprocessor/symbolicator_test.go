@@ -5,16 +5,28 @@ import (
 	"testing"
 	"time"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor/internal/metadata"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/component/componenttest"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap/zaptest"
 )
 
 func TestDSYMSymbolicator(t *testing.T) {
 	ctx := context.Background()
 
+	testTel := componenttest.NewTelemetry()
+	tb, err := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
+	assert.NoError(t, err)
+	defer tb.Shutdown()
+
+	attributes := attribute.NewSet(
+		attribute.String("processor_type", "dsym_symbolicator"),
+	)
+
 	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalDSYMConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
-	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb, attributes)
 
 	baseFrame := MetricKitCallStackFrame{
 		BinaryUUID:                  "6A8CB813-45F6-3652-AD33-778FD1EAB196",
@@ -43,9 +55,18 @@ func TestDSYMSymbolicator(t *testing.T) {
 func TestDSYMSymbolicatorCache(t *testing.T) {
 	ctx := context.Background()
 
+	testTel := componenttest.NewTelemetry()
+	tb, err := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
+	assert.NoError(t, err)
+	defer tb.Shutdown()
+
+	attributes := attribute.NewSet(
+		attribute.String("processor_type", "dsym_symbolicator"),
+	)
+
 	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalDSYMConfiguration{Path: "../test_assets"})
 	assert.NoError(t, err)
-	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs)
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb, attributes)
 
 	// Cache should be empty to start
 	assert.Equal(t, 0, sym.cache.Len())

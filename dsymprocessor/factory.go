@@ -4,10 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var (
@@ -60,13 +62,33 @@ func createLogsProcessor(ctx context.Context, set processor.Settings, cfg compon
 		return nil, err
 	}
 
-	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.DSYMCacheSize, store)
+	tb, err := metadata.NewTelemetryBuilder(set.TelemetrySettings)
+	if err != nil {
+		return nil, err
+	}
+	// Set up resource attributes for telemetry
+	attributeSet := setUpResourceAttributes()
+	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.DSYMCacheSize, store, tb, attributeSet)
 	if err != nil {
 		return nil, err
 	}
 
-	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym)
+	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym, tb, attributeSet)
 	return processorhelper.NewLogs(ctx, set, cfg, next, processor.processLogs, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
+}
+
+func setUpResourceAttributes() attribute.Set {
+	attributes := []attribute.KeyValue{}
+	config := metadata.DefaultResourceAttributesConfig()
+
+	if config.ProcessorType.Enabled {
+		attributes = append(attributes, attribute.String("otelcol_processor_type", typeStr.String()))
+	}
+	if config.ProcessorVersion.Enabled {
+		attributes = append(attributes, attribute.String("otelcol_processor_version", processorVersion))
+	}
+
+	return attribute.NewSet(attributes...)
 }
 
 // NewFactory creates a factory for the symbolicator processor

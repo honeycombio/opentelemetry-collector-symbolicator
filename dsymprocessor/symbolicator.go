@@ -7,7 +7,10 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor/internal/metadata"
 	"github.com/honeycombio/symbolic-go"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type dsymStore interface {
@@ -19,9 +22,12 @@ type basicSymbolicator struct {
 	timeout time.Duration
 	ch      chan struct{}
 	cache   *lru.Cache[string, *symbolic.Archive]
+
+	telemetryBuilder *metadata.TelemetryBuilder
+	attributes       metric.MeasurementOption
 }
 
-func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize int, store dsymStore) (*basicSymbolicator, error) {
+func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize int, store dsymStore, tb *metadata.TelemetryBuilder, attributes attribute.Set) (*basicSymbolicator, error) {
 	cache, err := lru.New[string, *symbolic.Archive](cacheSize)
 	if err != nil {
 		return nil, err
@@ -31,8 +37,10 @@ func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize in
 		store:   store,
 		timeout: timeout,
 		// the channel is buffered to allow for a single request to be in progress at a time
-		ch:    make(chan struct{}, 1),
-		cache: cache,
+		ch:               make(chan struct{}, 1),
+		cache:            cache,
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
 	}, nil
 }
 
@@ -58,10 +66,12 @@ func (ns *basicSymbolicator) symbolicateFrame(ctx context.Context, debugId, bina
 
 	cacheKey := debugId + "/" + binaryName
 	archive, ok := ns.cache.Get(cacheKey)
+	ns.telemetryBuilder.ProcessorDsymCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 
 	if !ok {
 		dSYMbytes, err := ns.store.GetDSYM(ctx, debugId, binaryName)
 		if err != nil {
+			ns.telemetryBuilder.ProcessorTotalDsymFetchFailures.Add(ctx, 1, ns.attributes)
 			return nil, err
 		}
 		archive, err = symbolic.NewArchiveFromBytes(dSYMbytes)
@@ -72,6 +82,9 @@ func (ns *basicSymbolicator) symbolicateFrame(ctx context.Context, debugId, bina
 
 		ns.cache.Add(cacheKey, archive)
 	}
+
+	// If the cache size has changed, we should record the new size
+	ns.telemetryBuilder.ProcessorDsymCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 
 	symCache, ok := archive.SymCaches[strings.ToLower(debugId)]
 	if !ok {

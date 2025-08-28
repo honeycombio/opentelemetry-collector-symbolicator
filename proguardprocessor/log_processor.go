@@ -83,7 +83,7 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 
 func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attributes pcommon.Map) error {
 	var ok bool
-	var classes, methods, lines pcommon.Slice
+	var classes, methods, lines, sourceFiles pcommon.Slice
 
 	if classes, ok = getSlice(p.cfg.ClassesAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ClassesAttributeKey)
@@ -97,21 +97,17 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.LinesAttributeKey)
 	}
 
-	// Ensure all slices are the same length
-	if classes.Len() != methods.Len() || classes.Len() != lines.Len() {
-		return fmt.Errorf("%w: (%s %d) (%s %d) (%s %d)", errMismatchedLength,
-			p.cfg.ClassesAttributeKey, classes.Len(),
-			p.cfg.MethodsAttributeKey, methods.Len(),
-			p.cfg.LinesAttributeKey, lines.Len(),
-		)
+	if sourceFiles, ok = getSlice(p.cfg.SourceFilesAttributeKey, attributes); !ok {
+		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.SourceFilesAttributeKey)
 	}
 
 	// Ensure all slices are the same length
-	if classes.Len() != methods.Len() || classes.Len() != lines.Len() {
-		return fmt.Errorf("%w: (%s %d) (%s %d) (%s %d)", errMismatchedLength,
+	if classes.Len() != methods.Len() || classes.Len() != lines.Len() || classes.Len() != sourceFiles.Len() {
+		return fmt.Errorf("%w: (%s %d) (%s %d) (%s %d) (%s %d)", errMismatchedLength,
 			p.cfg.ClassesAttributeKey, classes.Len(),
 			p.cfg.MethodsAttributeKey, methods.Len(),
 			p.cfg.LinesAttributeKey, lines.Len(),
+			p.cfg.SourceFilesAttributeKey, sourceFiles.Len(),
 		)
 	}
 
@@ -149,8 +145,8 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	for i := 0; i < classes.Len(); i++ {
 		line := lines.At(i).Int()
 
-		// -2 is a special value line number indicating a native method per the android docs
-		if (line < 0 && line != -2) || line > math.MaxUint32 {
+		// Line numbers set to -2 and -1 are special values indicating a native method and unknown source respectively, per the Android docs.
+		if line < -2 || line > math.MaxUint32 {
 			stack = append(stack, fmt.Sprintf("\tInvalid line number %d for %s.%s", line, classes.At(i).Str(), methods.At(i).Str()))
 			symbolicationFailed = true
 			continue
@@ -164,6 +160,22 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			stack = append(stack, fmt.Sprintf("\tFailed to symbolicate %s.%s(%d): %v", classes.At(i).Str(), methods.At(i).Str(), line, err))
 			symbolicationFailed = true
 			p.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, p.attributes)
+			continue
+		}
+		// Not a symbolication failure but no mapping found or needed; use original stacktrace data
+		if len(mappedClass) == 0 {
+			class := classes.At(i).Str()
+			method := methods.At(i).Str()
+			sourceFile := sourceFiles.At(i).Str()
+			if line == -2 {
+				// Native method, source file and line number are not applicable
+				stack = append(stack, fmt.Sprintf("\tat %s.%s(Native Method)", class, method))
+			} else if line == -1 {
+				// Unknown source file and line number
+				stack = append(stack, fmt.Sprintf("\tat %s.%s(Unknown Source)", class, method))
+			} else {
+				stack = append(stack, fmt.Sprintf("\tat %s.%s(%s:%d)", class, method, sourceFile, line))
+			}
 			continue
 		}
 

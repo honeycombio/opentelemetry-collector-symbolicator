@@ -82,45 +82,6 @@ The following configuration options can also be provided to change the attribute
 | `timeout`               | Max duration to wait to symbolicate a stack trace in seconds.                                                     | `5`           |
 | `source_map_cache_size` | The maximum number of source maps to cache. Reduce this if you are running into memory issues with the collector. | `128`         |
 
-### Internal Telemetry
-
-The collector processor emits custom telemetry metrics that provides insight into its status and performance. The custom processor metrics are generated
-using [mdatagen](https://github.com/open-telemetry/opentelemetry-collector/tree/main/cmd/mdatagen) and include metrics such as:
-
-- Number of stack frames processed
-- Number of stack frames that failed to symbolicate
-- Total source map fetch failures
-- The size of the source map cache in bytes
-
-To see the full list of the custom telemetry collected, see [documentation.md](./sourcemapprocessor/documentation.md) in the `sourcemapprocessor` package.
-
-To actually send your internal telemetry to a backend, make sure to enable the `metrics` service in your **collector's** yaml config file. Here is an example of a
-collector config sending metrics to a Honeycomb endpoint:
-
-```yaml
-# ...
-
-service:
-  metrics:
-    readers:
-      - periodic:
-          exporter:
-            otlp:
-              protocol: http/protobuf
-              endpoint: "https://api.honeycomb.io:443" # OR, for EU instance: https://api.eu1.honeycomb.io:443
-              headers:
-                - name: "x-honeycomb-team"
-                  value: "HONEYCOMB_API_KEY"
-                - name: "x-honeycomb-dataset"
-                  value: "otel-collector-metrics"
-
-#...
-```
-
-Internal telemetry is collected by the collector by default and will be sent alongside our custom telemetry. Please visit
-[Open Telemetry's Collector docs](https://opentelemetry.io/docs/collector/internal-telemetry/#lists-of-internal-metrics) for a
-full list of the default internal metrics.
-
 ## dSYM Symbolication
 ### Basic Configuration
 
@@ -279,6 +240,7 @@ The following configuration options can also be provided to change the attribute
 | `classes_attribute_key`              | Which attribute should the classes of the stack trace be sourced from                             | `exception.structured_stacktrace.classes`            |
 | `methods_attribute_key`              | Which attribute should the methods of the stack trace be sourced from                             | `exception.structured_stacktrace.methods`.           |
 | `lines_attribute_key`                | Which attribute should the lines of the stack trace be sourced from                               | `exception.structured_stacktrace.lines`              |
+| `source_files_attribute_key`         | Which attribute should the source files of the stack trace be sourced from                        | `exception.structured_stacktrace.source_files`       |
 | `output_stack_trace_key`             | Which attribute should the symbolicated stack trace be populated into                             | `exception.stacktrace`                               |
 | `exception_type_attribute_key`       | Which attribute should the exception type be sourced from                                         | `exception.type`                                     |
 | `exception_message_attribute_key`    | Which attribute should the exception message be sourced from                                      | `exception.message`                                  |
@@ -296,6 +258,44 @@ The following configuration options can also be provided to change the attribute
 | `timeout`             | Max duration to wait to symbolicate a stack trace in seconds.                                                        | `5`           |
 | `proguard_cache_size` | The maximum number of proguard files to cache. Reduce this if you are running into memory issues with the collector. | `128`         |
 
+## Internal Telemetry
+
+All collector processors emit custom telemetry metrics that provides insight into its status and performance. The custom processor metrics are generated
+using [mdatagen](https://github.com/open-telemetry/opentelemetry-collector/tree/main/cmd/mdatagen) and include metrics such as:
+
+- Number of stack frames processed
+- Number of stack frames that failed to symbolicate
+- Total source map fetch failures
+- The size of the source map cache in bytes
+
+To see the full list of the custom telemetry collected, see the the processor's `documentation.md` file.
+
+To actually send your internal telemetry to a backend, make sure to enable the `metrics` service in your **collector's** yaml config file. Here is an example of a
+collector config sending metrics to a Honeycomb endpoint:
+
+```yaml
+# ...
+
+service:
+  metrics:
+    readers:
+      - periodic:
+          exporter:
+            otlp:
+              protocol: http/protobuf
+              endpoint: "https://api.honeycomb.io:443" # OR, for EU instance: https://api.eu1.honeycomb.io:443
+              headers:
+                - name: "x-honeycomb-team"
+                  value: "HONEYCOMB_API_KEY"
+                - name: "x-honeycomb-dataset"
+                  value: "otel-collector-metrics"
+
+#...
+```
+
+Internal telemetry is collected by the collector by default and will be sent alongside our custom telemetry. Please visit
+[Open Telemetry's Collector docs](https://opentelemetry.io/docs/collector/internal-telemetry/#lists-of-internal-metrics) for a
+full list of the default internal metrics.
 
 ## Common Storage Mechanisms
 
