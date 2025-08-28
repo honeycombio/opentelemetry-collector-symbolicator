@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+feat: add internal telemetry to dsym processor (#108) | @jairo-mendoza
+
 ## v0.0.6 [beta] - 2025/07/24
 
 ### 🐛 Fixes
