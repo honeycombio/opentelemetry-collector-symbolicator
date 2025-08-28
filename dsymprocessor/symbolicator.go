@@ -7,8 +7,8 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/honeycombio/symbolic-go"
 	"github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor/internal/metadata"
+	"github.com/honeycombio/symbolic-go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -54,11 +54,6 @@ type mappedDSYMStackFrame struct {
 }
 
 func (ns *basicSymbolicator) symbolicateFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]*mappedDSYMStackFrame, error) {
-	start := time.Now()
-	defer func() {
-		ns.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(start).Seconds(), ns.attributes)
-	}()
-
 	select {
 	case ns.ch <- struct{}{}:
 	case <-time.After(ns.timeout):

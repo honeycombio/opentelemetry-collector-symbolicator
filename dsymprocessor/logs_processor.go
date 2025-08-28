@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -57,10 +58,13 @@ func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Sett
 func (sp *symbolicatorProcessor) processLogs(ctx context.Context, logs plog.Logs) (plog.Logs, error) {
 	sp.logger.Info("Processing logs")
 
+	startTime := time.Now()
 	for i := 0; i < logs.ResourceLogs().Len(); i++ {
 		rl := logs.ResourceLogs().At(i)
 		sp.processResourceSpans(ctx, rl)
 	}
+
+	sp.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
 	return logs, nil
 }
 
