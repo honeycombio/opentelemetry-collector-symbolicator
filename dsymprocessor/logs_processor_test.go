@@ -6,10 +6,13 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor/internal/metadata"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/processor"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -26,6 +29,18 @@ type testSymbolicator struct {
 
 func (ts *testSymbolicator) clear() {
 	ts.SymbolicatedLines = nil
+}
+
+func createTestTelemetry(t *testing.T) (*metadata.TelemetryBuilder, attribute.Set, func()) {
+	testTel := componenttest.NewTelemetry()
+	tb, err := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
+	assert.NoError(t, err)
+
+	attributes := attribute.NewSet(
+		attribute.String("processor_type", "dsym_symbolicator"),
+	)
+
+	return tb, attributes, tb.Shutdown
 }
 
 func (ts *testSymbolicator) symbolicateFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]*mappedDSYMStackFrame, error) {
@@ -47,11 +62,15 @@ func TestProcessStackTrace(t *testing.T) {
 	ctx := context.Background()
 	cfg := createDefaultConfig().(*Config)
 	s := &testSymbolicator{}
+
+	tb, attributes, cleanup := createTestTelemetry(t)
+	defer cleanup()
+
 	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger: zaptest.NewLogger(t),
 		},
-	}, s)
+	}, s, tb, attributes)
 
 	stacktrace := `0   CoreFoundation                      0x00000001835df228 7821F73C-378B-3A10-BE90-EF526B7DBA93 + 1155624
 1   libobjc.A.dylib                     0x0000000180a79abc objc_exception_throw + 88
@@ -118,11 +137,15 @@ func TestProcessMetricKit(t *testing.T) {
 	ctx := context.Background()
 	cfg := createDefaultConfig().(*Config)
 	s := &testSymbolicator{}
+
+	tb, attributes, cleanup := createTestTelemetry(t)
+	defer cleanup()
+
 	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger: zaptest.NewLogger(t),
 		},
-	}, s)
+	}, s, tb, attributes)
 
 	jsonstr := `{
 		"callStacks": [
@@ -225,11 +248,15 @@ func TestMetricKitExceptionAttrs(t *testing.T) {
 	ctx := context.Background()
 	cfg := createDefaultConfig().(*Config)
 	s := &testSymbolicator{}
+
+	tb, attributes, cleanup := createTestTelemetry(t)
+	defer cleanup()
+
 	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger: zaptest.NewLogger(t),
 		},
-	}, s)
+	}, s, tb, attributes)
 
 	jsonstr := `{ "callStacks": [] }`
 
@@ -272,11 +299,15 @@ func TestProcessFailure_WrongKey(t *testing.T) {
 	ctx := context.Background()
 	cfg := createDefaultConfig().(*Config)
 	s := &testSymbolicator{}
+
+	tb, attributes, cleanup := createTestTelemetry(t)
+	defer cleanup()
+
 	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger: zaptest.NewLogger(t),
 		},
-	}, s)
+	}, s, tb, attributes)
 
 	jsonstr := `{
 		"callStacks": [
@@ -350,11 +381,15 @@ func TestProcessFailure_InvalidJson(t *testing.T) {
 	ctx := context.Background()
 	cfg := createDefaultConfig().(*Config)
 	s := &testSymbolicator{}
+
+	tb, attributes, cleanup := createTestTelemetry(t)
+	defer cleanup()
+
 	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger: zaptest.NewLogger(t),
 		},
-	}, s)
+	}, s, tb, attributes)
 
 	jsonstr := `not a json stacktrace`
 

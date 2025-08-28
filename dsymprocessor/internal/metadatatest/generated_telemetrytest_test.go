@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 	"go.opentelemetry.io/collector/component/componenttest"
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor/internal/metadata"
 )
 
 func TestSetupTelemetry(t *testing.T) {
