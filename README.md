@@ -297,6 +297,11 @@ Internal telemetry is collected by the collector by default and will be sent alo
 [Open Telemetry's Collector docs](https://opentelemetry.io/docs/collector/internal-telemetry/#lists-of-internal-metrics) for a
 full list of the default internal metrics.
 
+Additionally, all processors attach the following attributes alongside symbolicated stacktraces:
+
+- `honeycomb.processor_type` - The processor that handled the log/trace
+- `honeycomb.processor_version` - The version of the processor that handled the log/trace
+
 ## Common Storage Mechanisms
 
 Both the Source Map and dSYM processors use the same configuration formats for loading the requires files.
