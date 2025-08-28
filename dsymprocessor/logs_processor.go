@@ -9,9 +9,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/processor"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
 )
 
@@ -33,14 +36,19 @@ type symbolicatorProcessor struct {
 	cfg *Config
 
 	symbolicator symbolicator
+
+	telemetryBuilder *metadata.TelemetryBuilder
+	attributes       metric.MeasurementOption
 }
 
 // newSymbolicatorProcessor creates a new symbolicatorProcessor.
-func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Settings, symbolicator symbolicator) *symbolicatorProcessor {
+func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Settings, symbolicator symbolicator, tb *metadata.TelemetryBuilder, attributes attribute.Set) *symbolicatorProcessor {
 	return &symbolicatorProcessor{
-		cfg:          cfg,
-		logger:       set.Logger,
-		symbolicator: symbolicator,
+		cfg:              cfg,
+		logger:           set.Logger,
+		symbolicator:     symbolicator,
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
 	}
 }
 
@@ -185,11 +193,13 @@ func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line,
 	}
 
 	locations, err := sp.symbolicator.symbolicateFrame(ctx, uuid, bin, offset)
+	sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
 
 	if errors.Is(err, errFailedToFindDSYM) {
 		return line, nil
 	}
 	if err != nil {
+		sp.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, sp.attributes)
 		return "", err
 	}
 
@@ -319,11 +329,13 @@ func (sp *symbolicatorProcessor) setMetricKitExceptionAttrs(ctx context.Context,
 
 func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame MetricKitCallStackFrame) (string, error) {
 	locations, err := sp.symbolicator.symbolicateFrame(ctx, frame.BinaryUUID, frame.BinaryName, frame.OffsetIntoBinaryTextSegment)
+	sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
 
 	if errors.Is(err, errFailedToFindDSYM) {
 		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment), nil
 	}
 	if err != nil {
+		sp.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, sp.attributes)
 		return "", err
 	}
 
