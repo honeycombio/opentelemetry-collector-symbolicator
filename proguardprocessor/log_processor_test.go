@@ -36,7 +36,7 @@ func (m *mockLogProcessorSymbolicator) symbolicate(ctx context.Context, uuid, cl
 
 func createMockTelemetry(t *testing.T) (*metadata.TelemetryBuilder, attribute.Set) {
 	settings := component.TelemetrySettings{
-		Logger: zaptest.NewLogger(t),
+		Logger:        zaptest.NewLogger(t),
 		MeterProvider: noop.NewMeterProvider(),
 	}
 	tb, err := metadata.NewTelemetryBuilder(settings)
@@ -51,6 +51,7 @@ func TestNewProguardLogsProcessor(t *testing.T) {
 		ClassesAttributeKey:      "classes",
 		MethodsAttributeKey:      "methods",
 		LinesAttributeKey:        "lines",
+		SourceFilesAttributeKey:  "source_files",
 		ProguardUUIDAttributeKey: "uuid",
 	}
 	settings := processor.Settings{
@@ -80,6 +81,7 @@ func TestProcessLogs_Success(t *testing.T) {
 		ClassesAttributeKey:             "classes",
 		MethodsAttributeKey:             "methods",
 		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
 		OutputStackTraceKey:             "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
@@ -121,6 +123,9 @@ func TestProcessLogs_Success(t *testing.T) {
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(42)
 
+	sourceFiles := attrs.PutEmptySlice("source_files")
+	sourceFiles.AppendEmpty().SetStr("Class.java")
+
 	result, err := processor.ProcessLogs(ctx, logs)
 
 	assert.NoError(t, err)
@@ -137,14 +142,98 @@ func TestProcessLogs_Success(t *testing.T) {
 	assert.False(t, failed.Bool())
 }
 
+func TestProcessLogs_KeepAllStackFrames(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{
+		ExceptionTypeAttributeKey:       "exception_type",
+		ExceptionMessageAttributeKey:    "exception_message",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		ProguardUUIDAttributeKey:        "uuid",
+		OutputStackTraceKey:             "stack_trace",
+		SymbolicatorFailureAttributeKey: "symbolication_failed",
+	}
+
+	settings := processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}
+
+	store := &mockLogProcessorStore{}
+	// If no mapping found/needed, the symbolicator returns an empty frame list without error.
+	symbolicator := &mockLogProcessorSymbolicator{
+		frames: []*mappedStackFrame{},
+		err:    nil,
+	}
+	tb, attributes := createMockTelemetry(t)
+
+	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
+
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	sl := rl.ScopeLogs().AppendEmpty()
+	lr := sl.LogRecords().AppendEmpty()
+
+	attrs := lr.Attributes()
+	attrs.PutStr("uuid", "test-uuid")
+	attrs.PutStr("exception_type", "java.lang.RuntimeException")
+	attrs.PutStr("exception_message", "Test exception")
+
+	classes := attrs.PutEmptySlice("classes")
+	classes.AppendEmpty().SetStr("com.example.Class")
+	classes.AppendEmpty().SetStr("com.example.Test")
+	classes.AppendEmpty().SetStr("com.example.Unknown")
+
+	methods := attrs.PutEmptySlice("methods")
+	methods.AppendEmpty().SetStr("method1")
+	methods.AppendEmpty().SetStr("method2")
+	methods.AppendEmpty().SetStr("unknownMethod")
+
+	lines := attrs.PutEmptySlice("lines")
+	lines.AppendEmpty().SetInt(42)
+	lines.AppendEmpty().SetInt(-2)
+	lines.AppendEmpty().SetInt(-1)
+
+	sourceFiles := attrs.PutEmptySlice("source_files")
+	sourceFiles.AppendEmpty().SetStr("Class.java")
+	sourceFiles.AppendEmpty().SetStr("Test.java")
+	// Unknown source file
+	sourceFiles.AppendEmpty()
+
+	result, err := processor.ProcessLogs(ctx, logs)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+
+	processedAttrs := result.ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0).Attributes()
+	stackTrace, ok := processedAttrs.Get("stack_trace")
+	assert.True(t, ok)
+	assert.Contains(t, stackTrace.Str(), "java.lang.RuntimeException: Test exception")
+	// Stack trace should include the original class, method, line number, and source file if no symbolication is needed.
+	assert.Contains(t, stackTrace.Str(), "at com.example.Class.method1(Class.java:42)")
+	// Stack frames with -2 line number are treated as native methods.
+	assert.Contains(t, stackTrace.Str(), "at com.example.Test.method2(Native Method)")
+	// Stack frames with -1 line number are treated as unknown source files.
+	assert.Contains(t, stackTrace.Str(), "at com.example.Unknown.unknownMethod(Unknown Source)")
+
+	// This should not count as a symbolication failure
+	failed, ok := processedAttrs.Get("symbolication_failed")
+	assert.True(t, ok)
+	assert.False(t, failed.Bool())
+}
+
 func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 	cfg := &Config{
-		ClassesAttributeKey:      "classes",
-		MethodsAttributeKey:      "methods",
-		LinesAttributeKey:        "lines",
-		ProguardUUIDAttributeKey: "uuid",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		ProguardUUIDAttributeKey:        "uuid",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
-		SymbolicatorErrorAttributeKey: "symbolication_error",
+		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}
 	tb, attributes := createMockTelemetry(t)
 
@@ -171,12 +260,13 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 
 func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
 	cfg := &Config{
-		ClassesAttributeKey:      "classes",
-		MethodsAttributeKey:      "methods",
-		LinesAttributeKey:        "lines",
-		ProguardUUIDAttributeKey: "uuid",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		ProguardUUIDAttributeKey:        "uuid",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
-		SymbolicatorErrorAttributeKey: "symbolication_error",
+		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}
 	tb, attributes := createMockTelemetry(t)
 
@@ -201,6 +291,9 @@ func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(42)
 
+	sourceFiles := attrs.PutEmptySlice("source_files")
+	sourceFiles.AppendEmpty().SetStr("Class.java")
+
 	processor.processLogRecord(context.Background(), lr)
 
 	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
@@ -218,6 +311,7 @@ func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
 		ClassesAttributeKey:             "classes",
 		MethodsAttributeKey:             "methods",
 		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
 		OutputStackTraceKey:             "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
@@ -250,6 +344,9 @@ func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(42)
 
+	sourceFiles := attrs.PutEmptySlice("source_files")
+	sourceFiles.AppendEmpty().SetStr("Class.java")
+
 	processor.processLogRecord(context.Background(), lr)
 
 	stackTrace, ok := attrs.Get("stack_trace")
@@ -271,6 +368,7 @@ func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
 		ClassesAttributeKey:             "classes",
 		MethodsAttributeKey:             "methods",
 		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
 		OutputStackTraceKey:             "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
@@ -299,13 +397,16 @@ func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
 	methods.AppendEmpty().SetStr("method1")
 
 	lines := attrs.PutEmptySlice("lines")
-	lines.AppendEmpty().SetInt(-1)
+	lines.AppendEmpty().SetInt(-3)
+
+	sourceFiles := attrs.PutEmptySlice("source_files")
+	sourceFiles.AppendEmpty().SetStr("Class.java")
 
 	processor.processLogRecord(context.Background(), lr)
 
 	stackTrace, ok := attrs.Get("stack_trace")
 	assert.True(t, ok)
-	assert.Contains(t, stackTrace.Str(), "Invalid line number -1")
+	assert.Contains(t, stackTrace.Str(), "Invalid line number -3")
 
 	failed, ok := attrs.Get("symbolication_failed")
 	assert.True(t, ok)
@@ -322,6 +423,7 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 		ClassesAttributeKey:             "classes",
 		MethodsAttributeKey:             "methods",
 		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
 		OutputStackTraceKey:             "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
@@ -358,6 +460,9 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(42)
 
+	sourceFiles := attrs.PutEmptySlice("source_files")
+	sourceFiles.AppendEmpty().SetStr("Class.java")
+
 	processor.processLogRecord(context.Background(), lr)
 
 	// Check original attributes are preserved
@@ -377,10 +482,11 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 
 func TestProcessLogRecord_MissingUUID(t *testing.T) {
 	cfg := &Config{
-		ClassesAttributeKey:      "classes",
-		MethodsAttributeKey:      "methods",
-		LinesAttributeKey:        "lines",
-		ProguardUUIDAttributeKey: "uuid",
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		ProguardUUIDAttributeKey:        "uuid",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 		SymbolicatorErrorAttributeKey:   "symbolication_error",
 	}
@@ -404,6 +510,9 @@ func TestProcessLogRecord_MissingUUID(t *testing.T) {
 
 	lines := attrs.PutEmptySlice("lines")
 	lines.AppendEmpty().SetInt(42)
+
+	sourceFiles := attrs.PutEmptySlice("source_files")
+	sourceFiles.AppendEmpty().SetStr("Class.java")
 
 	processor.processLogRecord(context.Background(), lr)
 

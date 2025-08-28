@@ -23,6 +23,10 @@ type Config struct {
 	// the stack trace.
 	LinesAttributeKey string `mapstructure:"lines_attribute_key"`
 
+	// SourceFilesAttributeKey is the attribute key that contains the source file names
+	// of the stack trace.
+	SourceFilesAttributeKey string `mapstructure:"source_files_attribute_key"`
+
 	// OutputStackTraceKey is the attribute key that the symbolicated stack trace
 	// will be written to.
 	OutputStackTraceKey string `mapstructure:"output_stack_trace_key"`
