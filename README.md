@@ -258,7 +258,7 @@ The following configuration options can also be provided to change the attribute
 | `timeout`             | Max duration to wait to symbolicate a stack trace in seconds.                                                        | `5`           |
 | `proguard_cache_size` | The maximum number of proguard files to cache. Reduce this if you are running into memory issues with the collector. | `128`         |
 
-### Internal Telemetry
+## Internal Telemetry
 
 All collector processors emit custom telemetry metrics that provides insight into its status and performance. The custom processor metrics are generated
 using [mdatagen](https://github.com/open-telemetry/opentelemetry-collector/tree/main/cmd/mdatagen) and include metrics such as:
