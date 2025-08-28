@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: emit processor version and type as attributes from all processors (#107) | @jairo-mendoza
 - feat: add telemetry support to proguard symbolicator
 
 ## v0.0.4 [beta] - 2025/08/20

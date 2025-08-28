@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- feat: emit processor version and type as attributes from all processors (#107) | @jairo-mendoza
+
 ## v0.0.10 [beta] - 2025/07/24
 
 ### ✨ Features
@@ -19,17 +21,21 @@
 - maint(deps): bump the aws group across 3 directories with 1 update (#85)
 
 ## v0.0.9 [beta] - 2025/07/02
+
 ### 🚧 Maintenance
+
 - maint(deps): bump the aws group across 2 directories with 1 update (#79)
 - maint(deps): bump the otel group across 3 directories with 5 updates (#81)
 - maint: Update symbolic-go (#83)
 
 ## v0.0.8 [beta] - 2025/06/27
+
 ### ✨ Features
 
 - feat: include error message on the log when symbolication fails (#77) | @mustafahaddara
 
 ## v0.0.7 [beta] - 2025/06/16
+
 ### 🚧 Maintenance
 
 - chore: update dependencies and golang versions | @martin308
