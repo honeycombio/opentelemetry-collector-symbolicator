@@ -131,7 +131,7 @@ func TestProcessLogs_Success(t *testing.T) {
 	// Verify processor type and attributes included
 	processorTypeAttr, ok := processedAttrs.Get("honeycomb.processor_type")
 	assert.True(t, ok)
-	assert.Equal(t, typeStr, processorTypeAttr.Str())
+	assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
 
 	processorVersionAttr, ok := processedAttrs.Get("honeycomb.processor_version")
 	assert.True(t, ok)
@@ -174,7 +174,7 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 	// Verify processor type and attributes are still included even on failure
 	processorTypeAttr, ok := attrs.Get("honeycomb.processor_type")
 	assert.True(t, ok)
-	assert.Equal(t, typeStr, processorTypeAttr.Str())
+	assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
 
 	processorVersionAttr, ok := attrs.Get("honeycomb.processor_version")
 	assert.True(t, ok)

@@ -97,7 +97,7 @@ func TestProcessStackTrace(t *testing.T) {
 			// Verify processor type and version attributes are included
 			processorTypeAttr, ok := log.Attributes().Get("honeycomb.processor_type")
 			assert.True(t, ok)
-			assert.Equal(t, typeStr, processorTypeAttr.Str())
+			assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
 
 			processorVersionAttr, ok := log.Attributes().Get("honeycomb.processor_version")
 			assert.True(t, ok)
@@ -205,7 +205,7 @@ func TestProcessMetricKit(t *testing.T) {
 			// Verify processor type and version attributes are included
 			processorTypeAttr, ok := log.Attributes().Get("honeycomb.processor_type")
 			assert.True(t, ok)
-			assert.Equal(t, typeStr, processorTypeAttr.Str())
+			assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
 
 			processorVersionAttr, ok := log.Attributes().Get("honeycomb.processor_version")
 			assert.True(t, ok)
