@@ -93,6 +93,15 @@ func TestProcess(t *testing.T) {
 				ils := rs.ScopeSpans().At(0)
 				span := ils.Spans().At(0)
 
+				// Verify processor type and version attributes are included
+				processorTypeAttr, ok := span.Attributes().Get("honeycomb.processor_type")
+				assert.True(t, ok)
+				assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
+
+				processorVersionAttr, ok := span.Attributes().Get("honeycomb.processor_version")
+				assert.True(t, ok)
+				assert.Equal(t, processorVersion, processorVersionAttr.Str())
+
 				attr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
 				assert.True(t, ok)
 				assert.Equal(t, "Error: Test error!\n    at function(url:42:42)", attr.Str())
@@ -282,6 +291,16 @@ func TestProcess(t *testing.T) {
 				rs := td.ResourceSpans().At(0)
 				ils := rs.ScopeSpans().At(0)
 				span := ils.Spans().At(0)
+
+				// Verify processor type and version attributes are included even on failure
+				processorTypeAttr, ok := span.Attributes().Get("honeycomb.processor_type")
+				assert.True(t, ok)
+				assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
+
+				processorVersionAttr, ok := span.Attributes().Get("honeycomb.processor_version")
+				assert.True(t, ok)
+				assert.Equal(t, processorVersion, processorVersionAttr.Str())
+
 				attr, ok := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
 				assert.True(t, ok)
 				assert.Equal(t, true, attr.Bool())

@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	errMissingAttribute = errors.New("missing attribute")
-	errMismatchedLength = errors.New("mismatched stacktrace attribute lengths")
+	errMissingAttribute     = errors.New("missing attribute")
+	errMismatchedLength     = errors.New("mismatched stacktrace attribute lengths")
 	errPartialSymbolication = errors.New("symbolication failed for some stack frames")
 )
 
@@ -92,6 +92,10 @@ func formatStackFrame(sf *mappedStackFrame) string {
 
 // processAttributes takes the attributes of a span and returns an error if symbolication failed.
 func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map) error {
+	// Add processor type and version as attributes
+	attributes.PutStr("honeycomb.processor_type", typeStr.String())
+	attributes.PutStr("honeycomb.processor_version", processorVersion)
+
 	err := sp.processThrow(ctx, attributes)
 
 	if err != nil {

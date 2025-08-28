@@ -132,6 +132,16 @@ func TestProcessLogs_Success(t *testing.T) {
 	assert.NotNil(t, result)
 
 	processedAttrs := result.ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0).Attributes()
+
+	// Verify processor type and attributes included
+	processorTypeAttr, ok := processedAttrs.Get("honeycomb.processor_type")
+	assert.True(t, ok)
+	assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
+
+	processorVersionAttr, ok := processedAttrs.Get("honeycomb.processor_version")
+	assert.True(t, ok)
+	assert.Equal(t, processorVersion, processorVersionAttr.Str())
+
 	stackTrace, ok := processedAttrs.Get("stack_trace")
 	assert.True(t, ok)
 	assert.Contains(t, stackTrace.Str(), "java.lang.RuntimeException: Test exception")
@@ -249,6 +259,15 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 	attrs.PutStr("uuid", "test-uuid")
 
 	processor.processLogRecord(context.Background(), lr)
+
+	// Verify processor type and attributes are still included even on failure
+	processorTypeAttr, ok := attrs.Get("honeycomb.processor_type")
+	assert.True(t, ok)
+	assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
+
+	processorVersionAttr, ok := attrs.Get("honeycomb.processor_version")
+	assert.True(t, ok)
+	assert.Equal(t, processorVersion, processorVersionAttr.Str())
 
 	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
 	assert.True(t, hasFailureAttr)

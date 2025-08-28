@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: emit processor version and type as attributes from all processors (#107) | @jairo-mendoza
 - feat: handle stack frames that don't need symbolication (#106) | @jairo-mendoza
 - feat: add telemetry support to proguard symbolicator (#105) | @wolfgangcodes
 

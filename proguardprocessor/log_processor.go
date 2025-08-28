@@ -67,6 +67,10 @@ func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.Sc
 func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.LogRecord) {
 	attributes := lr.Attributes()
 
+	// Add processor type and version as attributes
+	attributes.PutStr("honeycomb.processor_type", typeStr.String())
+	attributes.PutStr("honeycomb.processor_version", processorVersion)
+
 	err := p.processLogRecordThrow(ctx, attributes)
 
 	if err != nil {
