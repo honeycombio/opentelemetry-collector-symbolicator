@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- chore: reduce log verbosity by changing "Processing traces" from Info to Debug level | @clintonnkemdilim
+## v0.0.11 [beta] - 2025/10/21
+
+- chore: reduce log verbosity by changing "Processing traces" from Info to Debug level (#111) | @clintonnkemdilim
 - feat: emit processor version and type as attributes from all processors (#107) | @jairo-mendoza
 
 ## v0.0.10 [beta] - 2025/07/24
