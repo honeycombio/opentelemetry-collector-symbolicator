@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
-	"github.com/honeycombio/opentelemetry-collector-symbolicator/proguardprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/component/componenttest"
 )
 
