@@ -30,7 +30,7 @@ type store struct {
 	prefix string
 }
 
-func (s *store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error) {
+func (s *store) GetSourceMap(ctx context.Context, url string, uuid string) ([]byte, []byte, error) {
 	u, err := neturl.Parse(url)
 
 	if err != nil {
@@ -40,6 +40,9 @@ func (s *store) GetSourceMap(ctx context.Context, url string) ([]byte, []byte, e
 	// strip the path from the url and use the base name eg.
 	// https://www.honeycomb.io/assets/js/basic-mapping.js -> basic-mapping.js
 	base := filepath.Base(u.Path)
+	if uuid != "" {
+		base = filepath.Join(uuid, base)
+	}
 	path := filepath.Join(s.prefix, base)
 
 	if u.RawQuery != "" {

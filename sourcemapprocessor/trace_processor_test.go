@@ -31,7 +31,7 @@ func (ts *testSymbolicator) clear() {
 	ts.SymbolicatedLines = nil
 }
 
-func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error) {
+func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string, uuid string) (*mappedStackFrame, error) {
 	ts.SymbolicatedLines = append(ts.SymbolicatedLines, symbolicatedLine{
 		Line:     line,
 		Column:   column,

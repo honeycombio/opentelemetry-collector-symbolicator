@@ -14,7 +14,7 @@ import (
 )
 
 type sourceMapStore interface {
-	GetSourceMap(ctx context.Context, url string) ([]byte, []byte, error)
+	GetSourceMap(ctx context.Context, url string, uuid string) ([]byte, []byte, error)
 }
 
 type basicSymbolicator struct {
@@ -52,19 +52,29 @@ type mappedStackFrame struct {
 }
 
 // symbolicate takes a line, column, function name, and URL and returns a string
-func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error) {
+func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url, uuid string) (*mappedStackFrame, error) {
 	if column < 0 || column > math.MaxUint32 {
-		return &mappedStackFrame{}, fmt.Errorf("column must be uint32: %d", column)
+		return nil, fmt.Errorf("column must be uint32: %d", column)
 	}
 
 	if line < 0 || line > math.MaxUint32 {
-		return &mappedStackFrame{}, fmt.Errorf("line must be uint32: %d", line)
+		return nil, fmt.Errorf("line must be uint32: %d", line)
 	}
 
-	t, err := ns.limitedSymbolicate(ctx, line, column, url)
+	if url == "" {
+		// If there is no URL, then it's something like "native", so pass it through directly.
+		return &mappedStackFrame{
+			FunctionName: function,
+			URL:          url,
+			Line:         int64(line),
+			Col:          int64(column),
+		}, nil
+	}
+
+	t, err := ns.limitedSymbolicate(ctx, line, column, url, uuid)
 
 	if err != nil {
-		return &mappedStackFrame{}, err
+		return nil, err
 	}
 
 	return &mappedStackFrame{
@@ -77,7 +87,7 @@ func (ns *basicSymbolicator) symbolicate(ctx context.Context, line, column int64
 
 // limitedSymbolicate performs the actual symbolication. It is limited to a single request at a time
 // it checks and caches the source map cache before loading the source map from the store
-func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, column int64, url string) (*symbolic.SourceMapCacheToken, error) {
+func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, column int64, url, uuid string) (*symbolic.SourceMapCacheToken, error) {
 	select {
 	case ns.ch <- struct{}{}:
 	case <-time.After(ns.timeout):
@@ -92,7 +102,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 	ns.telemetryBuilder.ProcessorSourceMapCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 
 	if !ok {
-		source, sMap, err := ns.store.GetSourceMap(ctx, url)
+		source, sMap, err := ns.store.GetSourceMap(ctx, url, uuid)
 
 		if err != nil {
 			ns.telemetryBuilder.ProcessorTotalSourceMapFetchFailures.Add(ctx, 1, ns.attributes)

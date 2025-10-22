@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- feat: if `app.debug.source_map_uuid` is in the resource attributes, include it in source paths (#113) | @beekhc
+
 ## v0.0.11 [beta] - 2025/10/21
 
 - chore: reduce log verbosity by changing "Processing traces" from Info to Debug level (#111) | @clintonnkemdilim

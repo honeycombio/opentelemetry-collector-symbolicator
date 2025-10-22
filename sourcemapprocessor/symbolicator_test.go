@@ -14,8 +14,10 @@ import (
 )
 
 var (
-	jsFile = "https://www.honeycomb.io/assets/js/basic-mapping.js"
-	noFile = "https://www.honeycomb.io/assets/js/does-not-exist.js"
+	jsFile   = "https://www.honeycomb.io/assets/js/basic-mapping.js"
+	noFile   = "https://www.honeycomb.io/assets/js/does-not-exist.js"
+	uuid     = "e63db37d-9886-452a-8e56-2250dcc20102"
+	uuidFile = "uuid-mapping.js"
 )
 
 func TestSymbolicator(t *testing.T) {
@@ -34,19 +36,34 @@ func TestSymbolicator(t *testing.T) {
 	assert.NoError(t, err)
 	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb, attributes)
 
-	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile)
+	// The basic case.
+	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile, "")
 	line := formatStackFrame(sf)
-
 	assert.NoError(t, err)
 	assert.Equal(t, "    at bar(basic-mapping-original.js:8:1)", line)
 
-	_, err = sym.symbolicate(ctx, 0, 34, "b", noFile)
+	// When there is no url.
+	sf, err = sym.symbolicate(ctx, 0, 34, "b", "", "")
+	line = formatStackFrame(sf)
+	assert.NoError(t, err)
+	assert.Equal(t, "    at b(:0:34)", line)
+
+	// When UUID is present.
+	sf, err = sym.symbolicate(ctx, 0, 34, "b", uuidFile, uuid)
+	line = formatStackFrame(sf)
+	assert.NoError(t, err)
+	assert.Equal(t, "    at bar(uuid-mapping-original.js:8:1)", line)
+
+	// When the file is missing.
+	_, err = sym.symbolicate(ctx, 0, 34, "b", noFile, "")
 	assert.Error(t, err)
 
-	_, err = sym.symbolicate(ctx, math.MaxInt64, 34, "b", jsFile)
+	// The line number is too large.
+	_, err = sym.symbolicate(ctx, math.MaxInt64, 34, "b", jsFile, "")
 	assert.Error(t, err)
 
-	_, err = sym.symbolicate(ctx, 0, math.MaxInt64, "b", jsFile)
+	// The column is too large.
+	_, err = sym.symbolicate(ctx, 0, math.MaxInt64, "b", jsFile, "")
 	assert.Error(t, err)
 }
 
@@ -70,7 +87,7 @@ func TestSymbolicatorCache(t *testing.T) {
 	assert.Equal(t, 0, sym.cache.Len())
 
 	// First symbolication should add to cache
-	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile)
+	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile, "")
 	line := formatStackFrame(sf)
 
 	assert.NoError(t, err)
