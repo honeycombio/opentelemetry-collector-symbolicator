@@ -38,7 +38,7 @@ type proguardLogsProcessor struct {
 }
 
 func (p *proguardLogsProcessor) ProcessLogs(ctx context.Context, logs plog.Logs) (plog.Logs, error) {
-	p.logger.Info("Processing logs")
+	p.logger.Debug("Processing logs")
 
 	startTime := time.Now()
 	for i := 0; i < logs.ResourceLogs().Len(); i++ {

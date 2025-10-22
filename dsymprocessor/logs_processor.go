@@ -56,7 +56,7 @@ func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Sett
 // processTraces processes the received traces. It is the function configured
 // in the processorhelper.NewTraces call in factory.go
 func (sp *symbolicatorProcessor) processLogs(ctx context.Context, logs plog.Logs) (plog.Logs, error) {
-	sp.logger.Info("Processing logs")
+	sp.logger.Debug("Processing logs")
 
 	startTime := time.Now()
 	for i := 0; i < logs.ResourceLogs().Len(); i++ {
