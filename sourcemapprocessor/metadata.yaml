@@ -17,13 +17,18 @@ resource_attributes:
 telemetry:
   # metrics about internal performance of the symbolicator processor
   metrics:
-    processor_total_processed_frames:
+    processor_source_map_cache_size:
       enabled: true
-      description: Total number of frames the symbolicator processed.
-      unit: "1"
-      sum:
+      description: Size of the source map cache in bytes.
+      unit: "{sourcemaps}"
+      gauge:
         value_type: int
-        monotonic: true
+    processor_symbolication_duration:
+      enabled: true
+      description: Duration in seconds taken to symbolicate frames.
+      unit: s
+      histogram:
+        value_type: double
     processor_total_failed_frames:
       enabled: true
       description: Total number of frames the symbolicator failed to symbolicate.
@@ -31,12 +36,13 @@ telemetry:
       sum:
         value_type: int
         monotonic: true
-    processor_symbolication_duration:
+    processor_total_processed_frames:
       enabled: true
-      description: Duration in seconds taken to symbolicate frames.
-      unit: s
-      histogram:
-        value_type: double
+      description: Total number of frames the symbolicator processed.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
     processor_total_source_map_fetch_failures:
       enabled: true
       description: Total number of source map fetch failures.
@@ -44,9 +50,3 @@ telemetry:
       sum:
         value_type: int
         monotonic: true
-    processor_source_map_cache_size:
-      enabled: true
-      description: Size of the source map cache in bytes.
-      unit: "{sourcemaps}"
-      gauge:
-        value_type: int
