@@ -38,6 +38,7 @@ func createDefaultConfig() component.Config {
 		OriginalLinesAttributeKey:              "exception.structured_stacktrace.lines.original",
 		OriginalColumnsAttributeKey:            "exception.structured_stacktrace.columns.original",
 		OriginalUrlsAttributeKey:               "exception.structured_stacktrace.urls.original",
+		BuildUUIDAttributeKey:                  "app.debug.source_map_uuid",
 		SourceMapStoreKey:                      "file_store",
 		LocalSourceMapConfiguration: &LocalSourceMapConfiguration{
 			Path: ".",

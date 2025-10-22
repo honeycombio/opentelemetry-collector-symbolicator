@@ -48,6 +48,9 @@ type Config struct {
 	// trace.
 	OriginalStackTraceKey string `mapstructure:"original_stack_trace_key"`
 
+	// BuildUUIDAttributeKey is the attribute key that contains the build UUID of the current app.
+	BuildUUIDAttributeKey string `mapstructure:"build_uuid_attribute_key"`
+
 	// OriginalColumnsAttributeKey is the attribute key that preserves the original
 	// column numbers.
 	OriginalColumnsAttributeKey string `mapstructure:"original_columns_attribute_key"`

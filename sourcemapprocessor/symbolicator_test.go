@@ -14,8 +14,10 @@ import (
 )
 
 var (
-	jsFile = "https://www.honeycomb.io/assets/js/basic-mapping.js"
-	noFile = "https://www.honeycomb.io/assets/js/does-not-exist.js"
+	jsFile   = "https://www.honeycomb.io/assets/js/basic-mapping.js"
+	noFile   = "https://www.honeycomb.io/assets/js/does-not-exist.js"
+	uuid     = "e63db37d-9886-452a-8e56-2250dcc20102"
+	uuidFile = "uuid-mapping.js"
 )
 
 func TestSymbolicator(t *testing.T) {
@@ -34,19 +36,23 @@ func TestSymbolicator(t *testing.T) {
 	assert.NoError(t, err)
 	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb, attributes)
 
-	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile)
+	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile, "")
 	line := formatStackFrame(sf)
-
 	assert.NoError(t, err)
 	assert.Equal(t, "    at bar(basic-mapping-original.js:8:1)", line)
 
-	_, err = sym.symbolicate(ctx, 0, 34, "b", noFile)
+	sf, err = sym.symbolicate(ctx, 0, 34, "b", uuidFile, uuid)
+	line = formatStackFrame(sf)
+	assert.NoError(t, err)
+	assert.Equal(t, "    at bar(basic-mapping-original.js:8:1)", line)
+
+	_, err = sym.symbolicate(ctx, 0, 34, "b", noFile, "")
 	assert.Error(t, err)
 
-	_, err = sym.symbolicate(ctx, math.MaxInt64, 34, "b", jsFile)
+	_, err = sym.symbolicate(ctx, math.MaxInt64, 34, "b", jsFile, "")
 	assert.Error(t, err)
 
-	_, err = sym.symbolicate(ctx, 0, math.MaxInt64, "b", jsFile)
+	_, err = sym.symbolicate(ctx, 0, math.MaxInt64, "b", jsFile, "")
 	assert.Error(t, err)
 }
 
@@ -70,7 +76,7 @@ func TestSymbolicatorCache(t *testing.T) {
 	assert.Equal(t, 0, sym.cache.Len())
 
 	// First symbolication should add to cache
-	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile)
+	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile, "")
 	line := formatStackFrame(sf)
 
 	assert.NoError(t, err)

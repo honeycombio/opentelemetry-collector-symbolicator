@@ -24,7 +24,7 @@ var (
 
 // symbolicator interface is used to symbolicate stack traces.
 type symbolicator interface {
-	symbolicate(ctx context.Context, line, column int64, function, url string) (*mappedStackFrame, error)
+	symbolicate(ctx context.Context, line, column int64, function, url string, uuid string) (*mappedStackFrame, error)
 }
 
 // sourcemapprocessor is a processor that finds and symbolicates stack
@@ -75,7 +75,7 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 		for j := 0; j < ss.Spans().Len(); j++ {
 			span := ss.Spans().At(j)
 
-			err := sp.processAttributes(ctx, span.Attributes())
+			err := sp.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
 
 			if err != nil {
 				sp.logger.Debug("Error processing span", zap.Error(err))
@@ -91,12 +91,12 @@ func formatStackFrame(sf *mappedStackFrame) string {
 }
 
 // processAttributes takes the attributes of a span and returns an error if symbolication failed.
-func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map) error {
+func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) error {
 	// Add processor type and version as attributes
 	attributes.PutStr("honeycomb.processor_type", typeStr.String())
 	attributes.PutStr("honeycomb.processor_version", processorVersion)
 
-	err := sp.processThrow(ctx, attributes)
+	err := sp.processThrow(ctx, attributes, resourceAttributes)
 
 	if err != nil {
 		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
@@ -110,7 +110,7 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 // processThrow takes the attributes and determines if they contain
 // required stacktrace information. If they do, it symbolicates the stack
 // trace and adds it to the attributes.
-func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pcommon.Map) error {
+func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) error {
 	var ok bool
 	var symbolicationError error
 	var lines, columns, functions, urls pcommon.Slice
@@ -156,6 +156,11 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		attributes.PutStr(sp.cfg.OriginalStackTraceKey, origStackTraceStr.Str())
 	}
 
+	buildUUID := ""
+	if buildUUIDValue, ok := resourceAttributes.Get(sp.cfg.BuildUUIDAttributeKey); ok {
+		buildUUID = buildUUIDValue.Str()
+	}
+
 	// Update with symbolicated stack trace
 	var stack []string
 	var mappedColumns = attributes.PutEmptySlice(sp.cfg.ColumnsAttributeKey)
@@ -170,7 +175,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 
 	var hasSymbolicationFailed bool
 	for i := 0; i < columns.Len(); i++ {
-		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str())
+		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str(), buildUUID)
 		sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
 
 		if err != nil {
