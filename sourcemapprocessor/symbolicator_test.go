@@ -36,22 +36,33 @@ func TestSymbolicator(t *testing.T) {
 	assert.NoError(t, err)
 	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb, attributes)
 
+	// The basic case.
 	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile, "")
 	line := formatStackFrame(sf)
 	assert.NoError(t, err)
 	assert.Equal(t, "    at bar(basic-mapping-original.js:8:1)", line)
 
+	// When there is no url.
+	sf, err = sym.symbolicate(ctx, 0, 34, "b", "", "")
+	line = formatStackFrame(sf)
+	assert.NoError(t, err)
+	assert.Equal(t, "    at b(:0:34)", line)
+
+	// When UUID is present.
 	sf, err = sym.symbolicate(ctx, 0, 34, "b", uuidFile, uuid)
 	line = formatStackFrame(sf)
 	assert.NoError(t, err)
-	assert.Equal(t, "    at bar(basic-mapping-original.js:8:1)", line)
+	assert.Equal(t, "    at bar(uuid-mapping-original.js:8:1)", line)
 
+	// When the file is missing.
 	_, err = sym.symbolicate(ctx, 0, 34, "b", noFile, "")
 	assert.Error(t, err)
 
+	// The line number is too large.
 	_, err = sym.symbolicate(ctx, math.MaxInt64, 34, "b", jsFile, "")
 	assert.Error(t, err)
 
+	// The column is too large.
 	_, err = sym.symbolicate(ctx, 0, math.MaxInt64, "b", jsFile, "")
 	assert.Error(t, err)
 }

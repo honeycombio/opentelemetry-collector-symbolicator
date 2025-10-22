@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: if `app.debug.source_map_uuid` is in the resource attributes, include it in source paths (#113) | @beekhc
 - feat: emit processor version and type as attributes from all processors (#107) | @jairo-mendoza
 
 ## v0.0.10 [beta] - 2025/07/24
