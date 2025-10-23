@@ -18,27 +18,35 @@ type sourceMapStore interface {
 }
 
 type basicSymbolicator struct {
-	store   sourceMapStore
-	timeout time.Duration
-	ch      chan struct{}
-	cache   *lru.Cache[string, *symbolic.SourceMapCache]
+	store         sourceMapStore
+	timeout       time.Duration
+	ch            chan struct{}
+	cache         *lru.Cache[string, *symbolic.SourceMapCache]
+	notFoundCache *lru.Cache[string, struct{}] // cache for files that don't exist
 
 	telemetryBuilder *metadata.TelemetryBuilder
 	attributes       metric.MeasurementOption
 }
 
 func newBasicSymbolicator(_ context.Context, timeout time.Duration, sourceMapCacheSize int, store sourceMapStore, tb *metadata.TelemetryBuilder, attributes attribute.Set) (*basicSymbolicator, error) {
-	cache, err := lru.New[string, *symbolic.SourceMapCache](sourceMapCacheSize) // Adjust the size as needed
-
+	cache, err := lru.New[string, *symbolic.SourceMapCache](sourceMapCacheSize)
 	if err != nil {
 		return nil, err
 	}
+
+	// Create a separate cache for "not found" entries to prevent repeated S3 calls
+	// Use the same size as the main cache
+	notFoundCache, err := lru.New[string, struct{}](sourceMapCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
 	return &basicSymbolicator{
-		store:   store,
-		timeout: timeout,
-		// the channel is buffered to allow for a single request to be in progress at a time
-		ch:               make(chan struct{}, 1),
-		cache:            cache,
+		store:         store,
+		timeout:       timeout,
+		ch:            make(chan struct{}, 1), // buffered to allow for a single request to be in progress at a time
+		cache:         cache,
+		notFoundCache: notFoundCache,
 		telemetryBuilder: tb,
 		attributes:       metric.WithAttributeSet(attributes),
 	}, nil
@@ -98,6 +106,12 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 		<-ns.ch
 	}()
 
+	// Check if we've previously determined this file doesn't exist (negative cache)
+	if _, notFound := ns.notFoundCache.Get(url); notFound {
+		// File is known to not exist, don't attempt to fetch again
+		return nil, fmt.Errorf("source map not found (cached): %s", url)
+	}
+
 	smc, ok := ns.cache.Get(url)
 	ns.telemetryBuilder.ProcessorSourceMapCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 
@@ -106,11 +120,14 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 
 		if err != nil {
 			ns.telemetryBuilder.ProcessorTotalSourceMapFetchFailures.Add(ctx, 1, ns.attributes)
+			// Cache the fact that this file doesn't exist to prevent repeated S3 calls
+			ns.notFoundCache.Add(url, struct{}{})
 			return nil, err
 		}
 
 		smc, err = symbolic.NewSourceMapCache(string(source), string(sMap))
 		if err != nil {
+			// Don't cache parsing errors as they might be transient
 			return nil, err
 		}
 
