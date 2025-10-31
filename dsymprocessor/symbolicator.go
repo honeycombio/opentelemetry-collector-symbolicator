@@ -18,10 +18,11 @@ type dsymStore interface {
 }
 
 type basicSymbolicator struct {
-	store   dsymStore
-	timeout time.Duration
-	ch      chan struct{}
-	cache   *lru.Cache[string, *symbolic.Archive]
+	store         dsymStore
+	timeout       time.Duration
+	ch            chan struct{}
+	cache         *lru.Cache[string, *symbolic.Archive]
+	notFoundCache *lru.Cache[string, struct{}] // cache for files that don't exist
 
 	telemetryBuilder *metadata.TelemetryBuilder
 	attributes       metric.MeasurementOption
@@ -33,12 +34,19 @@ func newBasicSymbolicator(_ context.Context, timeout time.Duration, cacheSize in
 		return nil, err
 	}
 
+	// Create a separate cache for "not found" entries to prevent repeated S3 calls
+	// Use the same size as the main cache
+	notFoundCache, err := lru.New[string, struct{}](cacheSize)
+	if err != nil {
+		return nil, err
+	}
+
 	return &basicSymbolicator{
-		store:   store,
-		timeout: timeout,
-		// the channel is buffered to allow for a single request to be in progress at a time
-		ch:               make(chan struct{}, 1),
+		store:            store,
+		timeout:          timeout,
+		ch:               make(chan struct{}, 1), // buffered to allow for a single request to be in progress at a time
 		cache:            cache,
+		notFoundCache:    notFoundCache,
 		telemetryBuilder: tb,
 		attributes:       metric.WithAttributeSet(attributes),
 	}, nil
@@ -65,6 +73,13 @@ func (ns *basicSymbolicator) symbolicateFrame(ctx context.Context, debugId, bina
 	}()
 
 	cacheKey := debugId + "/" + binaryName
+
+	// Check if we've previously determined this file doesn't exist (negative cache)
+	if _, notFound := ns.notFoundCache.Get(cacheKey); notFound {
+		// File is known to not exist, don't attempt to fetch again
+		return nil, fmt.Errorf("dSYM not found (cached): %s", cacheKey)
+	}
+
 	archive, ok := ns.cache.Get(cacheKey)
 	ns.telemetryBuilder.ProcessorDsymCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 
@@ -72,11 +87,14 @@ func (ns *basicSymbolicator) symbolicateFrame(ctx context.Context, debugId, bina
 		dSYMbytes, err := ns.store.GetDSYM(ctx, debugId, binaryName)
 		if err != nil {
 			ns.telemetryBuilder.ProcessorTotalDsymFetchFailures.Add(ctx, 1, ns.attributes)
+			// Cache the fact that this file doesn't exist to prevent repeated S3 calls
+			ns.notFoundCache.Add(cacheKey, struct{}{})
 			return nil, err
 		}
 		archive, err = symbolic.NewArchiveFromBytes(dSYMbytes)
 
 		if err != nil {
+			// Don't cache parsing errors as they might be transient
 			return nil, err
 		}
 
