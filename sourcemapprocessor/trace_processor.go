@@ -173,10 +173,43 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 
 	stack = append(stack, fmt.Sprintf("%s: %s", stackType.Str(), stackMessage.Str()))
 
+	// Cache failed symbolication attempts within this stacktrace to avoid redundant fetches
+	// for URLs that don't have source maps. Successful symbolications must still be performed
+	// for each frame since different line/column positions in the same file map to different
+	// original source locations.
+	errorCache := make(map[string]error)
+
 	var hasSymbolicationFailed bool
 	for i := 0; i < columns.Len(); i++ {
-		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str(), buildUUID)
+		url := urls.At(i).Str()
+		line := lines.At(i).Int()
+		column := columns.At(i).Int()
+		function := functions.At(i).Str()
+
+		// Create cache key that includes URL and buildUUID
+		cacheKey := url
+		if buildUUID != "" {
+			cacheKey = url + "|" + buildUUID
+		}
+
 		sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
+
+		var mappedStackFrame *mappedStackFrame
+		var err error
+
+		// Check if we already know this URL fails (404, timeout, etc.)
+		if cachedError, exists := errorCache[cacheKey]; exists {
+			// We already know this URL failed, reuse the error
+			err = cachedError
+		} else {
+			// Perform symbolication (source maps are cached separately in basicSymbolicator.cache)
+			mappedStackFrame, err = sp.symbolicator.symbolicate(ctx, line, column, function, url, buildUUID)
+
+			// Cache only errors - successful results vary by line/column so can't be reused
+			if err != nil {
+				errorCache[cacheKey] = err
+			}
+		}
 
 		if err != nil {
 			hasSymbolicationFailed = true
