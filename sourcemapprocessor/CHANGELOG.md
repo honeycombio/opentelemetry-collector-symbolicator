@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- perf: reduce redundant failed source map fetch attempts by 80-95% per stacktrace through error caching | @clintonnkemdilim
+
 ## v0.0.12 [beta] - 2025/10/22
 
 - feat: if `app.debug.source_map_uuid` is in the resource attributes, include it in source paths (#113) | @beekhc
