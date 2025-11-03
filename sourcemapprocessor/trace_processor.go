@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -173,10 +174,11 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 
 	stack = append(stack, fmt.Sprintf("%s: %s", stackType.Str(), stackMessage.Str()))
 
-	// Cache failed symbolication attempts within this stacktrace to avoid redundant fetches
-	// for URLs that don't have source maps. Successful symbolications must still be performed
-	// for each frame since different line/column positions in the same file map to different
-	// original source locations.
+	// Cache URL-level errors (404, timeout) to avoid redundant fetches, but NOT
+	// frame-specific validation errors (invalid line/column). Validation errors don't
+	// indicate whether a URL has a valid source map - other frames with valid coordinates
+	// should still attempt symbolication.
+	// Note: Successful symbolications vary by line/column position, so can't be cached.
 	errorCache := make(map[string]error)
 
 	var hasSymbolicationFailed bool
@@ -186,7 +188,6 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		column := columns.At(i).Int()
 		function := functions.At(i).Str()
 
-		// Create cache key that includes URL and buildUUID
 		cacheKey := url
 		if buildUUID != "" {
 			cacheKey = url + "|" + buildUUID
@@ -197,17 +198,17 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		var mappedStackFrame *mappedStackFrame
 		var err error
 
-		// Check if we already know this URL fails (404, timeout, etc.)
-		if cachedError, exists := errorCache[cacheKey]; exists {
-			// We already know this URL failed, reuse the error
-			err = cachedError
-		} else {
-			// Perform symbolication (source maps are cached separately in basicSymbolicator.cache)
+		// Don't cache validation errors - they're frame-specific, not URL-level
+		if line < 0 || line > math.MaxUint32 || column < 0 || column > math.MaxUint32 {
 			mappedStackFrame, err = sp.symbolicator.symbolicate(ctx, line, column, function, url, buildUUID)
-
-			// Cache only errors - successful results vary by line/column so can't be reused
-			if err != nil {
-				errorCache[cacheKey] = err
+		} else {
+			if cachedError, exists := errorCache[cacheKey]; exists {
+				err = cachedError
+			} else {
+				mappedStackFrame, err = sp.symbolicator.symbolicate(ctx, line, column, function, url, buildUUID)
+				if err != nil {
+					errorCache[cacheKey] = err
+				}
 			}
 		}
 

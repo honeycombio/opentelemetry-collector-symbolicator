@@ -578,4 +578,44 @@ func TestDeduplication(t *testing.T) {
 		assert.True(t, ok)
 		assert.Contains(t, stackAttr.Str(), "Failed to symbolicate: source map not found: 404")
 	})
+
+	t.Run("validation errors are not cached - valid frames after invalid ones still get symbolicated", func(t *testing.T) {
+		s.clear()
+
+		td := ptrace.NewTraces()
+		rs := td.ResourceSpans().AppendEmpty()
+		ils := rs.ScopeSpans().AppendEmpty()
+		span := ils.Spans().AppendEmpty()
+
+		// Create frames: invalid column, valid, valid
+		// All from same URL to test that validation error doesn't get cached
+		span.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().FromRaw([]any{-5, 10, 20}) // -5 is invalid
+		span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"f1", "f2", "f3"})
+		span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{100, 200, 300})
+		span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"app.js", "app.js", "app.js"})
+		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
+		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+
+		_, err := processor.processTraces(ctx, td)
+		// Should not error at the processTraces level, but individual frames will fail
+		assert.NoError(t, err)
+
+		// All 3 frames should attempt symbolication
+		// Frame 1 will fail with validation error (not cached)
+		// Frame 2 and 3 should succeed with valid coordinates
+		assert.Equal(t, 3, len(s.SymbolicatedLines), "Expected 3 symbolication calls: validation error not cached")
+
+		// Verify all frames were attempted
+		assert.Equal(t, int64(100), s.SymbolicatedLines[0].Line, "First frame (invalid column) attempted")
+		assert.Equal(t, int64(-5), s.SymbolicatedLines[0].Column, "First frame has invalid column")
+		assert.Equal(t, int64(200), s.SymbolicatedLines[1].Line, "Second frame (valid) attempted")
+		assert.Equal(t, int64(10), s.SymbolicatedLines[1].Column, "Second frame has valid column")
+		assert.Equal(t, int64(300), s.SymbolicatedLines[2].Line, "Third frame (valid) attempted")
+		assert.Equal(t, int64(20), s.SymbolicatedLines[2].Column, "Third frame has valid column")
+
+		// Verify that the symbolication failure attribute is set since frame 1 failed
+		failureAttr, exists := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+		assert.True(t, exists)
+		assert.True(t, failureAttr.Bool(), "Should mark symbolication as having failures")
+	})
 }
