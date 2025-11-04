@@ -188,10 +188,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		column := columns.At(i).Int()
 		function := functions.At(i).Str()
 
-		cacheKey := url
-		if buildUUID != "" {
-			cacheKey = url + "|" + buildUUID
-		}
+		cacheKey := buildCacheKey(url, buildUUID)
 
 		sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
 

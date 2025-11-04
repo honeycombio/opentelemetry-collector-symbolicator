@@ -13,6 +13,15 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+// buildCacheKey creates a consistent cache key for source maps and error caching.
+// Includes buildUUID when present to ensure different builds are cached separately.
+func buildCacheKey(url, buildUUID string) string {
+	if buildUUID == "" {
+		return url
+	}
+	return url + "|" + buildUUID
+}
+
 type sourceMapStore interface {
 	GetSourceMap(ctx context.Context, url string, uuid string) ([]byte, []byte, error)
 }
@@ -98,7 +107,8 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 		<-ns.ch
 	}()
 
-	smc, ok := ns.cache.Get(url)
+	cacheKey := buildCacheKey(url, uuid)
+	smc, ok := ns.cache.Get(cacheKey)
 	ns.telemetryBuilder.ProcessorSourceMapCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 
 	if !ok {
@@ -114,7 +124,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 			return nil, err
 		}
 
-		ns.cache.Add(url, smc)
+		ns.cache.Add(cacheKey, smc)
 	}
 
 	// If the cache size has changed, we should record the new size
