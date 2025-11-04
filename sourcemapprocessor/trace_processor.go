@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -174,10 +173,9 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 
 	stack = append(stack, fmt.Sprintf("%s: %s", stackType.Str(), stackMessage.Str()))
 
-	// Cache URL-level errors (404, timeout) to avoid redundant fetches, but NOT
-	// frame-specific validation errors (invalid line/column). Validation errors don't
-	// indicate whether a URL has a valid source map - other frames with valid coordinates
-	// should still attempt symbolication.
+	// Cache fetch errors (404, timeout) to avoid redundant fetches.
+	// Only FetchError types are cached - validation and parse errors are not cached
+	// as they are frame-specific or indicate transient issues that might be resolved.
 	// Note: Successful symbolications vary by line/column position, so can't be cached.
 	errorCache := make(map[string]error)
 
@@ -195,15 +193,16 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		var mappedStackFrame *mappedStackFrame
 		var err error
 
-		// Don't cache validation errors - they're frame-specific, not URL-level
-		if line < 0 || line > math.MaxUint32 || column < 0 || column > math.MaxUint32 {
-			mappedStackFrame, err = sp.symbolicator.symbolicate(ctx, line, column, function, url, buildUUID)
+		// Check if we have a cached fetch error for this URL
+		if cachedError, exists := errorCache[cacheKey]; exists {
+			err = cachedError
 		} else {
-			if cachedError, exists := errorCache[cacheKey]; exists {
-				err = cachedError
-			} else {
-				mappedStackFrame, err = sp.symbolicator.symbolicate(ctx, line, column, function, url, buildUUID)
-				if err != nil {
+			mappedStackFrame, err = sp.symbolicator.symbolicate(ctx, line, column, function, url, buildUUID)
+
+			// Only cache FetchErrors (404, timeout, etc.) - not validation or parse errors
+			if err != nil {
+				var fetchErr *FetchError
+				if errors.As(err, &fetchErr) {
 					errorCache[cacheKey] = err
 				}
 			}

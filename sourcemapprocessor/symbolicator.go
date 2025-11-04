@@ -22,6 +22,20 @@ func buildCacheKey(url, buildUUID string) string {
 	return url + "|" + buildUUID
 }
 
+// FetchError wraps source map fetch failures (404, timeout) that are safe to cache.
+type FetchError struct {
+	URL string
+	Err error
+}
+
+func (e *FetchError) Error() string {
+	return fmt.Sprintf("failed to fetch source map for %s: %v", e.URL, e.Err)
+}
+
+func (e *FetchError) Unwrap() error {
+	return e.Err
+}
+
 type sourceMapStore interface {
 	GetSourceMap(ctx context.Context, url string, uuid string) ([]byte, []byte, error)
 }
@@ -100,7 +114,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 	select {
 	case ns.ch <- struct{}{}:
 	case <-time.After(ns.timeout):
-		return nil, fmt.Errorf("timeout")
+		return nil, &FetchError{URL: url, Err: fmt.Errorf("timeout")}
 	}
 
 	defer func() {
@@ -116,7 +130,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 
 		if err != nil {
 			ns.telemetryBuilder.ProcessorTotalSourceMapFetchFailures.Add(ctx, 1, ns.attributes)
-			return nil, err
+			return nil, &FetchError{URL: url, Err: err}
 		}
 
 		smc, err = symbolic.NewSourceMapCache(string(source), string(sMap))

@@ -27,12 +27,15 @@ type testSymbolicator struct {
 	SymbolicatedLines []symbolicatedLine
 	shouldError       bool
 	errorMsg          string
+	returnFetchError  bool // If true, wraps error in FetchError
 	callCount         int
 }
 
 func (ts *testSymbolicator) clear() {
 	ts.SymbolicatedLines = nil
 	ts.callCount = 0
+	ts.shouldError = false
+	ts.returnFetchError = false
 }
 
 func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64, function, url string, uuid string) (*mappedStackFrame, error) {
@@ -46,10 +49,14 @@ func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64,
 
 	// Return error if configured to do so
 	if ts.shouldError {
-		return nil, fmt.Errorf(ts.errorMsg)
+		err := fmt.Errorf(ts.errorMsg)
+		if ts.returnFetchError {
+			return nil, &FetchError{URL: url, Err: err}
+		}
+		return nil, err
 	}
 
-	// Special case for symbolication errors
+	// Special case for symbolication errors (validation)
 	if column < 0 || column > math.MaxUint32 {
 		return &mappedStackFrame{}, fmt.Errorf("column must be uint32: %d", column)
 	}
@@ -523,10 +530,11 @@ func TestDeduplication(t *testing.T) {
 	})
 
 	t.Run("missing source map errors are cached and reused within stacktrace", func(t *testing.T) {
-		// Create a symbolicator that returns errors (simulating missing source maps)
+		// Create a symbolicator that returns FetchError (simulating missing source maps)
 		errorSymbolicator := &testSymbolicator{
-			shouldError: true,
-			errorMsg:    "source map not found: 404",
+			shouldError:      true,
+			errorMsg:         "source map not found: 404",
+			returnFetchError: true,
 		}
 
 		testTel := componenttest.NewTelemetry()
@@ -576,46 +584,61 @@ func TestDeduplication(t *testing.T) {
 		// Verify the stacktrace indicates failure
 		stackAttr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
 		assert.True(t, ok)
-		assert.Contains(t, stackAttr.Str(), "Failed to symbolicate: source map not found: 404")
+		assert.Contains(t, stackAttr.Str(), "failed to fetch source map")
 	})
 
-	t.Run("validation errors are not cached - valid frames after invalid ones still get symbolicated", func(t *testing.T) {
-		s.clear()
+	t.Run("non-fetch errors are not cached - parse errors cause retry per frame", func(t *testing.T) {
+		// Create a symbolicator that returns generic errors (simulating parse errors, not fetch errors)
+		parseErrorSymbolicator := &testSymbolicator{
+			shouldError:      true,
+			errorMsg:         "failed to parse source map: invalid JSON",
+			returnFetchError: false, // NOT a FetchError - should not be cached
+		}
+
+		testTel := componenttest.NewTelemetry()
+		parseErrorTb, tbErr := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
+		assert.NoError(t, tbErr)
+		defer parseErrorTb.Shutdown()
+
+		parseErrorAttributes := attribute.NewSet(
+			attribute.String("processor_type", "sourcemap"),
+		)
+
+		parseErrorProcessor := newSymbolicatorProcessor(ctx, cfg, processorhelper.Settings{
+			TelemetrySettings: component.TelemetrySettings{
+				Logger: zaptest.NewLogger(t),
+			},
+		}, parseErrorSymbolicator, parseErrorTb, parseErrorAttributes)
 
 		td := ptrace.NewTraces()
 		rs := td.ResourceSpans().AppendEmpty()
 		ils := rs.ScopeSpans().AppendEmpty()
 		span := ils.Spans().AppendEmpty()
 
-		// Create frames: invalid column, valid, valid
-		// All from same URL to test that validation error doesn't get cached
-		span.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().FromRaw([]any{-5, 10, 20}) // -5 is invalid
+		// Create 3 frames all from the same URL that will return parse errors
+		span.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().FromRaw([]any{1, 2, 3})
 		span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"f1", "f2", "f3"})
 		span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{100, 200, 300})
 		span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"app.js", "app.js", "app.js"})
 		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
 		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
 
-		_, err := processor.processTraces(ctx, td)
-		// Should not error at the processTraces level, but individual frames will fail
-		assert.NoError(t, err)
+		_, processErr := parseErrorProcessor.processTraces(ctx, td)
+		assert.NoError(t, processErr) // Processing should succeed even if symbolication fails
 
-		// All 3 frames should attempt symbolication
-		// Frame 1 will fail with validation error (not cached)
-		// Frame 2 and 3 should succeed with valid coordinates
-		assert.Equal(t, 3, len(s.SymbolicatedLines), "Expected 3 symbolication calls: validation error not cached")
+		// Should call symbolicate 3 times - parse errors are NOT cached
+		// This is correct because parse errors might be transient or fixable
+		assert.Equal(t, 3, parseErrorSymbolicator.callCount,
+			"Expected 3 symbolication calls: parse errors should not be cached")
 
-		// Verify all frames were attempted
-		assert.Equal(t, int64(100), s.SymbolicatedLines[0].Line, "First frame (invalid column) attempted")
-		assert.Equal(t, int64(-5), s.SymbolicatedLines[0].Column, "First frame has invalid column")
-		assert.Equal(t, int64(200), s.SymbolicatedLines[1].Line, "Second frame (valid) attempted")
-		assert.Equal(t, int64(10), s.SymbolicatedLines[1].Column, "Second frame has valid column")
-		assert.Equal(t, int64(300), s.SymbolicatedLines[2].Line, "Third frame (valid) attempted")
-		assert.Equal(t, int64(20), s.SymbolicatedLines[2].Column, "Third frame has valid column")
+		// Verify symbolication_failed attribute is set
+		attr, ok := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+		assert.True(t, ok)
+		assert.True(t, attr.Bool())
 
-		// Verify that the symbolication failure attribute is set since frame 1 failed
-		failureAttr, exists := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
-		assert.True(t, exists)
-		assert.True(t, failureAttr.Bool(), "Should mark symbolication as having failures")
+		// Verify the stacktrace indicates parse failure (not fetch failure)
+		stackAttr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
+		assert.True(t, ok)
+		assert.Contains(t, stackAttr.Str(), "failed to parse source map")
 	})
 }
