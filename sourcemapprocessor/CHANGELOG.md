@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- perf: reduce redundant failed source map fetch attempts by 80-95% per stacktrace through error caching | @clintonnkemdilim
+- perf: enhance symbolication process with per stacktrace error caching | @clintonnkemdilim
 
 ## v0.0.12 [beta] - 2025/10/22
 
