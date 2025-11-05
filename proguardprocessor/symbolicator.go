@@ -13,6 +13,20 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+// FetchError wraps ProGuard mapping fetch failures (404, timeout) that are safe to cache.
+type FetchError struct {
+	UUID string
+	Err  error
+}
+
+func (e *FetchError) Error() string {
+	return fmt.Sprintf("failed to fetch ProGuard mapping for %s: %v", e.UUID, e.Err)
+}
+
+func (e *FetchError) Unwrap() error {
+	return e.Err
+}
+
 type fileStore interface {
 	GetProguardMapping(ctx context.Context, uuid string) ([]byte, error)
 }
@@ -82,7 +96,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, uuid, class
 	select {
 	case ns.ch <- struct{}{}:
 	case <-time.After(ns.timeout):
-		return nil, fmt.Errorf("timeout")
+		return nil, &FetchError{UUID: uuid, Err: fmt.Errorf("timeout")}
 	}
 
 	defer func() {
@@ -97,7 +111,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, uuid, class
 
 		if err != nil {
 			ns.telemetryBuilder.ProcessorTotalProguardFetchFailures.Add(ctx, 1, ns.attributes)
-			return nil, err
+			return nil, &FetchError{UUID: uuid, Err: err}
 		}
 
 		f, err := os.CreateTemp("", "proguard-*.txt")

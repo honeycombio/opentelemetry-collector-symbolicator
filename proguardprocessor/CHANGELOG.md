@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 🚀 Performance
+
+- perf: enhance symbolication process with per stacktrace error caching | @clintonnkemdilim
+
 ## v0.0.5 [beta] - 2025/10/21
 
 - chore: reduce log verbosity by changing "Processing logs" from Info to Debug level (#111) | @clintonnkemdilim
