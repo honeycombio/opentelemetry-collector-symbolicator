@@ -177,7 +177,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	// Only FetchError types are cached - validation and parse errors are not cached
 	// as they are frame-specific or indicate transient issues that might be resolved.
 	// Note: Successful symbolications vary by line/column position, so can't be cached.
-	errorCache := make(map[string]error)
+	fetchErrorCache := make(map[string]error)
 
 	var hasSymbolicationFailed bool
 	for i := 0; i < columns.Len(); i++ {
@@ -194,7 +194,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		var err error
 
 		// Check if we have a cached fetch error for this URL
-		if cachedError, exists := errorCache[cacheKey]; exists {
+		if cachedError, exists := fetchErrorCache[cacheKey]; exists {
 			err = cachedError
 		} else {
 			mappedStackFrame, err = sp.symbolicator.symbolicate(ctx, line, column, function, url, buildUUID)
@@ -203,7 +203,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 			if err != nil {
 				var fetchErr *FetchError
 				if errors.As(err, &fetchErr) {
-					errorCache[cacheKey] = err
+					fetchErrorCache[cacheKey] = err
 				}
 			}
 		}
