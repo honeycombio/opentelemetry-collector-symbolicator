@@ -173,10 +173,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 
 	stack = append(stack, fmt.Sprintf("%s: %s", stackType.Str(), stackMessage.Str()))
 
-	// Cache fetch errors (404, timeout) to avoid redundant fetches.
-	// Only FetchError types are cached - validation and parse errors are not cached
-	// as they are frame-specific or indicate transient issues that might be resolved.
-	// Note: Successful symbolications vary by line/column position, so can't be cached.
+	// Cache FetchErrors to avoid redundant fetches for missing resources.
 	fetchErrorCache := make(map[string]error)
 
 	var hasSymbolicationFailed bool
