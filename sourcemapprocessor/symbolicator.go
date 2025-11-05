@@ -13,6 +13,29 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+// buildCacheKey creates a consistent cache key for source maps and error caching.
+// Includes buildUUID when present to ensure different builds are cached separately.
+func buildCacheKey(url, buildUUID string) string {
+	if buildUUID == "" {
+		return url
+	}
+	return url + "|" + buildUUID
+}
+
+// FetchError wraps source map fetch failures (404, timeout) that are safe to cache.
+type FetchError struct {
+	URL string
+	Err error
+}
+
+func (e *FetchError) Error() string {
+	return fmt.Sprintf("failed to fetch source map for %s: %v", e.URL, e.Err)
+}
+
+func (e *FetchError) Unwrap() error {
+	return e.Err
+}
+
 type sourceMapStore interface {
 	GetSourceMap(ctx context.Context, url string, uuid string) ([]byte, []byte, error)
 }
@@ -91,14 +114,15 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 	select {
 	case ns.ch <- struct{}{}:
 	case <-time.After(ns.timeout):
-		return nil, fmt.Errorf("timeout")
+		return nil, &FetchError{URL: url, Err: fmt.Errorf("timeout")}
 	}
 
 	defer func() {
 		<-ns.ch
 	}()
 
-	smc, ok := ns.cache.Get(url)
+	cacheKey := buildCacheKey(url, uuid)
+	smc, ok := ns.cache.Get(cacheKey)
 	ns.telemetryBuilder.ProcessorSourceMapCacheSize.Record(ctx, int64(ns.cache.Len()), ns.attributes)
 
 	if !ok {
@@ -106,7 +130,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 
 		if err != nil {
 			ns.telemetryBuilder.ProcessorTotalSourceMapFetchFailures.Add(ctx, 1, ns.attributes)
-			return nil, err
+			return nil, &FetchError{URL: url, Err: err}
 		}
 
 		smc, err = symbolic.NewSourceMapCache(string(source), string(sMap))
@@ -114,7 +138,7 @@ func (ns *basicSymbolicator) limitedSymbolicate(ctx context.Context, line, colum
 			return nil, err
 		}
 
-		ns.cache.Add(url, smc)
+		ns.cache.Add(cacheKey, smc)
 	}
 
 	// If the cache size has changed, we should record the new size

@@ -173,10 +173,37 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 
 	stack = append(stack, fmt.Sprintf("%s: %s", stackType.Str(), stackMessage.Str()))
 
+	// Cache FetchErrors to avoid redundant fetches for missing resources.
+	fetchErrorCache := make(map[string]error)
+
 	var hasSymbolicationFailed bool
 	for i := 0; i < columns.Len(); i++ {
-		mappedStackFrame, err := sp.symbolicator.symbolicate(ctx, lines.At(i).Int(), columns.At(i).Int(), functions.At(i).Str(), urls.At(i).Str(), buildUUID)
+		url := urls.At(i).Str()
+		line := lines.At(i).Int()
+		column := columns.At(i).Int()
+		function := functions.At(i).Str()
+
+		cacheKey := buildCacheKey(url, buildUUID)
+
 		sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
+
+		var mappedStackFrame *mappedStackFrame
+		var err error
+
+		// Check if we have a cached fetch error for this URL
+		if cachedError, exists := fetchErrorCache[cacheKey]; exists {
+			err = cachedError
+		} else {
+			mappedStackFrame, err = sp.symbolicator.symbolicate(ctx, line, column, function, url, buildUUID)
+
+			// Only cache FetchErrors (404, timeout, etc.) - not validation or parse errors
+			if err != nil {
+				var fetchErr *FetchError
+				if errors.As(err, &fetchErr) {
+					fetchErrorCache[cacheKey] = err
+				}
+			}
+		}
 
 		if err != nil {
 			hasSymbolicationFailed = true

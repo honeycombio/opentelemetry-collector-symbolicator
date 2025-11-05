@@ -96,3 +96,89 @@ func TestSymbolicatorCache(t *testing.T) {
 	// Cache should have one entry
 	assert.Equal(t, 1, sym.cache.Len())
 }
+
+func TestBuildCacheKey(t *testing.T) {
+	tests := []struct {
+		name      string
+		url       string
+		buildUUID string
+		expected  string
+	}{
+		{
+			name:      "URL only, no UUID",
+			url:       "app.js",
+			buildUUID: "",
+			expected:  "app.js",
+		},
+		{
+			name:      "URL with UUID",
+			url:       "app.js",
+			buildUUID: "build-v1.0",
+			expected:  "app.js|build-v1.0",
+		},
+		{
+			name:      "Different URLs same UUID should differ",
+			url:       "vendor.js",
+			buildUUID: "build-v1.0",
+			expected:  "vendor.js|build-v1.0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := buildCacheKey(tt.url, tt.buildUUID)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestSymbolicatorCacheWithUUID(t *testing.T) {
+	ctx := context.Background()
+
+	testTel := componenttest.NewTelemetry()
+	tb, err := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
+	assert.NoError(t, err)
+	defer tb.Shutdown()
+
+	attributes := attribute.NewSet(
+		attribute.String("processor_type", "symbolicator"),
+	)
+
+	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
+	assert.NoError(t, err)
+	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb, attributes)
+
+	// Cache should be empty to start
+	assert.Equal(t, 0, sym.cache.Len())
+
+	// Symbolicate with UUID
+	sf1, err := sym.symbolicate(ctx, 0, 34, "b", uuidFile, uuid)
+	assert.NoError(t, err)
+	assert.Equal(t, "bar", sf1.FunctionName)
+
+	// Cache should have one entry (url|uuid)
+	assert.Equal(t, 1, sym.cache.Len())
+
+	// Symbolicate same URL with different UUID (simulating different build)
+	// This should create a separate cache entry
+	differentUUID := "different-uuid-1234"
+	
+	// This will fail to fetch since the file doesn't exist with this UUID, but that's okay
+	// The important part is it tries to fetch (proving it's not using the cached entry)
+	_, err = sym.symbolicate(ctx, 0, 34, "b", uuidFile, differentUUID)
+	// We expect an error because the file won't exist with this UUID
+	assert.Error(t, err, "Should attempt to fetch with different UUID and fail")
+
+	// Cache should still have the first entry
+	// (The second fetch failed, so it wasn't added to cache)
+	assert.Equal(t, 1, sym.cache.Len())
+
+	// Symbolicate same URL with NO UUID
+	// This should also create a separate cache entry
+	sf3, err := sym.symbolicate(ctx, 0, 34, "b", jsFile, "")
+	assert.NoError(t, err)
+	assert.Equal(t, "bar", sf3.FunctionName)
+
+	// Cache should now have two entries: "uuid-mapping.js|<uuid>" and "jsFile"
+	assert.Equal(t, 2, sym.cache.Len())
+}
