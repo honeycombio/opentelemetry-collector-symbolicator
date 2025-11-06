@@ -24,9 +24,10 @@ var (
 	exceptionHeaderRegex = regexp.MustCompile(`^([^\s:]+(?:\.[^\s:]+)*)\s*:\s*(.*)$`)
 	// According to Claude, this should match the following formats:
 	// Matches lines like: at com.example.Class.method(File.java:123)
+	// Also matches: at com.example.Class.method(File.java:-2)
 	// Also matches: at com.example.Class.method(Native Method)
 	// Also matches: at com.example.Class.method(Unknown Source)
 	// Also matches: at com.example.Class.method(File.java)
-	stackFrameRegex      = regexp.MustCompile(`^\s*at\s+([^\s(]+)\.([^\s.(]+)\(([^:)]+)(?::(\d+))?\)\s*$`)
+	stackFrameRegex      = regexp.MustCompile(`^\s*at\s+([^\s(]+)\.([^\s.(]+)\(([^:)]+)(?::(-?\d+))?\)\s*$`)
 )
 
