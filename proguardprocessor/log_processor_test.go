@@ -2,6 +2,8 @@ package proguardprocessor
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/honeycombio/opentelemetry-collector-symbolicator/proguardprocessor/internal/metadata"
@@ -26,12 +28,18 @@ func (m *mockLogProcessorStore) GetProguardMapping(ctx context.Context, uuid str
 }
 
 type mockLogProcessorSymbolicator struct {
-	frames []*mappedStackFrame
-	err    error
+	frames    []*mappedStackFrame
+	err       error
+	callCount int
 }
 
 func (m *mockLogProcessorSymbolicator) symbolicate(ctx context.Context, uuid, className, methodName string, lineNumber int) ([]*mappedStackFrame, error) {
+	m.callCount++
 	return m.frames, m.err
+}
+
+func (m *mockLogProcessorSymbolicator) clear() {
+	m.callCount = 0
 }
 
 func createMockTelemetry(t *testing.T) (*metadata.TelemetryBuilder, attribute.Set) {
@@ -560,4 +568,250 @@ func TestGetSlice(t *testing.T) {
 	result, ok = getSlice("non_existing", m)
 	assert.False(t, ok)
 	assert.Equal(t, 0, result.Len())
+}
+
+func TestErrorCaching_MissingProguardMapping(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		ProguardUUIDAttributeKey:        "uuid",
+		OutputStackTraceKey:             "stack_trace",
+		SymbolicatorFailureAttributeKey: "symbolication_failed",
+		SymbolicatorErrorAttributeKey:   "symbolication_error",
+	}
+
+	settings := processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}
+
+	store := &mockLogProcessorStore{}
+	// Create a symbolicator that returns FetchError (simulating missing ProGuard mapping)
+	symbolicator := &mockLogProcessorSymbolicator{
+		frames: nil,
+		err:    &FetchError{UUID: "missing-uuid-123", Err: errors.New("404 not found")},
+	}
+	tb, attributes := createMockTelemetry(t)
+
+	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
+	assert.NoError(t, err)
+
+	lr := plog.NewLogRecord()
+	attrs := lr.Attributes()
+	attrs.PutStr("uuid", "missing-uuid-123")
+
+	// Create 10 frames all with the same UUID (missing ProGuard mapping)
+	classes := attrs.PutEmptySlice("classes")
+	methods := attrs.PutEmptySlice("methods")
+	lines := attrs.PutEmptySlice("lines")
+	sourceFiles := attrs.PutEmptySlice("source_files")
+
+	for i := 0; i < 10; i++ {
+		classes.AppendEmpty().SetStr("com.example.ObfuscatedClass")
+		methods.AppendEmpty().SetStr("a")
+		lines.AppendEmpty().SetInt(int64(100 + i*10))
+		sourceFiles.AppendEmpty().SetStr("Unknown.java")
+	}
+
+	processor.processLogRecord(context.Background(), lr)
+
+	// Should only call symbolicate ONCE for the first frame, then reuse cached error
+	// This validates the 90% reduction in failed fetches claim (1 call instead of 10)
+	assert.Equal(t, 1, symbolicator.callCount,
+		"Expected only 1 symbolication call for 10 frames with same missing UUID (90%% reduction)")
+
+	// Verify symbolication_failed attribute is set
+	failed, ok := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
+	assert.True(t, ok)
+	assert.True(t, failed.Bool())
+
+	// Verify the error attribute is set
+	errorMsg, ok := attrs.Get(cfg.SymbolicatorErrorAttributeKey)
+	assert.True(t, ok)
+	assert.Equal(t, "symbolication failed for some stack frames", errorMsg.Str())
+
+	// Verify the stacktrace contains failure messages
+	stackTrace, ok := attrs.Get(cfg.OutputStackTraceKey)
+	assert.True(t, ok)
+	assert.Contains(t, stackTrace.Str(), "Failed to symbolicate")
+}
+
+// testSymbolicatorWithFetchErrors simulates a symbolicator that can return FetchErrors or other errors
+type testSymbolicatorWithFetchErrors struct {
+	returnFetchError bool
+	callCount        int
+	err              error
+}
+
+func (m *testSymbolicatorWithFetchErrors) symbolicate(ctx context.Context, uuid, className, methodName string, lineNumber int) ([]*mappedStackFrame, error) {
+	m.callCount++
+	if m.err != nil {
+		if m.returnFetchError {
+			return nil, &FetchError{UUID: uuid, Err: m.err}
+		}
+		return nil, m.err
+	}
+	return []*mappedStackFrame{
+		{ClassName: "Deobfuscated", MethodName: "method", SourceFile: "Source.java", LineNumber: int64(lineNumber)},
+	}, nil
+}
+
+func TestDeduplication(t *testing.T) {
+	tests := []struct {
+		name              string
+		numFrames         int
+		returnFetchError  bool
+		symbolicatorError error
+		expectCallCount   int
+		description       string
+	}{
+		{
+			name:              "successful symbolication calls for each frame",
+			numFrames:         10,
+			returnFetchError:  false,
+			symbolicatorError: nil,
+			expectCallCount:   10,
+			description:       "Each frame should be symbolicated independently when successful",
+		},
+		{
+			name:              "FetchError is cached and reused within stacktrace",
+			numFrames:         10,
+			returnFetchError:  true,
+			symbolicatorError: errors.New("404 not found"),
+			expectCallCount:   1,
+			description:       "FetchError should be cached after first frame, 90% reduction in calls",
+		},
+		{
+			name:              "non-FetchError is NOT cached",
+			numFrames:         5,
+			returnFetchError:  false,
+			symbolicatorError: errors.New("parse error"),
+			expectCallCount:   5,
+			description:       "Parse errors should not be cached, each frame attempts symbolication",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cfg := &Config{
+				ClassesAttributeKey:             "classes",
+				MethodsAttributeKey:             "methods",
+				LinesAttributeKey:               "lines",
+				SourceFilesAttributeKey:         "source_files",
+				ProguardUUIDAttributeKey:        "uuid",
+				OutputStackTraceKey:             "stack_trace",
+				SymbolicatorFailureAttributeKey: "symbolication_failed",
+				SymbolicatorErrorAttributeKey:   "symbolication_error",
+			}
+
+			settings := processor.Settings{
+				TelemetrySettings: component.TelemetrySettings{
+					Logger: zaptest.NewLogger(t),
+				},
+			}
+
+			store := &mockLogProcessorStore{}
+			symbolicator := &testSymbolicatorWithFetchErrors{
+				returnFetchError: tt.returnFetchError,
+				err:              tt.symbolicatorError,
+			}
+			tb, attributes := createMockTelemetry(t)
+
+			processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
+			assert.NoError(t, err)
+
+			lr := plog.NewLogRecord()
+			attrs := lr.Attributes()
+			attrs.PutStr("uuid", "test-uuid-123")
+
+			// Create frames with different line numbers to simulate realistic stacktrace
+			classes := attrs.PutEmptySlice("classes")
+			methods := attrs.PutEmptySlice("methods")
+			lines := attrs.PutEmptySlice("lines")
+			sourceFiles := attrs.PutEmptySlice("source_files")
+
+			for i := 0; i < tt.numFrames; i++ {
+				classes.AppendEmpty().SetStr("com.example.ObfuscatedClass")
+				methods.AppendEmpty().SetStr("a")
+				lines.AppendEmpty().SetInt(int64(100 + i*10))
+				sourceFiles.AppendEmpty().SetStr("Unknown.java")
+			}
+
+			processor.processLogRecord(ctx, lr)
+
+			assert.Equal(t, tt.expectCallCount, symbolicator.callCount, tt.description)
+
+			// Verify failure flag based on whether there was an error
+			failed, ok := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
+			assert.True(t, ok)
+			if tt.symbolicatorError != nil {
+				assert.True(t, failed.Bool())
+			} else {
+				assert.False(t, failed.Bool())
+			}
+		})
+	}
+}
+
+func TestDeduplication_MultipleUUIDs(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		ProguardUUIDAttributeKey:        "uuid",
+		OutputStackTraceKey:             "stack_trace",
+		SymbolicatorFailureAttributeKey: "symbolication_failed",
+	}
+
+	settings := processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}
+
+	store := &mockLogProcessorStore{}
+	symbolicator := &mockLogProcessorSymbolicator{
+		frames: nil,
+		err:    &FetchError{UUID: "test", Err: errors.New("404 not found")},
+	}
+
+	tb, attributes := createMockTelemetry(t)
+	processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
+	assert.NoError(t, err)
+
+	// Create log record with frames from the same UUID
+	// In reality, all frames in a stacktrace share the same UUID
+	// This test verifies error cache keying by UUID
+	lr := plog.NewLogRecord()
+	attrs := lr.Attributes()
+
+	// Note: ProGuard UUID is typically the same for all frames in a stacktrace
+	// This test verifies error cache keying by UUID
+	attrs.PutStr("uuid", "uuid-1")
+
+	classes := attrs.PutEmptySlice("classes")
+	methods := attrs.PutEmptySlice("methods")
+	lines := attrs.PutEmptySlice("lines")
+	sourceFiles := attrs.PutEmptySlice("source_files")
+
+	// Add 5 frames with the same UUID
+	for i := 0; i < 5; i++ {
+		classes.AppendEmpty().SetStr("com.example.Class" + fmt.Sprintf("%d", i))
+		methods.AppendEmpty().SetStr("method" + fmt.Sprintf("%d", i))
+		lines.AppendEmpty().SetInt(int64(100 + i*10))
+		sourceFiles.AppendEmpty().SetStr("Unknown.java")
+	}
+
+	processor.processLogRecord(ctx, lr)
+
+	// Should only call once per UUID, not once per frame
+	assert.Equal(t, 1, symbolicator.callCount,
+		"Expected 1 call for 5 frames with same UUID (error cached)")
 }

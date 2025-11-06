@@ -191,3 +191,123 @@ func TestBasicSymbolicator_LargeLineNumber(t *testing.T) {
 		assert.IsType(t, []*mappedStackFrame{}, result)
 	}
 }
+
+func TestFetchError(t *testing.T) {
+	tests := []struct {
+		name         string
+		uuid         string
+		wrappedError error
+		wantContains []string
+	}{
+		{
+			name:         "store error wrapped in FetchError",
+			uuid:         "test-uuid-123",
+			wrappedError: errors.New("404 not found"),
+			wantContains: []string{"failed to fetch ProGuard mapping", "test-uuid-123", "404 not found"},
+		},
+		{
+			name:         "timeout wrapped in FetchError",
+			uuid:         "uuid-456",
+			wrappedError: errors.New("timeout"),
+			wantContains: []string{"failed to fetch ProGuard mapping", "uuid-456", "timeout"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fetchErr := &FetchError{UUID: tt.uuid, Err: tt.wrappedError}
+			errMsg := fetchErr.Error()
+
+			for _, want := range tt.wantContains {
+				assert.Contains(t, errMsg, want)
+			}
+
+			// Verify Unwrap works
+			assert.Equal(t, tt.wrappedError, fetchErr.Unwrap())
+
+			// Verify errors.As can detect it
+			var fe *FetchError
+			assert.True(t, errors.As(fetchErr, &fe))
+			assert.Equal(t, tt.uuid, fe.UUID)
+		})
+	}
+}
+
+func TestBasicSymbolicator_FetchErrorWrapping(t *testing.T) {
+	tests := []struct {
+		name         string
+		storeError   error
+		timeout      time.Duration
+		blockChannel bool
+		wantFetchErr bool
+	}{
+		{
+			name:         "store error should be wrapped in FetchError",
+			storeError:   errors.New("404 not found"),
+			timeout:      5 * time.Second,
+			blockChannel: false,
+			wantFetchErr: true,
+		},
+		{
+			name:         "timeout should be wrapped in FetchError",
+			storeError:   nil,
+			timeout:      1 * time.Nanosecond,
+			blockChannel: true,
+			wantFetchErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			mockStore := &mockSymbolicatorStore{err: tt.storeError}
+			tb, attributes := createMockSymbolicatorTelemetry(t)
+
+			symbolicator, err := newBasicSymbolicator(ctx, tt.timeout, 10, mockStore, tb, attributes)
+			require.NoError(t, err)
+
+			if tt.blockChannel {
+				// Block the channel to force timeout
+				symbolicator.ch <- struct{}{}
+			}
+
+			_, err = symbolicator.symbolicate(ctx, "test-uuid", "com.example.Test", "methodA", 100)
+
+			if tt.blockChannel {
+				// Unblock for cleanup
+				<-symbolicator.ch
+			}
+
+			// Should return an error
+			require.Error(t, err)
+
+			if tt.wantFetchErr {
+				// Verify it's a FetchError
+				var fetchErr *FetchError
+				assert.True(t, errors.As(err, &fetchErr), "Expected error to be wrapped in FetchError")
+				assert.Contains(t, err.Error(), "failed to fetch ProGuard mapping")
+			}
+		})
+	}
+}
+
+func TestBasicSymbolicator_DifferentUUIDs(t *testing.T) {
+	ctx := context.Background()
+	mockStore := &mockSymbolicatorStore{}
+	tb, attributes := createMockSymbolicatorTelemetry(t)
+
+	symbolicator, err := newBasicSymbolicator(ctx, 5*time.Second, 10, mockStore, tb, attributes)
+	require.NoError(t, err)
+
+	// Call with first UUID
+	_, _ = symbolicator.limitedSymbolicate(ctx, "uuid-1", "com.example.Test", "methodA", 1)
+	callsAfterFirst := mockStore.calls
+
+	// Call with same UUID - should use cache
+	_, _ = symbolicator.limitedSymbolicate(ctx, "uuid-1", "com.example.Test", "methodB", 2)
+	assert.Equal(t, callsAfterFirst, mockStore.calls, "Second call with same UUID should use cache")
+
+	// Call with different UUID - should fetch new mapping
+	_, _ = symbolicator.limitedSymbolicate(ctx, "uuid-2", "com.example.Test", "methodA", 1)
+	assert.Greater(t, mockStore.calls, callsAfterFirst, "Call with different UUID should fetch new mapping")
+}
