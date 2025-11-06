@@ -116,7 +116,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		methods.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalMethodsAttributeKey))
 		lines.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalLinesAttributeKey))
 
-		if originalStackTrace, ok := attributes.Get(p.cfg.OutputStackTraceKey); ok {
+		if originalStackTrace, ok := attributes.Get(p.cfg.StackTraceAttributeKey); ok {
 			attributes.PutStr(p.cfg.OriginalStackTraceKey, originalStackTrace.Str())
 		}
 	}
@@ -188,7 +188,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		}
 	}
 
-	attributes.PutStr(p.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
+	attributes.PutStr(p.cfg.StackTraceAttributeKey, strings.Join(stack, "\n"))
 
 	if symbolicationFailed {
 		return errPartialSymbolication

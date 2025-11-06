@@ -83,7 +83,7 @@ func TestProcessLogs_Success(t *testing.T) {
 		LinesAttributeKey:               "lines",
 		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
-		OutputStackTraceKey:             "stack_trace",
+		StackTraceAttributeKey:          "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 	}
 
@@ -162,7 +162,7 @@ func TestProcessLogs_KeepAllStackFrames(t *testing.T) {
 		LinesAttributeKey:               "lines",
 		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
-		OutputStackTraceKey:             "stack_trace",
+		StackTraceAttributeKey:          "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 	}
 
@@ -332,7 +332,7 @@ func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
 		LinesAttributeKey:               "lines",
 		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
-		OutputStackTraceKey:             "stack_trace",
+		StackTraceAttributeKey:          "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 	}
 
@@ -389,7 +389,7 @@ func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
 		LinesAttributeKey:               "lines",
 		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
-		OutputStackTraceKey:             "stack_trace",
+		StackTraceAttributeKey:          "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 	}
 
@@ -444,7 +444,7 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 		LinesAttributeKey:               "lines",
 		SourceFilesAttributeKey:         "source_files",
 		ProguardUUIDAttributeKey:        "uuid",
-		OutputStackTraceKey:             "stack_trace",
+		StackTraceAttributeKey:          "stack_trace",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 		PreserveStackTrace:              true,
 		OriginalClassesAttributeKey:     "original_classes",
