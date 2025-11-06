@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-### 🚀 Performance
-
 - perf: enhance symbolication process with per stacktrace error caching | @clintonnkemdilim
 
 ## v0.0.5 [beta] - 2025/10/21
