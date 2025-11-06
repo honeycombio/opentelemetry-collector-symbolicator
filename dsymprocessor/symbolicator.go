@@ -13,6 +13,21 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+// FetchError indicates a dSYM could not be fetched from the store (e.g., 404, timeout).
+// These errors are safe to cache as they indicate the resource is unavailable.
+type FetchError struct {
+	DebugID string
+	Err     error
+}
+
+func (e *FetchError) Error() string {
+	return fmt.Sprintf("failed to fetch dSYM for %s: %v", e.DebugID, e.Err)
+}
+
+func (e *FetchError) Unwrap() error {
+	return e.Err
+}
+
 type dsymStore interface {
 	GetDSYM(ctx context.Context, debugId, binaryName string) ([]byte, error)
 }
@@ -57,7 +72,7 @@ func (ns *basicSymbolicator) symbolicateFrame(ctx context.Context, debugId, bina
 	select {
 	case ns.ch <- struct{}{}:
 	case <-time.After(ns.timeout):
-		return nil, fmt.Errorf("timeout")
+		return nil, &FetchError{DebugID: debugId, Err: fmt.Errorf("timeout")}
 	}
 
 	defer func() {
@@ -72,7 +87,7 @@ func (ns *basicSymbolicator) symbolicateFrame(ctx context.Context, debugId, bina
 		dSYMbytes, err := ns.store.GetDSYM(ctx, debugId, binaryName)
 		if err != nil {
 			ns.telemetryBuilder.ProcessorTotalDsymFetchFailures.Add(ctx, 1, ns.attributes)
-			return nil, err
+			return nil, &FetchError{DebugID: debugId, Err: err}
 		}
 		archive, err = symbolic.NewArchiveFromBytes(dSYMbytes)
 
