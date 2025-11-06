@@ -97,7 +97,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		rawStackTrace, hasRawStackTrace := attributes.Get(p.cfg.StackTraceAttributeKey)
 
 		if !hasRawStackTrace {
-			return fmt.Errorf("%w: missing structured stack trace attributes and %s is missing",
+			return fmt.Errorf("%w: missing structured stack trace attributes and %s attribute is missing",
 				errMissingAttribute,
 				p.cfg.StackTraceAttributeKey,
 			)
@@ -189,6 +189,12 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			class := classes.At(i).Str()
 			method := methods.At(i).Str()
 			sourceFile := sourceFiles.At(i).Str()
+
+			// since we are using original stacktrace data, preserve original values in the output slices
+			mappedClasses.AppendEmpty().SetStr(class)
+			mappedMethods.AppendEmpty().SetStr(method)
+			mappedLines.AppendEmpty().SetInt(line)
+
 			if line == -2 {
 				// Native method, source file and line number are not applicable
 				stack = append(stack, fmt.Sprintf("\tat %s.%s(Native Method)", class, method))

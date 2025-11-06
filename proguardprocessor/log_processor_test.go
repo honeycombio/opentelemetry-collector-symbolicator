@@ -241,6 +241,7 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 		MethodsAttributeKey:             "methods",
 		LinesAttributeKey:               "lines",
 		SourceFilesAttributeKey:         "source_files",
+		StackTraceAttributeKey:          "stack_trace",
 		ProguardUUIDAttributeKey:        "uuid",
 		SymbolicatorFailureAttributeKey: "symbolication_failed",
 		SymbolicatorErrorAttributeKey:   "symbolication_error",
@@ -274,7 +275,9 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 	assert.True(t, hasFailure.Bool())
 	errorMsg, hasErrorMsgAttr := attrs.Get(cfg.SymbolicatorErrorAttributeKey)
 	assert.True(t, hasErrorMsgAttr)
-	assert.Equal(t, "missing attribute: classes", errorMsg.Str())
+	// Now with fallback parsing, the error message mentions both missing structured attributes and stack trace
+	assert.Contains(t, errorMsg.Str(), "missing structured stack trace attributes")
+	assert.Contains(t, errorMsg.Str(), "stack_trace attribute is missing")
 }
 
 func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
@@ -560,4 +563,167 @@ func TestGetSlice(t *testing.T) {
 	result, ok = getSlice("non_existing", m)
 	assert.False(t, ok)
 	assert.Equal(t, 0, result.Len())
+}
+
+func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		ExceptionTypeAttributeKey:       "exception_type",
+		ExceptionMessageAttributeKey:    "exception_message",
+		ProguardUUIDAttributeKey:        "uuid",
+		StackTraceAttributeKey:          "stack_trace",
+		SymbolicatorFailureAttributeKey: "symbolication_failed",
+	}
+
+	settings := processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}
+
+	store := &mockLogProcessorStore{}
+	// Return empty frames (no mapping needed) so we can verify the parsed values remain
+	symbolicator := &mockLogProcessorSymbolicator{
+		frames: []*mappedStackFrame{},
+		err:    nil,
+	}
+	tb, attributes := createMockTelemetry(t)
+
+	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
+
+	lr := plog.NewLogRecord()
+	attrs := lr.Attributes()
+	attrs.PutStr("uuid", "test-uuid")
+
+	// Only provide raw stack trace, no structured attributes
+	rawStackTrace := `java.lang.RuntimeException: Test exception
+	at com.example.ObfuscatedClass.obfuscatedMethod(SourceFile:42)
+	at com.example.AnotherClass.anotherMethod(Native Method)
+	at com.example.ThirdClass.thirdMethod(Unknown Source)`
+	attrs.PutStr("stack_trace", rawStackTrace)
+
+	processor.processLogRecord(context.Background(), lr)
+
+	// Verify that parsing succeeded and structured attributes were populated
+	classes, ok := attrs.Get("classes")
+	assert.True(t, ok)
+	assert.Equal(t, 3, classes.Slice().Len())
+	assert.Equal(t, "com.example.ObfuscatedClass", classes.Slice().At(0).Str())
+	assert.Equal(t, "com.example.AnotherClass", classes.Slice().At(1).Str())
+	assert.Equal(t, "com.example.ThirdClass", classes.Slice().At(2).Str())
+
+	methods, ok := attrs.Get("methods")
+	assert.True(t, ok)
+	assert.Equal(t, 3, methods.Slice().Len())
+	assert.Equal(t, "obfuscatedMethod", methods.Slice().At(0).Str())
+	assert.Equal(t, "anotherMethod", methods.Slice().At(1).Str())
+	assert.Equal(t, "thirdMethod", methods.Slice().At(2).Str())
+
+	lines, ok := attrs.Get("lines")
+	assert.True(t, ok)
+	assert.Equal(t, 3, lines.Slice().Len())
+	assert.Equal(t, int64(42), lines.Slice().At(0).Int())
+	assert.Equal(t, int64(-2), lines.Slice().At(1).Int()) // Native Method
+	assert.Equal(t, int64(-1), lines.Slice().At(2).Int()) // Unknown Source
+
+	sourceFiles, ok := attrs.Get("source_files")
+	assert.True(t, ok)
+	assert.Equal(t, 3, sourceFiles.Slice().Len())
+	assert.Equal(t, "SourceFile", sourceFiles.Slice().At(0).Str())
+	assert.Equal(t, "Native Method", sourceFiles.Slice().At(1).Str())
+	assert.Equal(t, "Unknown Source", sourceFiles.Slice().At(2).Str())
+
+	// Verify symbolication succeeded
+	failed, ok := attrs.Get("symbolication_failed")
+	assert.True(t, ok)
+	assert.False(t, failed.Bool())
+
+	// Verify output stack trace was generated with original (unparsed) values
+	stackTrace, ok := attrs.Get("stack_trace")
+	assert.True(t, ok)
+	assert.Contains(t, stackTrace.Str(), "java.lang.RuntimeException: Test exception")
+	assert.Contains(t, stackTrace.Str(), "at com.example.ObfuscatedClass.obfuscatedMethod(SourceFile:42)")
+	assert.Contains(t, stackTrace.Str(), "at com.example.AnotherClass.anotherMethod(Native Method)")
+	assert.Contains(t, stackTrace.Str(), "at com.example.ThirdClass.thirdMethod(Unknown Source)")
+}
+
+func TestProcessLogRecord_MissingBothStructuredAndRawStackTrace(t *testing.T) {
+	cfg := &Config{
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		StackTraceAttributeKey:          "stack_trace",
+		ProguardUUIDAttributeKey:        "uuid",
+		SymbolicatorFailureAttributeKey: "symbolication_failed",
+		SymbolicatorErrorAttributeKey:   "symbolication_error",
+	}
+	tb, attributes := createMockTelemetry(t)
+
+	processor := &proguardLogsProcessor{
+		cfg:              cfg,
+		logger:           zaptest.NewLogger(t),
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
+	}
+
+	lr := plog.NewLogRecord()
+	attrs := lr.Attributes()
+	attrs.PutStr("uuid", "test-uuid")
+
+	// No structured attributes and no raw stack trace provided
+	processor.processLogRecord(context.Background(), lr)
+
+	// Verify failure
+	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
+	assert.True(t, hasFailureAttr)
+	assert.True(t, hasFailure.Bool())
+
+	errorMsg, hasErrorMsgAttr := attrs.Get(cfg.SymbolicatorErrorAttributeKey)
+	assert.True(t, hasErrorMsgAttr)
+	assert.Contains(t, errorMsg.Str(), "missing structured stack trace attributes")
+	assert.Contains(t, errorMsg.Str(), "stack_trace attribute is missing")
+}
+
+func TestProcessLogRecord_InvalidRawStackTraceFormat(t *testing.T) {
+	cfg := &Config{
+		ClassesAttributeKey:             "classes",
+		MethodsAttributeKey:             "methods",
+		LinesAttributeKey:               "lines",
+		SourceFilesAttributeKey:         "source_files",
+		StackTraceAttributeKey:          "stack_trace",
+		ProguardUUIDAttributeKey:        "uuid",
+		SymbolicatorFailureAttributeKey: "symbolication_failed",
+		SymbolicatorErrorAttributeKey:   "symbolication_error",
+	}
+	tb, attributes := createMockTelemetry(t)
+
+	processor := &proguardLogsProcessor{
+		cfg:              cfg,
+		logger:           zaptest.NewLogger(t),
+		telemetryBuilder: tb,
+		attributes:       metric.WithAttributeSet(attributes),
+	}
+
+	lr := plog.NewLogRecord()
+	attrs := lr.Attributes()
+	attrs.PutStr("uuid", "test-uuid")
+
+	// Provide invalid stack trace format
+	attrs.PutStr("stack_trace", "This is not a valid stack trace format")
+
+	processor.processLogRecord(context.Background(), lr)
+
+	// Verify failure
+	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
+	assert.True(t, hasFailureAttr)
+	assert.True(t, hasFailure.Bool())
+
+	errorMsg, hasErrorMsgAttr := attrs.Get(cfg.SymbolicatorErrorAttributeKey)
+	assert.True(t, hasErrorMsgAttr)
+	assert.Contains(t, errorMsg.Str(), "failed to parse raw stack trace from stack_trace")
 }
