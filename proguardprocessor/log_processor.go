@@ -84,21 +84,43 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attributes pcommon.Map) error {
 	var ok bool
 	var classes, methods, lines, sourceFiles pcommon.Slice
+	var classesOk, methodsOk, linesOk, sourceFilesOk bool
 
-	if classes, ok = getSlice(p.cfg.ClassesAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ClassesAttributeKey)
-	}
+	// Attempt to get structured stack trace attributes first
+	classes, classesOk = getSlice(p.cfg.ClassesAttributeKey, attributes)
+	methods, methodsOk = getSlice(p.cfg.MethodsAttributeKey, attributes)
+	lines, linesOk = getSlice(p.cfg.LinesAttributeKey, attributes)
+	sourceFiles, sourceFilesOk = getSlice(p.cfg.SourceFilesAttributeKey, attributes)
 
-	if methods, ok = getSlice(p.cfg.MethodsAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.MethodsAttributeKey)
-	}
+	// If any of the structured attributes are missing, attempt to parse the raw stack trace
+	if !classesOk || !methodsOk || !linesOk || !sourceFilesOk {
+		rawStackTrace, hasRawStackTrace := attributes.Get(p.cfg.StackTraceAttributeKey)
 
-	if lines, ok = getSlice(p.cfg.LinesAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.LinesAttributeKey)
-	}
+		if !hasRawStackTrace {
+			return fmt.Errorf("%w: missing structured stack trace attributes and %s is missing",
+				errMissingAttribute,
+				p.cfg.StackTraceAttributeKey,
+			)
+		}
 
-	if sourceFiles, ok = getSlice(p.cfg.SourceFilesAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.SourceFilesAttributeKey)
+		parsedStackTrace, err := parseStackTrace(rawStackTrace.Str())
+		if err != nil {
+			return fmt.Errorf("failed to parse raw stack trace from %s: %w", p.cfg.StackTraceAttributeKey, err)
+		}
+
+		// Set parsed data into otel slice attributes
+		classes = attributes.PutEmptySlice(p.cfg.ClassesAttributeKey)
+		methods = attributes.PutEmptySlice(p.cfg.MethodsAttributeKey)
+		lines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
+		sourceFiles = attributes.PutEmptySlice(p.cfg.SourceFilesAttributeKey)
+
+		// sadly :( we need to loop again to populate the slices into otel structures
+		for _, frame := range parsedStackTrace.frames {
+			classes.AppendEmpty().SetStr(frame.class)
+			methods.AppendEmpty().SetStr(frame.method)
+			lines.AppendEmpty().SetInt(int64(frame.line))
+			sourceFiles.AppendEmpty().SetStr(frame.sourceFile)
+		}
 	}
 
 	// Ensure all slices are the same length
