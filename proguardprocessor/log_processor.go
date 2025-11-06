@@ -86,6 +86,9 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	var classes, methods, lines, sourceFiles pcommon.Slice
 	var classesOk, methodsOk, linesOk, sourceFilesOk bool
 
+	var exceptionType, hasExceptionType = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
+	var exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
+
 	// Attempt to get structured stack trace attributes first
 	classes, classesOk = getSlice(p.cfg.ClassesAttributeKey, attributes)
 	methods, methodsOk = getSlice(p.cfg.MethodsAttributeKey, attributes)
@@ -120,6 +123,18 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			methods.AppendEmpty().SetStr(frame.method)
 			lines.AppendEmpty().SetInt(int64(frame.line))
 			sourceFiles.AppendEmpty().SetStr(frame.sourceFile)
+		}
+
+		if !hasExceptionType {
+			attributes.PutStr(p.cfg.ExceptionTypeAttributeKey, parsedStackTrace.exceptionType)
+			exceptionType, _ = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
+			hasExceptionType = true
+		}
+
+		if !hasExceptionMessage {
+			attributes.PutStr(p.cfg.ExceptionMessageAttributeKey, parsedStackTrace.exceptionMessage)
+			exceptionMessage, _ = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
+			hasExceptionMessage = true
 		}
 	}
 
@@ -157,13 +172,10 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 
 	var symbolicationFailed bool
 
-	var exceptionType, hasExceptionType = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
-	var exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
-
+	// Reconstruct the stack trace with symbolicated frames
 	if hasExceptionType && hasExceptionMessage {
 		stack = append(stack, fmt.Sprintf("%s: %s", exceptionType.Str(), exceptionMessage.Str()))
 	}
-
 	for i := 0; i < classes.Len(); i++ {
 		line := lines.At(i).Int()
 
