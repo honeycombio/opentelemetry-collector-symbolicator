@@ -83,6 +83,12 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 
 func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attributes pcommon.Map) error {
 	var ok bool
+
+	uuidValue, ok := attributes.Get(p.cfg.ProguardUUIDAttributeKey)
+	if !ok {
+		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
+	}
+
 	var classes, methods, lines, sourceFiles pcommon.Slice
 	var classesOk, methodsOk, linesOk, sourceFilesOk bool
 
@@ -156,11 +162,6 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		if originalStackTrace, ok := attributes.Get(p.cfg.StackTraceAttributeKey); ok {
 			attributes.PutStr(p.cfg.OriginalStackTraceKey, originalStackTrace.Str())
 		}
-	}
-
-	uuidValue, ok := attributes.Get(p.cfg.ProguardUUIDAttributeKey)
-	if !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
 	}
 
 	uuid := uuidValue.Str()
