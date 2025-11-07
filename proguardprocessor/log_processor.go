@@ -177,6 +177,10 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	if hasExceptionType && hasExceptionMessage {
 		stack = append(stack, fmt.Sprintf("%s: %s", exceptionType.Str(), exceptionMessage.Str()))
 	}
+
+	// Cache FetchErrors to avoid redundant fetches for missing resources.
+	fetchErrorCache := make(map[string]error)
+
 	for i := 0; i < classes.Len(); i++ {
 		line := lines.At(i).Int()
 
@@ -187,9 +191,26 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			continue
 		}
 
-		// maybe we should change this to take uint32?
-		mappedClass, err := p.symbolicator.symbolicate(ctx, uuid, classes.At(i).Str(), methods.At(i).Str(), int(line))
 		p.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, p.attributes)
+
+		var mappedClass []*mappedStackFrame
+		var err error
+
+		// Check if we have a cached fetch error for this UUID
+		if cachedError, exists := fetchErrorCache[uuid]; exists {
+			err = cachedError
+		} else {
+			// maybe we should change this to take uint32?
+			mappedClass, err = p.symbolicator.symbolicate(ctx, uuid, classes.At(i).Str(), methods.At(i).Str(), int(line))
+
+			// Only cache FetchErrors (404, timeout, etc.) - not parse or validation errors
+			if err != nil {
+				var fetchErr *FetchError
+				if errors.As(err, &fetchErr) {
+					fetchErrorCache[uuid] = err
+				}
+			}
+		}
 
 		if err != nil {
 			stack = append(stack, fmt.Sprintf("\tFailed to symbolicate %s.%s(%d): %v", classes.At(i).Str(), methods.At(i).Str(), line, err))
