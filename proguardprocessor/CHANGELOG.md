@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: Implement stack trace parser in the proguard processor (#118) | @jairo-mendoza
 - perf: enhance symbolication process with per stacktrace error caching | @clintonnkemdilim
 
 ## v0.0.5 [beta] - 2025/10/21
