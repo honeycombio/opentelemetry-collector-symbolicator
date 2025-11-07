@@ -264,9 +264,11 @@ func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
-	attrs.PutStr("uuid", "test-uuid")
 
-	processor.processLogRecord(context.Background(), lr)
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "test-uuid")
+
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
 	// Verify processor type and attributes are still included even on failure
 	processorTypeAttr, ok := attrs.Get("honeycomb.processor_type")
@@ -306,7 +308,9 @@ func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
-	attrs.PutStr("uuid", "test-uuid")
+
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "test-uuid")
 
 	classes := attrs.PutEmptySlice("classes")
 	classes.AppendEmpty().SetStr("Class1")
@@ -321,7 +325,7 @@ func TestProcessLogRecord_MismatchedAttributeLengths(t *testing.T) {
 	sourceFiles := attrs.PutEmptySlice("source_files")
 	sourceFiles.AppendEmpty().SetStr("Class.java")
 
-	processor.processLogRecord(context.Background(), lr)
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
 	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
 	assert.True(t, hasFailureAttr)
@@ -360,7 +364,9 @@ func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
-	attrs.PutStr("uuid", "test-uuid")
+
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "test-uuid")
 
 	classes := attrs.PutEmptySlice("classes")
 	classes.AppendEmpty().SetStr("com.example.Class")
@@ -374,7 +380,7 @@ func TestProcessLogRecord_SymbolicationFailure(t *testing.T) {
 	sourceFiles := attrs.PutEmptySlice("source_files")
 	sourceFiles.AppendEmpty().SetStr("Class.java")
 
-	processor.processLogRecord(context.Background(), lr)
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
 	stackTrace, ok := attrs.Get("stack_trace")
 	assert.True(t, ok)
@@ -415,7 +421,9 @@ func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
-	attrs.PutStr("uuid", "test-uuid")
+
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "test-uuid")
 
 	classes := attrs.PutEmptySlice("classes")
 	classes.AppendEmpty().SetStr("com.example.Class")
@@ -429,7 +437,7 @@ func TestProcessLogRecord_InvalidLineNumber(t *testing.T) {
 	sourceFiles := attrs.PutEmptySlice("source_files")
 	sourceFiles.AppendEmpty().SetStr("Class.java")
 
-	processor.processLogRecord(context.Background(), lr)
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
 	stackTrace, ok := attrs.Get("stack_trace")
 	assert.True(t, ok)
@@ -475,8 +483,10 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
-	attrs.PutStr("uuid", "test-uuid")
 	attrs.PutStr("stack_trace", "existing stack trace")
+
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "test-uuid")
 
 	classes := attrs.PutEmptySlice("classes")
 	classes.AppendEmpty().SetStr("com.example.Class")
@@ -490,7 +500,7 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 	sourceFiles := attrs.PutEmptySlice("source_files")
 	sourceFiles.AppendEmpty().SetStr("Class.java")
 
-	processor.processLogRecord(context.Background(), lr)
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
 	// Check original attributes are preserved
 	originalClasses, ok := attrs.Get("original_classes")
@@ -529,6 +539,9 @@ func TestProcessLogRecord_MissingUUID(t *testing.T) {
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
 
+	// No UUID in either resource or log attributes
+	resourceAttrs := pcommon.NewMap()
+
 	classes := attrs.PutEmptySlice("classes")
 	classes.AppendEmpty().SetStr("com.example.Class")
 
@@ -541,7 +554,7 @@ func TestProcessLogRecord_MissingUUID(t *testing.T) {
 	sourceFiles := attrs.PutEmptySlice("source_files")
 	sourceFiles.AppendEmpty().SetStr("Class.java")
 
-	processor.processLogRecord(context.Background(), lr)
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
 	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
 	assert.True(t, hasFailureAttr)
@@ -602,7 +615,9 @@ func TestErrorCaching_MissingProguardMapping(t *testing.T) {
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
-	attrs.PutStr("uuid", "missing-uuid-123")
+
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "missing-uuid-123")
 
 	// Create 10 frames all with the same UUID (missing ProGuard mapping)
 	classes := attrs.PutEmptySlice("classes")
@@ -617,7 +632,7 @@ func TestErrorCaching_MissingProguardMapping(t *testing.T) {
 		sourceFiles.AppendEmpty().SetStr("Unknown.java")
 	}
 
-	processor.processLogRecord(context.Background(), lr)
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
 	// Should only call symbolicate ONCE for the first frame, then reuse cached error
 	// This validates the 90% reduction in failed fetches claim (1 call instead of 10)
@@ -727,7 +742,9 @@ func TestDeduplication(t *testing.T) {
 
 			lr := plog.NewLogRecord()
 			attrs := lr.Attributes()
-			attrs.PutStr("uuid", "test-uuid-123")
+
+			resourceAttrs := pcommon.NewMap()
+			resourceAttrs.PutStr("uuid", "test-uuid-123")
 
 			// Create frames with different line numbers to simulate realistic stacktrace
 			classes := attrs.PutEmptySlice("classes")
@@ -742,7 +759,7 @@ func TestDeduplication(t *testing.T) {
 				sourceFiles.AppendEmpty().SetStr("Unknown.java")
 			}
 
-			processor.processLogRecord(ctx, lr)
+			processor.processLogRecord(ctx, lr, resourceAttrs)
 
 			assert.Equal(t, tt.expectCallCount, symbolicator.callCount, tt.description)
 
@@ -794,7 +811,8 @@ func TestDeduplication_MultipleUUIDs(t *testing.T) {
 
 	// Note: ProGuard UUID is typically the same for all frames in a stacktrace
 	// This test verifies error cache keying by UUID
-	attrs.PutStr("uuid", "uuid-1")
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "uuid-1")
 
 	classes := attrs.PutEmptySlice("classes")
 	methods := attrs.PutEmptySlice("methods")
@@ -809,7 +827,7 @@ func TestDeduplication_MultipleUUIDs(t *testing.T) {
 		sourceFiles.AppendEmpty().SetStr("Unknown.java")
 	}
 
-	processor.processLogRecord(ctx, lr)
+	processor.processLogRecord(ctx, lr, resourceAttrs)
 
 	// Should only call once per UUID, not once per frame
 	assert.Equal(t, 1, symbolicator.callCount,
