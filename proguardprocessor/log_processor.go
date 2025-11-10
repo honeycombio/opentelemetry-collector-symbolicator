@@ -123,9 +123,9 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	}
 
 	// Support retrieving the Proguard UUID from either resource or log attributes, for now.
-	uuidValue, ok := resourceAttrs.Get(p.cfg.ProguardUUIDAttributeKey)
+	uuidValue, ok := attributes.Get(p.cfg.ProguardUUIDAttributeKey)
 	if !ok {
-		uuidValue, ok = attributes.Get(p.cfg.ProguardUUIDAttributeKey)
+		uuidValue, ok = resourceAttrs.Get(p.cfg.ProguardUUIDAttributeKey)
 		if !ok {
 			return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
 		}
