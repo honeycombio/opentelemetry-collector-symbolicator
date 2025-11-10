@@ -15,40 +15,40 @@ The following telemetry is emitted by this component.
 
 ### otelcol_processor_proguard_cache_size
 
-Size of the proguard mapping cache in bytes.
+Size of the proguard mapping cache in bytes. [Alpha]
 
-| Unit | Metric Type | Value Type |
-| ---- | ----------- | ---------- |
-| {proguardmappings} | Gauge | Int |
+| Unit | Metric Type | Value Type | Stability |
+| ---- | ----------- | ---------- | --------- |
+| {proguardmappings} | Gauge | Int | Alpha |
 
 ### otelcol_processor_symbolication_duration
 
-Duration in seconds taken to symbolicate frames.
+Duration in seconds taken to symbolicate frames. [Alpha]
 
-| Unit | Metric Type | Value Type |
-| ---- | ----------- | ---------- |
-| s | Histogram | Double |
+| Unit | Metric Type | Value Type | Stability |
+| ---- | ----------- | ---------- | --------- |
+| s | Histogram | Double | Alpha |
 
 ### otelcol_processor_total_failed_frames
 
-Total number of frames the symbolicator failed to symbolicate.
+Total number of frames the symbolicator failed to symbolicate. [Alpha]
 
-| Unit | Metric Type | Value Type | Monotonic |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Int | true |
+| Unit | Metric Type | Value Type | Monotonic | Stability |
+| ---- | ----------- | ---------- | --------- | --------- |
+| 1 | Sum | Int | true | Alpha |
 
 ### otelcol_processor_total_processed_frames
 
-Total number of frames the symbolicator processed.
+Total number of frames the symbolicator processed. [Alpha]
 
-| Unit | Metric Type | Value Type | Monotonic |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Int | true |
+| Unit | Metric Type | Value Type | Monotonic | Stability |
+| ---- | ----------- | ---------- | --------- | --------- |
+| 1 | Sum | Int | true | Alpha |
 
 ### otelcol_processor_total_proguard_fetch_failures
 
-Total number of proguard mapping fetch failures.
+Total number of proguard mapping fetch failures. [Alpha]
 
-| Unit | Metric Type | Value Type | Monotonic |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Int | true |
+| Unit | Metric Type | Value Type | Monotonic | Stability |
+| ---- | ----------- | ---------- | --------- | --------- |
+| 1 | Sum | Int | true | Alpha |
