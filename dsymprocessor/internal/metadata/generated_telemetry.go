@@ -64,31 +64,31 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...Teleme
 	var err, errs error
 	builder.ProcessorDsymCacheSize, err = builder.meter.Int64Gauge(
 		"otelcol_processor_dsym_cache_size",
-		metric.WithDescription("Size of the dSYM cache in bytes."),
+		metric.WithDescription("Size of the dSYM cache in bytes. [Alpha]"),
 		metric.WithUnit("{dsyms}"),
 	)
 	errs = errors.Join(errs, err)
 	builder.ProcessorSymbolicationDuration, err = builder.meter.Float64Histogram(
 		"otelcol_processor_symbolication_duration",
-		metric.WithDescription("Duration in seconds taken to symbolicate frames."),
+		metric.WithDescription("Duration in seconds taken to symbolicate frames. [Alpha]"),
 		metric.WithUnit("s"),
 	)
 	errs = errors.Join(errs, err)
 	builder.ProcessorTotalDsymFetchFailures, err = builder.meter.Int64Counter(
 		"otelcol_processor_total_dsym_fetch_failures",
-		metric.WithDescription("Total number of dSYM fetch failures."),
+		metric.WithDescription("Total number of dSYM fetch failures. [Alpha]"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)
 	builder.ProcessorTotalFailedFrames, err = builder.meter.Int64Counter(
 		"otelcol_processor_total_failed_frames",
-		metric.WithDescription("Total number of frames the symbolicator failed to symbolicate."),
+		metric.WithDescription("Total number of frames the symbolicator failed to symbolicate. [Alpha]"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)
 	builder.ProcessorTotalProcessedFrames, err = builder.meter.Int64Counter(
 		"otelcol_processor_total_processed_frames",
-		metric.WithDescription("Total number of frames the symbolicator processed."),
+		metric.WithDescription("Total number of frames the symbolicator processed. [Alpha]"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)

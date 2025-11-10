@@ -2,8 +2,11 @@
 
 ## Unreleased
 
+## v0.0.6 [beta] - 2025/11/10
+
+- maint: bump dependency to v1.45.0/v0.139.0 (#121) | @TylerHelmuth
 - fix: Fix Proguard processor failing to retrieve Proguard UUID (#120) | @jairo-mendoza
-- perf: enhance symbolication process with per stacktrace error caching | @clintonnkemdilim
+- perf: enhance symbolication process with per stacktrace error caching (#117) | @clintonnkemdilim
 
 ## v0.0.5 [beta] - 2025/10/21
 

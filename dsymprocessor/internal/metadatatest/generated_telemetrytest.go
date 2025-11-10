@@ -24,7 +24,7 @@ func NewSettings(tt *componenttest.Telemetry) processor.Settings {
 func AssertEqualProcessorDsymCacheSize(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol_processor_dsym_cache_size",
-		Description: "Size of the dSYM cache in bytes.",
+		Description: "Size of the dSYM cache in bytes. [Alpha]",
 		Unit:        "{dsyms}",
 		Data: metricdata.Gauge[int64]{
 			DataPoints: dps,
@@ -38,7 +38,7 @@ func AssertEqualProcessorDsymCacheSize(t *testing.T, tt *componenttest.Telemetry
 func AssertEqualProcessorSymbolicationDuration(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.HistogramDataPoint[float64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol_processor_symbolication_duration",
-		Description: "Duration in seconds taken to symbolicate frames.",
+		Description: "Duration in seconds taken to symbolicate frames. [Alpha]",
 		Unit:        "s",
 		Data: metricdata.Histogram[float64]{
 			Temporality: metricdata.CumulativeTemporality,
@@ -53,7 +53,7 @@ func AssertEqualProcessorSymbolicationDuration(t *testing.T, tt *componenttest.T
 func AssertEqualProcessorTotalDsymFetchFailures(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol_processor_total_dsym_fetch_failures",
-		Description: "Total number of dSYM fetch failures.",
+		Description: "Total number of dSYM fetch failures. [Alpha]",
 		Unit:        "1",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
@@ -69,7 +69,7 @@ func AssertEqualProcessorTotalDsymFetchFailures(t *testing.T, tt *componenttest.
 func AssertEqualProcessorTotalFailedFrames(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol_processor_total_failed_frames",
-		Description: "Total number of frames the symbolicator failed to symbolicate.",
+		Description: "Total number of frames the symbolicator failed to symbolicate. [Alpha]",
 		Unit:        "1",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
@@ -85,7 +85,7 @@ func AssertEqualProcessorTotalFailedFrames(t *testing.T, tt *componenttest.Telem
 func AssertEqualProcessorTotalProcessedFrames(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol_processor_total_processed_frames",
-		Description: "Total number of frames the symbolicator processed.",
+		Description: "Total number of frames the symbolicator processed. [Alpha]",
 		Unit:        "1",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
