@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix: Fix Proguard processor failing to retrieve Proguard UUID (#120) | @jairo-mendoza
 - perf: enhance symbolication process with per stacktrace error caching | @clintonnkemdilim
 
 ## v0.0.5 [beta] - 2025/10/21
