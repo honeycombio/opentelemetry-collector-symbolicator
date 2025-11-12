@@ -618,7 +618,9 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
-	attrs.PutStr("uuid", "test-uuid")
+	
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "missing-uuid-123")
 
 	// Only provide raw stack trace, no structured attributes
 	rawStackTrace := `java.lang.RuntimeException: Test exception
@@ -627,7 +629,7 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 	at com.example.ThirdClass.thirdMethod(Unknown Source)`
 	attrs.PutStr("stack_trace", rawStackTrace)
 
-	processor.processLogRecord(context.Background(), lr)
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
 	// Verify exception type and message were set
 	exceptionType, ok := attrs.Get("exception_type")
@@ -703,10 +705,12 @@ func TestProcessLogRecord_MissingBothStructuredAndRawStackTrace(t *testing.T) {
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
-	attrs.PutStr("uuid", "test-uuid")
+
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "missing-uuid-123")
 
 	// No structured attributes and no raw stack trace provided
-	processor.processLogRecord(context.Background(), lr)
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
 	// Verify failure
 	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
@@ -741,12 +745,14 @@ func TestProcessLogRecord_InvalidRawStackTraceFormat(t *testing.T) {
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
-	attrs.PutStr("uuid", "test-uuid")
 
 	// Provide invalid stack trace format
 	attrs.PutStr("stack_trace", "This is not a valid stack trace format")
 
-	processor.processLogRecord(context.Background(), lr)
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "test-uuid")
+
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
 	// Verify failure
 	hasFailure, hasFailureAttr := attrs.Get(cfg.SymbolicatorFailureAttributeKey)
