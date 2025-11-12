@@ -162,7 +162,7 @@ func TestSymbolicatorCacheWithUUID(t *testing.T) {
 	// Symbolicate same URL with different UUID (simulating different build)
 	// This should create a separate cache entry
 	differentUUID := "different-uuid-1234"
-	
+
 	// This will fail to fetch since the file doesn't exist with this UUID, but that's okay
 	// The important part is it tries to fetch (proving it's not using the cached entry)
 	_, err = sym.symbolicate(ctx, 0, 34, "b", uuidFile, differentUUID)

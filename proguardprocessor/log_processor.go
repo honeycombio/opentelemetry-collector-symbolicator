@@ -51,27 +51,28 @@ func (p *proguardLogsProcessor) ProcessLogs(ctx context.Context, logs plog.Logs)
 }
 
 func (p *proguardLogsProcessor) processResourceLogs(ctx context.Context, rl plog.ResourceLogs) {
+	resourceAttrs := rl.Resource().Attributes()
 	for j := 0; j < rl.ScopeLogs().Len(); j++ {
 		sl := rl.ScopeLogs().At(j)
-		p.processScopeLogs(ctx, sl)
+		p.processScopeLogs(ctx, sl, resourceAttrs)
 	}
 }
 
-func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.ScopeLogs) {
+func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.ScopeLogs, resourceAttrs pcommon.Map) {
 	for k := 0; k < sl.LogRecords().Len(); k++ {
 		lr := sl.LogRecords().At(k)
-		p.processLogRecord(ctx, lr)
+		p.processLogRecord(ctx, lr, resourceAttrs)
 	}
 }
 
-func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.LogRecord) {
+func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.LogRecord, resourceAttrs pcommon.Map) {
 	attributes := lr.Attributes()
 
 	// Add processor type and version as attributes
 	attributes.PutStr("honeycomb.processor_type", typeStr.String())
 	attributes.PutStr("honeycomb.processor_version", processorVersion)
 
-	err := p.processLogRecordThrow(ctx, attributes)
+	err := p.processLogRecordThrow(ctx, attributes, resourceAttrs)
 
 	if err != nil {
 		attributes.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
@@ -81,12 +82,16 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 	}
 }
 
-func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attributes pcommon.Map) error {
+func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attributes pcommon.Map, resourceAttrs pcommon.Map) error {
 	var ok bool
 
+	// Support retrieving the Proguard UUID from either resource or log attributes, for now.
 	uuidValue, ok := attributes.Get(p.cfg.ProguardUUIDAttributeKey)
 	if !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
+		uuidValue, ok = resourceAttrs.Get(p.cfg.ProguardUUIDAttributeKey)
+		if !ok {
+			return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
+		}
 	}
 
 	var classes, methods, lines, sourceFiles pcommon.Slice
