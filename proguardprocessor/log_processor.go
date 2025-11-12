@@ -123,7 +123,6 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		lines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
 		sourceFiles = attributes.PutEmptySlice(p.cfg.SourceFilesAttributeKey)
 
-		// sadly :( we need to loop again to populate the slices into otel structures
 		for _, frame := range parsedStackTrace.frames {
 			classes.AppendEmpty().SetStr(frame.class)
 			methods.AppendEmpty().SetStr(frame.method)
