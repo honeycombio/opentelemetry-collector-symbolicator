@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	processorhelper "go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/otel/attribute"
@@ -77,7 +78,7 @@ func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64,
 	}, nil
 }
 
-func TestProcess(t *testing.T) {
+func TestProcessTraces(t *testing.T) {
 	ctx := context.Background()
 	cfg := createDefaultConfig().(*Config)
 	s := &testSymbolicator{}
@@ -361,6 +362,135 @@ func TestProcess(t *testing.T) {
 
 			tt.AssertSymbolicatorCalls(s)
 			tt.AssertOutput(otd)
+		})
+	}
+}
+
+func TestProcessLogs(t *testing.T) {
+	ctx := context.Background()
+	cfg := createDefaultConfig().(*Config)
+	s := &testSymbolicator{}
+
+	testTel := componenttest.NewTelemetry()
+	tb, err := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
+	assert.NoError(t, err)
+	defer tb.Shutdown()
+
+	attributes := attribute.NewSet(
+		attribute.String("processor_type", "symbolicator"),
+	)
+
+	processor := newSymbolicatorProcessor(ctx, cfg, processorhelper.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}, s, tb, attributes)
+
+	tts := []struct {
+		Name                    string
+		ApplyAttributes         func(logRecord plog.LogRecord)
+		AssertSymbolicatorCalls func(s *testSymbolicator)
+		AssertOutput            func(logs plog.Logs)
+	}{
+		{
+			Name: "symbolicated stacktrace attribute provided",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				logRecord.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().AppendEmpty().SetInt(42)
+				logRecord.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().AppendEmpty().SetInt(42)
+				logRecord.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("function")
+				logRecord.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("url")
+				logRecord.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
+				logRecord.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("Test error!")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
+					{Line: 42, Column: 42, Function: "function", URL: "url"},
+				})
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				// Verify processor type and version attributes are included
+				processorTypeAttr, ok := logRecord.Attributes().Get("honeycomb.processor_type")
+				assert.True(t, ok)
+				assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
+
+				processorVersionAttr, ok := logRecord.Attributes().Get("honeycomb.processor_version")
+				assert.True(t, ok)
+				assert.Equal(t, processorVersion, processorVersionAttr.Str())
+
+				attr, ok := logRecord.Attributes().Get(cfg.OutputStackTraceKey)
+				assert.True(t, ok)
+				assert.Equal(t, "Error: Test error!\n    at mapped_function_42_42(original_url:84:52)", attr.Str())
+
+				attr, ok = logRecord.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, false, attr.Bool())
+			},
+		},
+		{
+			Name: "multiple frames symbolicated successfully",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				logRecord.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().FromRaw([]any{1, 2, 3})
+				logRecord.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
+				logRecord.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
+				logRecord.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
+				logRecord.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
+				logRecord.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("test error")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
+					{Line: 4, Column: 1, Function: "func1", URL: "url1"},
+					{Line: 5, Column: 2, Function: "func2", URL: "url2"},
+					{Line: 6, Column: 3, Function: "func3", URL: "url3"},
+				})
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				attr, ok := logRecord.Attributes().Get(cfg.ColumnsAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "[11,12,13]", attr.AsString())
+
+				attr, ok = logRecord.Attributes().Get(cfg.LinesAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "[8,10,12]", attr.AsString())
+
+				attr, ok = logRecord.Attributes().Get(cfg.FunctionsAttributeKey)
+				assert.True(t, ok)
+				assert.Contains(t, attr.AsString(), "mapped_func1_4_1")
+				assert.Contains(t, attr.AsString(), "mapped_func2_5_2")
+				assert.Contains(t, attr.AsString(), "mapped_func3_6_3")
+
+				attr, ok = logRecord.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, false, attr.Bool())
+			},
+		},
+	}
+
+	for _, tt := range tts {
+		t.Run(tt.Name, func(t *testing.T) {
+			s.clear()
+
+			logs := plog.NewLogs()
+			rl := logs.ResourceLogs().AppendEmpty()
+			sl := rl.ScopeLogs().AppendEmpty()
+
+			logRecord := sl.LogRecords().AppendEmpty()
+			logRecord.SetTimestamp(1234567890)
+
+			tt.ApplyAttributes(logRecord)
+
+			outputLogs, err := processor.processLogs(ctx, logs)
+			assert.NoError(t, err)
+
+			tt.AssertSymbolicatorCalls(s)
+			tt.AssertOutput(outputLogs)
 		})
 	}
 }
