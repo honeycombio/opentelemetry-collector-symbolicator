@@ -212,6 +212,48 @@ Caused by: java.lang.IOException: IO error
 			},
 		},
 		{
+			name: "Exception header with extra colons",
+			input: `foo: bar: baz
+	at com.example.MyClass.method(MyClass.java:100)`,
+			expectedType:    "foo",
+			expectedMessage: "bar: baz",
+			expectedFrames:  1,
+			expectedFrame0: &stackFrame{
+				class:      "com.example.MyClass",
+				method:     "method",
+				sourceFile: "MyClass.java",
+				line:       100,
+			},
+		},
+		{
+			name: "Exception header with whitespace around colon",
+			input: `foo.bar  :  baz
+	at com.example.MyClass.method(MyClass.java:100)`,
+			expectedType:    "foo.bar",
+			expectedMessage: "baz",
+			expectedFrames:  1,
+			expectedFrame0: &stackFrame{
+				class:      "com.example.MyClass",
+				method:     "method",
+				sourceFile: "MyClass.java",
+				line:       100,
+			},
+		},
+		{
+			name: "Exception header containing exception type with no .",
+			input: `Foo: bar baz
+	at com.example.MyClass.method(MyClass.java:100)`,
+			expectedType:    "Foo",
+			expectedMessage: "bar baz",
+			expectedFrames:  1,
+			expectedFrame0: &stackFrame{
+				class:      "com.example.MyClass",
+				method:     "method",
+				sourceFile: "MyClass.java",
+				line:       100,
+			},
+		},
+		{
 			name:        "Empty string",
 			input:       "",
 			expectError: errEmptyStackTrace,
