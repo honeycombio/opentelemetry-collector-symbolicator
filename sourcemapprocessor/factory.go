@@ -48,8 +48,9 @@ func createDefaultConfig() component.Config {
 	}
 }
 
-// createTracesProcessor creates a traces processor
-func createTracesProcessor(ctx context.Context, set processor.Settings, cfg component.Config, next consumer.Traces) (processor.Traces, error) {
+// createSymbolicatorProcessor is a helper that creates the common symbolicator processor
+// used by both traces and logs processors.
+func createSymbolicatorProcessor(ctx context.Context, set processor.Settings, cfg component.Config) (*symbolicatorProcessor, error) {
 	symCfg := cfg.(*Config)
 	var store sourceMapStore
 	var err error
@@ -71,6 +72,7 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 	if err != nil {
 		return nil, err
 	}
+
 	// Set up resource attributes for telemetry
 	attributeSet := setUpResourceAttributes()
 	sym, err := newBasicSymbolicator(ctx, symCfg.Timeout, symCfg.SourceMapCacheSize, store, tb, attributeSet)
@@ -78,8 +80,25 @@ func createTracesProcessor(ctx context.Context, set processor.Settings, cfg comp
 		return nil, err
 	}
 
-	processor := newSymbolicatorProcessor(ctx, symCfg, set, sym, tb, attributeSet)
-	return processorhelper.NewTraces(ctx, set, cfg, next, processor.processTraces, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
+	return newSymbolicatorProcessor(ctx, symCfg, set, sym, tb, attributeSet), nil
+}
+
+// createTracesProcessor creates a processor that accepts traces.
+func createTracesProcessor(ctx context.Context, set processor.Settings, cfg component.Config, next consumer.Traces) (processor.Traces, error) {
+	proc, err := createSymbolicatorProcessor(ctx, set, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return processorhelper.NewTraces(ctx, set, cfg, next, proc.processTraces, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
+}
+
+// createLogsProcessor creates a processor that accepts logs.
+func createLogsProcessor(ctx context.Context, set processor.Settings, cfg component.Config, next consumer.Logs) (processor.Logs, error) {
+	proc, err := createSymbolicatorProcessor(ctx, set, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return processorhelper.NewLogs(ctx, set, cfg, next, proc.processLogs, processorhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}))
 }
 
 func setUpResourceAttributes() attribute.Set {
@@ -102,5 +121,6 @@ func NewFactory() processor.Factory {
 		typeStr,
 		createDefaultConfig,
 		processor.WithTraces(createTracesProcessor, component.StabilityLevelAlpha),
+		processor.WithLogs(createLogsProcessor, component.StabilityLevelAlpha),
 	)
 }
