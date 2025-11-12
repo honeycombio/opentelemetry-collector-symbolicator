@@ -130,17 +130,11 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			sourceFiles.AppendEmpty().SetStr(frame.sourceFile)
 		}
 
-		if !hasExceptionType {
-			attributes.PutStr(p.cfg.ExceptionTypeAttributeKey, parsedStackTrace.exceptionType)
-			exceptionType, _ = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
-			hasExceptionType = true
-		}
+		attributes.PutStr(p.cfg.ExceptionTypeAttributeKey, parsedStackTrace.exceptionType)
+		exceptionType, hasExceptionType = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
 
-		if !hasExceptionMessage {
-			attributes.PutStr(p.cfg.ExceptionMessageAttributeKey, parsedStackTrace.exceptionMessage)
-			exceptionMessage, _ = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
-			hasExceptionMessage = true
-		}
+		attributes.PutStr(p.cfg.ExceptionMessageAttributeKey, parsedStackTrace.exceptionMessage)
+		exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
 	}
 
 	// Ensure all slices are the same length
