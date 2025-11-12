@@ -616,6 +616,11 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 
 	processor.processLogRecord(context.Background(), lr)
 
+	// Verify exception type and message were set
+	exceptionType, ok := attrs.Get("exception_type")
+	assert.True(t, ok)
+	assert.Equal(t, "java.lang.RuntimeException", exceptionType.Str())
+
 	// Verify that parsing succeeded and structured attributes were populated
 	classes, ok := attrs.Get("classes")
 	assert.True(t, ok)
@@ -644,6 +649,10 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 	assert.Equal(t, "SourceFile", sourceFiles.Slice().At(0).Str())
 	assert.Equal(t, "Native Method", sourceFiles.Slice().At(1).Str())
 	assert.Equal(t, "Unknown Source", sourceFiles.Slice().At(2).Str())
+
+	exceptionMessage, ok := attrs.Get("exception_message")
+	assert.True(t, ok)
+	assert.Equal(t, "Test exception", exceptionMessage.Str())
 
 	// Verify symbolication succeeded
 	failed, ok := attrs.Get("symbolication_failed")
