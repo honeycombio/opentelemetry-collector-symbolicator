@@ -30,20 +30,32 @@ type stackTrace struct {
 
 // Regex patterns for parsing stack traces.
 var (
-	exceptionHeaderRegex = regexp.MustCompile(`^([^\s:]+(?:\.[^\s:]+)*)\s*:\s*(.*)$`)
-	// stackFrameRegex matches lines that represent a Java/Kotlin stack frame.
+	// exceptionHeaderRegex matches the first line of a stack trace to extract
+	// the exception type and message.
+	// Capture Groups:
+	// 		1: Exception type
+	// 		2: Exception message
+	//
+	// Examples that match:
+	// 		foo.bar.baz:literally anything after colon
+	// 		foo.bar.baz		:	  literally anything after colon
+	// 		foo  :  literally anything after colon
+	//
+	exceptionHeaderRegex = regexp.MustCompile(`^([^\s:]+)\s*:\s*(.*)$`)
+	// stackFrameRegex matches exception stack frames.
 	// Capture Groups:
 	// 		1: Full class name
 	// 		2: Method name
 	// 		3: Source name
 	// 		4: Line number (optional)
 	//
-	// Example of valid matches:
+	// Examples that match:
 	// 		at com.example.Class.method(File.java:123)
 	// 		at com.example.Class.method(File.java:-2)
 	// 		at com.example.Class.method(Native Method)
 	// 		at com.example.Class.method(Unknown Source)
 	// 		at com.example.Class.method(File.java)
+	//
 	stackFrameRegex = regexp.MustCompile(`^\s*at\s+([^\s(]+)\.([^\s.(]+)\(([^:)]+)(?::(-?\d+))?\)\s*$`)
 )
 
