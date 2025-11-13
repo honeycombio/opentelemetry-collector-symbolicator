@@ -471,6 +471,47 @@ func TestProcessLogs(t *testing.T) {
 				assert.Equal(t, false, attr.Bool())
 			},
 		},
+		{
+			Name: "symbolication failed attribute set to true on symbolication error",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				logRecord.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().FromRaw([]any{1, int64(math.MaxUint32) + 1, 3})
+				logRecord.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
+				logRecord.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
+				logRecord.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
+				logRecord.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
+				logRecord.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("test error")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
+					{Line: 4, Column: 1, Function: "func1", URL: "url1"},
+					{Line: 5, Column: int64(math.MaxUint32) + 1, Function: "func2", URL: "url2"},
+					{Line: 6, Column: 3, Function: "func3", URL: "url3"},
+				})
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				// Verify processor type and version attributes are included even on failure
+				processorTypeAttr, ok := logRecord.Attributes().Get("honeycomb.processor_type")
+				assert.True(t, ok)
+				assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
+
+				processorVersionAttr, ok := logRecord.Attributes().Get("honeycomb.processor_version")
+				assert.True(t, ok)
+				assert.Equal(t, processorVersion, processorVersionAttr.Str())
+
+				// Verify failure attributes
+				attr, ok := logRecord.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, true, attr.Bool())
+
+				attr, ok = logRecord.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "column must be uint32: 4294967296", attr.Str())
+			},
+		},
 	}
 
 	for _, tt := range tts {
