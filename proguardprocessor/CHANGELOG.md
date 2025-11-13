@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- feat: Implement stack trace parser in the proguard processor (#118) | @jairo-mendoza
+
 ## v0.0.6 [beta] - 2025/11/10
 
 - maint: bump dependency to v1.45.0/v0.139.0 (#121) | @TylerHelmuth
