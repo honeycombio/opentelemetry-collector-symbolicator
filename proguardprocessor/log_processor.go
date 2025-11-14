@@ -141,10 +141,8 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		attributes.PutStr(p.cfg.ExceptionMessageAttributeKey, parsedStackTrace.exceptionMessage)
 		exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
 
-		// Indicate that parsing method was used
 		attributes.PutStr(p.cfg.SymbolicatorParsingMethodAttributeKey, "processor_parsed")
 	} else {
-		// Indicate that structured attributes method was used
 		attributes.PutStr(p.cfg.SymbolicatorParsingMethodAttributeKey, "structured_stacktrace_attributes")
 	}
 

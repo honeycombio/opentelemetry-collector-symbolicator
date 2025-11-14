@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: add parsing method attribute to the proguard processor (#124) | @jairo-mendoza
 - feat: Implement stack trace parser in the proguard processor (#118) | @jairo-mendoza
 
 ## v0.0.6 [beta] - 2025/11/10
