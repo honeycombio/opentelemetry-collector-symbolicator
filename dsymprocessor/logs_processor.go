@@ -151,7 +151,7 @@ func (sp *symbolicatorProcessor) processStackTraceAttributesThrows(ctx context.C
 	fetchErrorCache := make(map[string]error)
 
 	for idx, line := range lines {
-		symbolicated, err := sp.symbolicateStackLineWithCache(ctx, line, binaryName, buildUUID, fetchErrorCache)
+		symbolicated, err := sp.symbolicateStackLine(ctx, line, binaryName, buildUUID, fetchErrorCache)
 		if err != nil {
 			sp.logger.Debug("could not symbolicate line")
 			res[idx] = line
@@ -177,7 +177,7 @@ func (sp *symbolicatorProcessor) processStackTraceAttributesThrows(ctx context.C
 var stackLineRegex = regexp.MustCompile(`^([0-9]+)\s+([\w _\-\.]+[\w_\-\.])\s+(0x[\da-f]+)\s+([\w _\-\.]*) \+ (\d+)`)
 var uuidRegex = regexp.MustCompile(`[0-9A-Z]{8}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{12}`)
 
-func (sp *symbolicatorProcessor) symbolicateStackLineWithCache(ctx context.Context, line, binaryName, buildUUID string, fetchErrorCache map[string]error) (string, error) {
+func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line, binaryName, buildUUID string, fetchErrorCache map[string]error) (string, error) {
 	if !stackLineRegex.MatchString(line) {
 		// stacktrace line not formated the way we expect, skip it
 		return line, nil
@@ -219,52 +219,6 @@ func (sp *symbolicatorProcessor) symbolicateStackLineWithCache(ctx context.Conte
 			fetchErrorCache[uuid] = err
 		}
 	}
-
-	if errors.Is(err, errFailedToFindDSYM) {
-		return line, nil
-	}
-	if err != nil {
-		sp.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, sp.attributes)
-		return "", err
-	}
-
-	// keep everything up to the end of match group 3 (the binary/uuid)
-	//   indexes are paired, so group 0 spans index 0 - index 1
-	//   so index 7 is the end of group 3
-	prefix := line[:matchIdxes[7]]
-
-	return formatStackFrames(prefix, bin, offset, locations), nil
-}
-
-func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line, binaryName, buildUUID string) (string, error) {
-	if !stackLineRegex.MatchString(line) {
-		// stacktrace line not formated the way we expect, skip it
-		return line, nil
-	}
-	matches := stackLineRegex.FindStringSubmatch(line)
-	matchIdxes := stackLineRegex.FindStringSubmatchIndex(line)
-	libName := matches[2]
-	uuidOrBinary := matches[4]
-	offsetInt, err := strconv.Atoi(matches[5])
-	if err != nil {
-		return "", err
-	}
-	offset := uint64(offsetInt)
-
-	var uuid string
-	var bin string
-	if isUUID(uuidOrBinary) {
-		uuid = uuidOrBinary
-		bin = libName
-	} else if uuidOrBinary == binaryName {
-		uuid = buildUUID
-		bin = binaryName
-	} else {
-		return line, nil
-	}
-
-	locations, err := sp.symbolicator.symbolicateFrame(ctx, uuid, bin, offset)
-	sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
 
 	if errors.Is(err, errFailedToFindDSYM) {
 		return line, nil
@@ -353,7 +307,7 @@ func (sp *symbolicatorProcessor) processMetricKitAttributesThrows(ctx context.Co
 		symbolicatedStack := make([]string, capacity)
 		frame := callStack.CallStackRootFrames[0]
 		for i := capacity - 1; i >= 0; i-- {
-			line, err := sp.symbolicateFrameWithCache(ctx, frame, fetchErrorCache)
+			line, err := sp.symbolicateFrame(ctx, frame, fetchErrorCache)
 			if err != nil {
 				return err
 			}
@@ -405,7 +359,7 @@ func (sp *symbolicatorProcessor) setMetricKitExceptionAttrs(ctx context.Context,
 	attributes.PutStr(sp.cfg.OutputMetricKitExceptionMessageAttributeKey, exceptionMsg)
 }
 
-func (sp *symbolicatorProcessor) symbolicateFrameWithCache(ctx context.Context, frame MetricKitCallStackFrame, fetchErrorCache map[string]error) (string, error) {
+func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame MetricKitCallStackFrame, fetchErrorCache map[string]error) (string, error) {
 	// Check if we have a cached fetch error for this UUID
 	if cachedError, exists := fetchErrorCache[frame.BinaryUUID]; exists {
 		return "", cachedError
@@ -421,21 +375,6 @@ func (sp *symbolicatorProcessor) symbolicateFrameWithCache(ctx context.Context, 
 			fetchErrorCache[frame.BinaryUUID] = err
 		}
 	}
-
-	if errors.Is(err, errFailedToFindDSYM) {
-		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment), nil
-	}
-	if err != nil {
-		sp.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, sp.attributes)
-		return "", err
-	}
-
-	return formatMetricKitStackFrames(frame, locations), nil
-}
-
-func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame MetricKitCallStackFrame) (string, error) {
-	locations, err := sp.symbolicator.symbolicateFrame(ctx, frame.BinaryUUID, frame.BinaryName, frame.OffsetIntoBinaryTextSegment)
-	sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
 
 	if errors.Is(err, errFailedToFindDSYM) {
 		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment), nil
