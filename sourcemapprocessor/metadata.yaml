@@ -19,18 +19,24 @@ telemetry:
   metrics:
     processor_source_map_cache_size:
       enabled: true
+      stability:
+        level: alpha
       description: Size of the source map cache in bytes.
       unit: "{sourcemaps}"
       gauge:
         value_type: int
     processor_symbolication_duration:
       enabled: true
+      stability:
+        level: alpha
       description: Duration in seconds taken to symbolicate frames.
       unit: s
       histogram:
         value_type: double
     processor_total_failed_frames:
       enabled: true
+      stability:
+        level: alpha
       description: Total number of frames the symbolicator failed to symbolicate.
       unit: "1"
       sum:
@@ -38,6 +44,8 @@ telemetry:
         monotonic: true
     processor_total_processed_frames:
       enabled: true
+      stability:
+        level: alpha
       description: Total number of frames the symbolicator processed.
       unit: "1"
       sum:
@@ -45,6 +53,8 @@ telemetry:
         monotonic: true
     processor_total_source_map_fetch_failures:
       enabled: true
+      stability:
+        level: alpha
       description: Total number of source map fetch failures.
       unit: "1"
       sum:

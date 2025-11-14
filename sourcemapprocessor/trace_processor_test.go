@@ -2,6 +2,7 @@ package sourcemapprocessor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"testing"
@@ -49,7 +50,7 @@ func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64,
 
 	// Return error if configured to do so
 	if ts.shouldError {
-		err := fmt.Errorf(ts.errorMsg)
+		err := errors.New(ts.errorMsg)
 		if ts.returnFetchError {
 			return nil, &FetchError{URL: url, Err: err}
 		}

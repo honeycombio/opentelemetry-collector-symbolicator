@@ -64,31 +64,31 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...Teleme
 	var err, errs error
 	builder.ProcessorProguardCacheSize, err = builder.meter.Int64Gauge(
 		"otelcol_processor_proguard_cache_size",
-		metric.WithDescription("Size of the proguard mapping cache in bytes."),
+		metric.WithDescription("Size of the proguard mapping cache in bytes. [Alpha]"),
 		metric.WithUnit("{proguardmappings}"),
 	)
 	errs = errors.Join(errs, err)
 	builder.ProcessorSymbolicationDuration, err = builder.meter.Float64Histogram(
 		"otelcol_processor_symbolication_duration",
-		metric.WithDescription("Duration in seconds taken to symbolicate frames."),
+		metric.WithDescription("Duration in seconds taken to symbolicate frames. [Alpha]"),
 		metric.WithUnit("s"),
 	)
 	errs = errors.Join(errs, err)
 	builder.ProcessorTotalFailedFrames, err = builder.meter.Int64Counter(
 		"otelcol_processor_total_failed_frames",
-		metric.WithDescription("Total number of frames the symbolicator failed to symbolicate."),
+		metric.WithDescription("Total number of frames the symbolicator failed to symbolicate. [Alpha]"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)
 	builder.ProcessorTotalProcessedFrames, err = builder.meter.Int64Counter(
 		"otelcol_processor_total_processed_frames",
-		metric.WithDescription("Total number of frames the symbolicator processed."),
+		metric.WithDescription("Total number of frames the symbolicator processed. [Alpha]"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)
 	builder.ProcessorTotalProguardFetchFailures, err = builder.meter.Int64Counter(
 		"otelcol_processor_total_proguard_fetch_failures",
-		metric.WithDescription("Total number of proguard mapping fetch failures."),
+		metric.WithDescription("Total number of proguard mapping fetch failures. [Alpha]"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)

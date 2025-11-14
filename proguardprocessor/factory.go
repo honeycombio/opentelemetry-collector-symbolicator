@@ -20,7 +20,7 @@ var (
 )
 
 const (
-	processorVersion = "0.0.5"
+	processorVersion = "0.0.6"
 )
 
 func createDefaultConfig() component.Config {
@@ -31,7 +31,7 @@ func createDefaultConfig() component.Config {
 		MethodsAttributeKey:             "exception.structured_stacktrace.methods",
 		LinesAttributeKey:               "exception.structured_stacktrace.lines",
 		SourceFilesAttributeKey:         "exception.structured_stacktrace.source_files",
-		OutputStackTraceKey:             "exception.stacktrace",
+		StackTraceAttributeKey:          "exception.stacktrace",
 		ExceptionTypeAttributeKey:       "exception.type",
 		ExceptionMessageAttributeKey:    "exception.message",
 		PreserveStackTrace:              true,

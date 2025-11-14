@@ -27,9 +27,11 @@ type Config struct {
 	// of the stack trace.
 	SourceFilesAttributeKey string `mapstructure:"source_files_attribute_key"`
 
-	// OutputStackTraceKey is the attribute key that the symbolicated stack trace
-	// will be written to.
-	OutputStackTraceKey string `mapstructure:"output_stack_trace_key"`
+	// StackTraceAttributeKey is the attribute key for the stack trace.
+	// When structured stack trace attributes are missing, the processor reads the raw
+	// stack trace from this key and parses it.
+	// The symbolicated stack trace is written back to this key.
+	StackTraceAttributeKey string `mapstructure:"stack_trace_attribute_key"`
 
 	// ExceptionTypeAttributeKey is the attribute key that contains the type of the exception.
 	ExceptionTypeAttributeKey string `mapstructure:"exception_type_attribute_key"`

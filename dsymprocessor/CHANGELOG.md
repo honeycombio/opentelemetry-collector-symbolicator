@@ -4,6 +4,10 @@
 
 - perf: enhance symbolication process with per stacktrace error caching | @clintonnkemdilim
 
+## v0.0.8 [beta] - 2025/11/10
+
+- maint: bump dependency to v1.45.0/v0.139.0 (#121) | @TylerHelmuth
+
 ## v0.0.7 [beta] - 2025/10/21
 
 - chore: reduce log verbosity by changing "Processing logs" from Info to Debug level (#111) | @clintonnkemdilim

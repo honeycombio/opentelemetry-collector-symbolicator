@@ -51,27 +51,28 @@ func (p *proguardLogsProcessor) ProcessLogs(ctx context.Context, logs plog.Logs)
 }
 
 func (p *proguardLogsProcessor) processResourceLogs(ctx context.Context, rl plog.ResourceLogs) {
+	resourceAttrs := rl.Resource().Attributes()
 	for j := 0; j < rl.ScopeLogs().Len(); j++ {
 		sl := rl.ScopeLogs().At(j)
-		p.processScopeLogs(ctx, sl)
+		p.processScopeLogs(ctx, sl, resourceAttrs)
 	}
 }
 
-func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.ScopeLogs) {
+func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.ScopeLogs, resourceAttrs pcommon.Map) {
 	for k := 0; k < sl.LogRecords().Len(); k++ {
 		lr := sl.LogRecords().At(k)
-		p.processLogRecord(ctx, lr)
+		p.processLogRecord(ctx, lr, resourceAttrs)
 	}
 }
 
-func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.LogRecord) {
+func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.LogRecord, resourceAttrs pcommon.Map) {
 	attributes := lr.Attributes()
 
 	// Add processor type and version as attributes
 	attributes.PutStr("honeycomb.processor_type", typeStr.String())
 	attributes.PutStr("honeycomb.processor_version", processorVersion)
 
-	err := p.processLogRecordThrow(ctx, attributes)
+	err := p.processLogRecordThrow(ctx, attributes, resourceAttrs)
 
 	if err != nil {
 		attributes.PutBool(p.cfg.SymbolicatorFailureAttributeKey, true)
@@ -81,24 +82,64 @@ func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.Lo
 	}
 }
 
-func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attributes pcommon.Map) error {
+func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attributes pcommon.Map, resourceAttrs pcommon.Map) error {
 	var ok bool
+
+	// Support retrieving the Proguard UUID from either resource or log attributes, for now.
+	uuidValue, ok := attributes.Get(p.cfg.ProguardUUIDAttributeKey)
+	if !ok {
+		uuidValue, ok = resourceAttrs.Get(p.cfg.ProguardUUIDAttributeKey)
+		if !ok {
+			return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
+		}
+	}
+
 	var classes, methods, lines, sourceFiles pcommon.Slice
+	var classesOk, methodsOk, linesOk, sourceFilesOk bool
 
-	if classes, ok = getSlice(p.cfg.ClassesAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ClassesAttributeKey)
-	}
+	var exceptionType, hasExceptionType = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
+	var exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
 
-	if methods, ok = getSlice(p.cfg.MethodsAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.MethodsAttributeKey)
-	}
+	// Attempt to get structured stack trace attributes first
+	classes, classesOk = getSlice(p.cfg.ClassesAttributeKey, attributes)
+	methods, methodsOk = getSlice(p.cfg.MethodsAttributeKey, attributes)
+	lines, linesOk = getSlice(p.cfg.LinesAttributeKey, attributes)
+	sourceFiles, sourceFilesOk = getSlice(p.cfg.SourceFilesAttributeKey, attributes)
 
-	if lines, ok = getSlice(p.cfg.LinesAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.LinesAttributeKey)
-	}
+	// If any of the structured attributes are missing, attempt to parse the raw stack trace
+	if !classesOk || !methodsOk || !linesOk || !sourceFilesOk {
+		rawStackTrace, hasRawStackTrace := attributes.Get(p.cfg.StackTraceAttributeKey)
 
-	if sourceFiles, ok = getSlice(p.cfg.SourceFilesAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.SourceFilesAttributeKey)
+		if !hasRawStackTrace {
+			return fmt.Errorf("%w: missing structured stack trace attributes and %s attribute is missing",
+				errMissingAttribute,
+				p.cfg.StackTraceAttributeKey,
+			)
+		}
+
+		parsedStackTrace, err := parseStackTrace(rawStackTrace.Str())
+		if err != nil {
+			return fmt.Errorf("failed to parse raw stack trace from %s: %w", p.cfg.StackTraceAttributeKey, err)
+		}
+
+		// Set parsed data into otel slice attributes
+		classes = attributes.PutEmptySlice(p.cfg.ClassesAttributeKey)
+		methods = attributes.PutEmptySlice(p.cfg.MethodsAttributeKey)
+		lines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
+		sourceFiles = attributes.PutEmptySlice(p.cfg.SourceFilesAttributeKey)
+
+		for _, frame := range parsedStackTrace.frames {
+			classes.AppendEmpty().SetStr(frame.class)
+			methods.AppendEmpty().SetStr(frame.method)
+			lines.AppendEmpty().SetInt(int64(frame.line))
+			sourceFiles.AppendEmpty().SetStr(frame.sourceFile)
+		}
+
+		attributes.PutStr(p.cfg.ExceptionTypeAttributeKey, parsedStackTrace.exceptionType)
+		exceptionType, hasExceptionType = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
+
+		attributes.PutStr(p.cfg.ExceptionMessageAttributeKey, parsedStackTrace.exceptionMessage)
+		exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
 	}
 
 	// Ensure all slices are the same length
@@ -116,14 +157,9 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		methods.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalMethodsAttributeKey))
 		lines.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalLinesAttributeKey))
 
-		if originalStackTrace, ok := attributes.Get(p.cfg.OutputStackTraceKey); ok {
+		if originalStackTrace, ok := attributes.Get(p.cfg.StackTraceAttributeKey); ok {
 			attributes.PutStr(p.cfg.OriginalStackTraceKey, originalStackTrace.Str())
 		}
-	}
-
-	uuidValue, ok := attributes.Get(p.cfg.ProguardUUIDAttributeKey)
-	if !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, p.cfg.ProguardUUIDAttributeKey)
 	}
 
 	uuid := uuidValue.Str()
@@ -135,9 +171,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 
 	var symbolicationFailed bool
 
-	var exceptionType, hasExceptionType = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
-	var exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
-
+	// Reconstruct the stack trace with symbolicated frames
 	if hasExceptionType && hasExceptionMessage {
 		stack = append(stack, fmt.Sprintf("%s: %s", exceptionType.Str(), exceptionMessage.Str()))
 	}
@@ -187,6 +221,12 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			class := classes.At(i).Str()
 			method := methods.At(i).Str()
 			sourceFile := sourceFiles.At(i).Str()
+
+			// since we are using original stacktrace data, preserve original values in the output slices
+			mappedClasses.AppendEmpty().SetStr(class)
+			mappedMethods.AppendEmpty().SetStr(method)
+			mappedLines.AppendEmpty().SetInt(line)
+
 			if line == -2 {
 				// Native method, source file and line number are not applicable
 				stack = append(stack, fmt.Sprintf("\tat %s.%s(Native Method)", class, method))
@@ -208,7 +248,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		}
 	}
 
-	attributes.PutStr(p.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
+	attributes.PutStr(p.cfg.StackTraceAttributeKey, strings.Join(stack, "\n"))
 
 	if symbolicationFailed {
 		return errPartialSymbolication
