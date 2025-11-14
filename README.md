@@ -12,6 +12,8 @@ To install this processor, include it in the build config file of your OpenTelem
 
 ℹ️ Prior to release [`sourcemapprocessor/v0.0.10`](https://github.com/honeycombio/opentelemetry-collector-symbolicator/releases/tag/sourcemapprocessor%2Fv0.0.10) this was called `symbolicatorprocessor`.
 
+ℹ️ Logs are not officially supported yet.
+
 ### Basic Configuration
 
 Register the plugin in the processors section of your open telemetry collector configuration.
