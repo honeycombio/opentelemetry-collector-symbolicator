@@ -11,6 +11,10 @@ type Config struct {
 	// message if the symbolicator fails to fully symbolicate a stack trace.
 	SymbolicatorErrorAttributeKey string `mapstructure:"symbolicator_error_attribute_key"`
 
+	// SymbolicatorParsingMethodAttributeKey is the attribute key that contains the
+	// method used to parse the stack trace.
+	SymbolicatorParsingMethodAttributeKey string `mapstructure:"symbolicator_parsing_method_attribute_key"`
+
 	// ClassesAttributeKey is the attribute key that contains the class names
 	// of the stack trace.
 	ClassesAttributeKey string `mapstructure:"classes_attribute_key"`

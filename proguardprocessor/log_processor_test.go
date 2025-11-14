@@ -84,15 +84,16 @@ func TestNewProguardLogsProcessor(t *testing.T) {
 func TestProcessLogs_Success(t *testing.T) {
 	ctx := context.Background()
 	cfg := &Config{
-		ExceptionTypeAttributeKey:       "exception_type",
-		ExceptionMessageAttributeKey:    "exception_message",
-		ClassesAttributeKey:             "classes",
-		MethodsAttributeKey:             "methods",
-		LinesAttributeKey:               "lines",
-		SourceFilesAttributeKey:         "source_files",
-		ProguardUUIDAttributeKey:        "uuid",
-		StackTraceAttributeKey:          "stack_trace",
-		SymbolicatorFailureAttributeKey: "symbolication_failed",
+		ExceptionTypeAttributeKey:             "exception_type",
+		ExceptionMessageAttributeKey:          "exception_message",
+		ClassesAttributeKey:                   "classes",
+		MethodsAttributeKey:                   "methods",
+		LinesAttributeKey:                     "lines",
+		SourceFilesAttributeKey:               "source_files",
+		ProguardUUIDAttributeKey:              "uuid",
+		StackTraceAttributeKey:                "stack_trace",
+		SymbolicatorFailureAttributeKey:       "symbolication_failed",
+		SymbolicatorParsingMethodAttributeKey: "parsing_method",
 	}
 
 	settings := processor.Settings{
@@ -158,20 +159,25 @@ func TestProcessLogs_Success(t *testing.T) {
 	failed, ok := processedAttrs.Get("symbolication_failed")
 	assert.True(t, ok)
 	assert.False(t, failed.Bool())
+
+	parsingMethod, ok := processedAttrs.Get("parsing_method")
+	assert.True(t, ok)
+	assert.Equal(t, "structured_stacktrace_attributes", parsingMethod.Str())
 }
 
 func TestProcessLogs_KeepAllStackFrames(t *testing.T) {
 	ctx := context.Background()
 	cfg := &Config{
-		ExceptionTypeAttributeKey:       "exception_type",
-		ExceptionMessageAttributeKey:    "exception_message",
-		ClassesAttributeKey:             "classes",
-		MethodsAttributeKey:             "methods",
-		LinesAttributeKey:               "lines",
-		SourceFilesAttributeKey:         "source_files",
-		ProguardUUIDAttributeKey:        "uuid",
-		StackTraceAttributeKey:          "stack_trace",
-		SymbolicatorFailureAttributeKey: "symbolication_failed",
+		ExceptionTypeAttributeKey:             "exception_type",
+		ExceptionMessageAttributeKey:          "exception_message",
+		ClassesAttributeKey:                   "classes",
+		MethodsAttributeKey:                   "methods",
+		LinesAttributeKey:                     "lines",
+		SourceFilesAttributeKey:               "source_files",
+		ProguardUUIDAttributeKey:              "uuid",
+		StackTraceAttributeKey:                "stack_trace",
+		SymbolicatorFailureAttributeKey:       "symbolication_failed",
+		SymbolicatorParsingMethodAttributeKey: "parsing_method",
 	}
 
 	settings := processor.Settings{
@@ -241,6 +247,10 @@ func TestProcessLogs_KeepAllStackFrames(t *testing.T) {
 	failed, ok := processedAttrs.Get("symbolication_failed")
 	assert.True(t, ok)
 	assert.False(t, failed.Bool())
+
+	parsingMethod, ok := processedAttrs.Get("parsing_method")
+	assert.True(t, ok)
+	assert.Equal(t, "structured_stacktrace_attributes", parsingMethod.Str())
 }
 
 func TestProcessLogRecord_MissingClassesAttribute(t *testing.T) {
@@ -589,15 +599,16 @@ func TestGetSlice(t *testing.T) {
 func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 	ctx := context.Background()
 	cfg := &Config{
-		ClassesAttributeKey:             "classes",
-		MethodsAttributeKey:             "methods",
-		LinesAttributeKey:               "lines",
-		SourceFilesAttributeKey:         "source_files",
-		ExceptionTypeAttributeKey:       "exception_type",
-		ExceptionMessageAttributeKey:    "exception_message",
-		ProguardUUIDAttributeKey:        "uuid",
-		StackTraceAttributeKey:          "stack_trace",
-		SymbolicatorFailureAttributeKey: "symbolication_failed",
+		ClassesAttributeKey:                   "classes",
+		MethodsAttributeKey:                   "methods",
+		LinesAttributeKey:                     "lines",
+		SourceFilesAttributeKey:               "source_files",
+		ExceptionTypeAttributeKey:             "exception_type",
+		ExceptionMessageAttributeKey:          "exception_message",
+		ProguardUUIDAttributeKey:              "uuid",
+		StackTraceAttributeKey:                "stack_trace",
+		SymbolicatorFailureAttributeKey:       "symbolication_failed",
+		SymbolicatorParsingMethodAttributeKey: "parsing_method",
 	}
 
 	settings := processor.Settings{
@@ -618,7 +629,7 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 
 	lr := plog.NewLogRecord()
 	attrs := lr.Attributes()
-	
+
 	resourceAttrs := pcommon.NewMap()
 	resourceAttrs.PutStr("uuid", "missing-uuid-123")
 
@@ -681,6 +692,10 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 	assert.Contains(t, stackTrace.Str(), "at com.example.ObfuscatedClass.obfuscatedMethod(SourceFile:42)")
 	assert.Contains(t, stackTrace.Str(), "at com.example.AnotherClass.anotherMethod(Native Method)")
 	assert.Contains(t, stackTrace.Str(), "at com.example.ThirdClass.thirdMethod(Unknown Source)")
+
+	parsingMethod, ok := attrs.Get("parsing_method")
+	assert.True(t, ok)
+	assert.Equal(t, "processor_parsed", parsingMethod.Str())
 }
 
 func TestProcessLogRecord_MissingBothStructuredAndRawStackTrace(t *testing.T) {

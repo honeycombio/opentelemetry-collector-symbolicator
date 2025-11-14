@@ -140,6 +140,10 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 
 		attributes.PutStr(p.cfg.ExceptionMessageAttributeKey, parsedStackTrace.exceptionMessage)
 		exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
+
+		attributes.PutStr(p.cfg.SymbolicatorParsingMethodAttributeKey, "processor_parsed")
+	} else {
+		attributes.PutStr(p.cfg.SymbolicatorParsingMethodAttributeKey, "structured_stacktrace_attributes")
 	}
 
 	// Ensure all slices are the same length
