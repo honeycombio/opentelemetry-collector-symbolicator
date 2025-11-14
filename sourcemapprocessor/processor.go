@@ -9,6 +9,7 @@ import (
 
 	"github.com/honeycombio/opentelemetry-collector-symbolicator/sourcemapprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/otel/attribute"
@@ -79,6 +80,39 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 
 			if err != nil {
 				sp.logger.Debug("Error processing span", zap.Error(err))
+			}
+		}
+	}
+}
+
+// processLogs processes the received logs. It is the function configured
+// in the processorhelper.NewLogs call in factory.go
+func (sp *symbolicatorProcessor) processLogs(ctx context.Context, logs plog.Logs) (plog.Logs, error) {
+	sp.logger.Debug("Processing logs")
+
+	startTime := time.Now()
+	for i := 0; i < logs.ResourceLogs().Len(); i++ {
+		rl := logs.ResourceLogs().At(i)
+		sp.processResourceLogs(ctx, rl)
+	}
+
+	sp.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
+	return logs, nil
+}
+
+// processResourceLogs takes resource logs and processes the attributes
+// found on the log records.
+func (sp *symbolicatorProcessor) processResourceLogs(ctx context.Context, rl plog.ResourceLogs) {
+	for i := 0; i < rl.ScopeLogs().Len(); i++ {
+		sl := rl.ScopeLogs().At(i)
+
+		for j := 0; j < sl.LogRecords().Len(); j++ {
+			logRecord := sl.LogRecords().At(j)
+
+			err := sp.processAttributes(ctx, logRecord.Attributes(), rl.Resource().Attributes())
+
+			if err != nil {
+				sp.logger.Debug("Error processing log record", zap.Error(err))
 			}
 		}
 	}

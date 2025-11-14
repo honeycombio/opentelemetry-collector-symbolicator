@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- feat: Add log support to the source map processor (#123) | @jairo-mendoza
+
 ## v0.0.13 [beta] - 2025/11/10
 
 - maint: bump dependency to v1.45.0/v0.139.0 (#121) | @TylerHelmuth
