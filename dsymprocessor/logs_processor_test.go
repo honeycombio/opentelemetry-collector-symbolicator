@@ -2,8 +2,10 @@ package dsymprocessor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/honeycombio/opentelemetry-collector-symbolicator/dsymprocessor/internal/metadata"
@@ -432,4 +434,270 @@ func TestProcessFailure_InvalidJson(t *testing.T) {
 	errorMessage, hasErrorMessage := log.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
 	assert.True(t, hasErrorMessage)
 	assert.Equal(t, "Invalid state! Called processMetricKitAttributes while missing metrickit.diagnostic.crash.exception.stacktrace_json attribute", errorMessage.Str())
+}
+
+// testSymbolicatorWithErrors simulates a symbolicator that can return FetchErrors or other errors
+type testSymbolicatorWithErrors struct {
+	returnFetchError bool
+	callCount        int
+	err              error
+}
+
+func (m *testSymbolicatorWithErrors) symbolicateFrame(ctx context.Context, debugId, binaryName string, addr uint64) ([]*mappedDSYMStackFrame, error) {
+	m.callCount++
+	if m.err != nil {
+		if m.returnFetchError {
+			return nil, &FetchError{DebugID: debugId, Err: m.err}
+		}
+		return nil, m.err
+	}
+	return []*mappedDSYMStackFrame{
+		{path: "Source.swift", line: 42, symbol: "function"},
+	}, nil
+}
+
+func TestErrorCaching_GenericStackTrace(t *testing.T) {
+	ctx := context.Background()
+	cfg := createDefaultConfig().(*Config)
+
+	tb, attributes, cleanup := createTestTelemetry(t)
+	defer cleanup()
+
+	// Create a symbolicator that returns FetchError (simulating missing dSYM)
+	symbolicator := &testSymbolicatorWithErrors{
+		returnFetchError: true,
+		err:              errors.New("404 not found"),
+	}
+
+	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}, symbolicator, tb, attributes)
+
+	logs := plog.NewLogs()
+	resourceLog := logs.ResourceLogs().AppendEmpty()
+	resourceLog.Resource().Attributes().PutStr(cfg.BuildUUIDAttributeKey, "6A8CB813-45F6-3652-AD33-778FD1EAB196")
+	resourceLog.Resource().Attributes().PutStr(cfg.AppExecutableAttributeKey, "MyApp")
+	scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+	log := scopeLog.LogRecords().AppendEmpty()
+
+	// Create a stacktrace with 10 lines all referencing the same binary/UUID
+	stackLines := []string{}
+	for i := 0; i < 10; i++ {
+		stackLines = append(stackLines, fmt.Sprintf("%d MyApp 0x100%06x MyApp + %d", i, 1000+i*100, 1000+i*100))
+	}
+	log.Attributes().PutStr(cfg.StackTraceAttributeKey, strings.Join(stackLines, "\n"))
+
+	processor.processStackTraceAttributes(ctx, log.Attributes(), resourceLog.Resource().Attributes())
+
+	// Should only call symbolicate ONCE for the first line, then reuse cached error
+	// This validates the 90% reduction in failed fetches claim (1 call instead of 10)
+	assert.Equal(t, 1, symbolicator.callCount,
+		"Expected only 1 symbolication call for 10 lines with same missing UUID (90%% reduction)")
+
+	// Verify symbolication_failed attribute is set
+	failed, ok := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+	assert.True(t, ok)
+	assert.True(t, failed.Bool())
+}
+
+func TestErrorCaching_MetricKit(t *testing.T) {
+	ctx := context.Background()
+	cfg := createDefaultConfig().(*Config)
+
+	tb, attributes, cleanup := createTestTelemetry(t)
+	defer cleanup()
+
+	// Create a symbolicator that returns FetchError (simulating missing dSYM)
+	symbolicator := &testSymbolicatorWithErrors{
+		returnFetchError: true,
+		err:              errors.New("404 not found"),
+	}
+
+	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}, symbolicator, tb, attributes)
+
+	// Create a MetricKit JSON with nested frames (all with same UUID)
+	uuid := "6A8CB813-45F6-3652-AD33-778FD1EAB196"
+	metrickitJSON := fmt.Sprintf(`{
+		"callStacks": [
+			{
+				"callStackRootFrames": [
+					{
+						"binaryUUID": "%s",
+						"binaryName": "MyApp",
+						"offsetIntoBinaryTextSegment": 1000,
+						"subFrames": [
+							{
+								"binaryUUID": "%s",
+								"binaryName": "MyApp",
+								"offsetIntoBinaryTextSegment": 2000,
+								"subFrames": [
+									{
+										"binaryUUID": "%s",
+										"binaryName": "MyApp",
+										"offsetIntoBinaryTextSegment": 3000,
+										"subFrames": [
+											{
+												"binaryUUID": "%s",
+												"binaryName": "MyApp",
+												"offsetIntoBinaryTextSegment": 4000
+											}
+										]
+									}
+								]
+							}
+						]
+					}
+				]
+			}
+		]
+	}`, uuid, uuid, uuid, uuid)
+
+	logs := plog.NewLogs()
+	resourceLog := logs.ResourceLogs().AppendEmpty()
+	scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+	log := scopeLog.LogRecords().AppendEmpty()
+	log.Attributes().PutStr(cfg.MetricKitStackTraceAttributeKey, metrickitJSON)
+
+	processor.processMetricKitAttributes(ctx, log.Attributes())
+
+	// Should only call symbolicate ONCE for the first frame, then reuse cached error
+	// for the remaining 3 frames (75% reduction: 1 call instead of 4)
+	assert.Equal(t, 1, symbolicator.callCount,
+		"Expected only 1 symbolication call for 4 frames with same missing UUID (75%% reduction)")
+
+	// Verify symbolication_failed attribute is set
+	failed, ok := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+	assert.True(t, ok)
+	assert.True(t, failed.Bool())
+}
+
+func TestDeduplication_GenericStackTrace(t *testing.T) {
+	tests := []struct {
+		name              string
+		numLines          int
+		returnFetchError  bool
+		symbolicatorError error
+		expectCallCount   int
+		description       string
+	}{
+		{
+			name:              "successful symbolication calls for each line",
+			numLines:          10,
+			returnFetchError:  false,
+			symbolicatorError: nil,
+			expectCallCount:   10,
+			description:       "Each line should be symbolicated independently when successful",
+		},
+		{
+			name:              "FetchError is cached and reused within stacktrace",
+			numLines:          10,
+			returnFetchError:  true,
+			symbolicatorError: errors.New("404 not found"),
+			expectCallCount:   1,
+			description:       "FetchError should be cached after first line, 90% reduction in calls",
+		},
+		{
+			name:              "non-FetchError is NOT cached",
+			numLines:          5,
+			returnFetchError:  false,
+			symbolicatorError: errors.New("parse error"),
+			expectCallCount:   5,
+			description:       "Parse errors should not be cached, each line attempts symbolication",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cfg := createDefaultConfig().(*Config)
+
+			tb, attributes, cleanup := createTestTelemetry(t)
+			defer cleanup()
+
+			symbolicator := &testSymbolicatorWithErrors{
+				returnFetchError: tt.returnFetchError,
+				err:              tt.symbolicatorError,
+			}
+
+			processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
+				TelemetrySettings: component.TelemetrySettings{
+					Logger: zaptest.NewLogger(t),
+				},
+			}, symbolicator, tb, attributes)
+
+			logs := plog.NewLogs()
+			resourceLog := logs.ResourceLogs().AppendEmpty()
+			resourceLog.Resource().Attributes().PutStr(cfg.BuildUUIDAttributeKey, "6A8CB813-45F6-3652-AD33-778FD1EAB196")
+			resourceLog.Resource().Attributes().PutStr(cfg.AppExecutableAttributeKey, "MyApp")
+			scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+			log := scopeLog.LogRecords().AppendEmpty()
+
+			// Create stacktrace lines
+			stackLines := []string{}
+			for i := 0; i < tt.numLines; i++ {
+				stackLines = append(stackLines, fmt.Sprintf("%d MyApp 0x100%06x MyApp + %d", i, 1000+i*100, 1000+i*100))
+			}
+			log.Attributes().PutStr(cfg.StackTraceAttributeKey, strings.Join(stackLines, "\n"))
+
+			processor.processStackTraceAttributes(ctx, log.Attributes(), resourceLog.Resource().Attributes())
+
+			assert.Equal(t, tt.expectCallCount, symbolicator.callCount, tt.description)
+		})
+	}
+}
+
+func TestDeduplication_MultipleUUIDs(t *testing.T) {
+	ctx := context.Background()
+	cfg := createDefaultConfig().(*Config)
+
+	tb, attributes, cleanup := createTestTelemetry(t)
+	defer cleanup()
+
+	// Create a symbolicator that returns FetchError
+	symbolicator := &testSymbolicatorWithErrors{
+		returnFetchError: true,
+		err:              errors.New("404 not found"),
+	}
+
+	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}, symbolicator, tb, attributes)
+
+	logs := plog.NewLogs()
+	resourceLog := logs.ResourceLogs().AppendEmpty()
+	resourceLog.Resource().Attributes().PutStr(cfg.BuildUUIDAttributeKey, "6A8CB813-45F6-3652-AD33-778FD1EAB196")
+	resourceLog.Resource().Attributes().PutStr(cfg.AppExecutableAttributeKey, "MyApp")
+	scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+	log := scopeLog.LogRecords().AppendEmpty()
+
+	// Create stacktrace with 3 different library UUIDs (3 lines each = 9 total)
+	stackLines := []string{
+		// UUID1 (3 lines)
+		"0 LibA 0x1001000 11111111-1111-1111-1111-111111111111 + 1000",
+		"1 LibA 0x1002000 11111111-1111-1111-1111-111111111111 + 2000",
+		"2 LibA 0x1003000 11111111-1111-1111-1111-111111111111 + 3000",
+		// UUID2 (3 lines)
+		"3 LibB 0x2001000 22222222-2222-2222-2222-222222222222 + 1000",
+		"4 LibB 0x2002000 22222222-2222-2222-2222-222222222222 + 2000",
+		"5 LibB 0x2003000 22222222-2222-2222-2222-222222222222 + 3000",
+		// UUID3 (3 lines)
+		"6 LibC 0x3001000 33333333-3333-3333-3333-333333333333 + 1000",
+		"7 LibC 0x3002000 33333333-3333-3333-3333-333333333333 + 2000",
+		"8 LibC 0x3003000 33333333-3333-3333-3333-333333333333 + 3000",
+	}
+	log.Attributes().PutStr(cfg.StackTraceAttributeKey, strings.Join(stackLines, "\n"))
+
+	processor.processStackTraceAttributes(ctx, log.Attributes(), resourceLog.Resource().Attributes())
+
+	// Should make 3 calls (one per unique UUID), not 9
+	assert.Equal(t, 3, symbolicator.callCount,
+		"Expected 3 symbolication calls for 3 different UUIDs (one per UUID, cached for remaining frames)")
 }

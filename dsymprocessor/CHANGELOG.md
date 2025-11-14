@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- perf: enhance symbolication process with per stacktrace error caching | @clintonnkemdilim
+
 ## v0.0.8 [beta] - 2025/11/10
 
 - maint: bump dependency to v1.45.0/v0.139.0 (#121) | @TylerHelmuth

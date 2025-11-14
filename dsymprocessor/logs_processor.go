@@ -146,8 +146,12 @@ func (sp *symbolicatorProcessor) processStackTraceAttributesThrows(ctx context.C
 	lines := strings.Split(rawStackTrace, "\n")
 	res := make([]string, len(lines))
 	symbolicationFailed := false
+
+	// Cache FetchErrors to avoid redundant fetches for missing resources.
+	fetchErrorCache := make(map[string]error)
+
 	for idx, line := range lines {
-		symbolicated, err := sp.symbolicateStackLine(ctx, line, binaryName, buildUUID)
+		symbolicated, err := sp.symbolicateStackLine(ctx, line, binaryName, buildUUID, fetchErrorCache)
 		if err != nil {
 			sp.logger.Debug("could not symbolicate line")
 			res[idx] = line
@@ -173,7 +177,7 @@ func (sp *symbolicatorProcessor) processStackTraceAttributesThrows(ctx context.C
 var stackLineRegex = regexp.MustCompile(`^([0-9]+)\s+([\w _\-\.]+[\w_\-\.])\s+(0x[\da-f]+)\s+([\w _\-\.]*) \+ (\d+)`)
 var uuidRegex = regexp.MustCompile(`[0-9A-Z]{8}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{12}`)
 
-func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line, binaryName, buildUUID string) (string, error) {
+func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line, binaryName, buildUUID string, fetchErrorCache map[string]error) (string, error) {
 	if !stackLineRegex.MatchString(line) {
 		// stacktrace line not formated the way we expect, skip it
 		return line, nil
@@ -200,8 +204,21 @@ func (sp *symbolicatorProcessor) symbolicateStackLine(ctx context.Context, line,
 		return line, nil
 	}
 
+	// Check if we have a cached fetch error for this UUID
+	if cachedError, exists := fetchErrorCache[uuid]; exists {
+		return "", cachedError
+	}
+
 	locations, err := sp.symbolicator.symbolicateFrame(ctx, uuid, bin, offset)
 	sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
+
+	// Only cache FetchErrors (404, timeout, etc.) - not parse errors
+	if err != nil {
+		var fetchErr *FetchError
+		if errors.As(err, &fetchErr) {
+			fetchErrorCache[uuid] = err
+		}
+	}
 
 	if errors.Is(err, errFailedToFindDSYM) {
 		return line, nil
@@ -282,12 +299,15 @@ func (sp *symbolicatorProcessor) processMetricKitAttributesThrows(ctx context.Co
 	// gotta unwind the nesting in reverse
 	stacks := make([]string, len(report.CallStacks))
 
+	// Cache FetchErrors to avoid redundant fetches for missing resources.
+	fetchErrorCache := make(map[string]error)
+
 	for idx, callStack := range report.CallStacks {
 		capacity := getStackDepth(callStack.CallStackRootFrames[0])
 		symbolicatedStack := make([]string, capacity)
 		frame := callStack.CallStackRootFrames[0]
 		for i := capacity - 1; i >= 0; i-- {
-			line, err := sp.symbolicateFrame(ctx, frame)
+			line, err := sp.symbolicateFrame(ctx, frame, fetchErrorCache)
 			if err != nil {
 				return err
 			}
@@ -339,9 +359,22 @@ func (sp *symbolicatorProcessor) setMetricKitExceptionAttrs(ctx context.Context,
 	attributes.PutStr(sp.cfg.OutputMetricKitExceptionMessageAttributeKey, exceptionMsg)
 }
 
-func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame MetricKitCallStackFrame) (string, error) {
+func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame MetricKitCallStackFrame, fetchErrorCache map[string]error) (string, error) {
+	// Check if we have a cached fetch error for this UUID
+	if cachedError, exists := fetchErrorCache[frame.BinaryUUID]; exists {
+		return "", cachedError
+	}
+
 	locations, err := sp.symbolicator.symbolicateFrame(ctx, frame.BinaryUUID, frame.BinaryName, frame.OffsetIntoBinaryTextSegment)
 	sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
+
+	// Only cache FetchErrors (404, timeout, etc.) - not parse errors
+	if err != nil {
+		var fetchErr *FetchError
+		if errors.As(err, &fetchErr) {
+			fetchErrorCache[frame.BinaryUUID] = err
+		}
+	}
 
 	if errors.Is(err, errFailedToFindDSYM) {
 		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment), nil
