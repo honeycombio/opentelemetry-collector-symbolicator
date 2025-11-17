@@ -105,11 +105,12 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	methods, methodsOk = getSlice(p.cfg.MethodsAttributeKey, attributes)
 	lines, linesOk = getSlice(p.cfg.LinesAttributeKey, attributes)
 	sourceFiles, sourceFilesOk = getSlice(p.cfg.SourceFilesAttributeKey, attributes)
+	rawStackTrace, hasRawStackTrace := attributes.Get(p.cfg.StackTraceAttributeKey)
 
 	// If any of the structured attributes are missing, attempt to parse the raw stack trace
+	var parsedStackTrace *stackTrace
+	var err error
 	if !classesOk || !methodsOk || !linesOk || !sourceFilesOk {
-		rawStackTrace, hasRawStackTrace := attributes.Get(p.cfg.StackTraceAttributeKey)
-
 		if !hasRawStackTrace {
 			return fmt.Errorf("%w: missing structured stack trace attributes and %s attribute is missing",
 				errMissingAttribute,
@@ -117,7 +118,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			)
 		}
 
-		parsedStackTrace, err := parseStackTrace(rawStackTrace.Str())
+		parsedStackTrace, err = parseStackTrace(rawStackTrace.Str())
 		if err != nil {
 			return fmt.Errorf("failed to parse raw stack trace from %s: %w", p.cfg.StackTraceAttributeKey, err)
 		}
@@ -128,7 +129,13 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		lines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
 		sourceFiles = attributes.PutEmptySlice(p.cfg.SourceFilesAttributeKey)
 
-		for _, frame := range parsedStackTrace.frames {
+		for _, element := range parsedStackTrace.elements {
+			// This is a raw line, skip for now...
+			if element.line != "" {
+				continue
+			}
+
+			frame := element.frame
 			classes.AppendEmpty().SetStr(frame.class)
 			methods.AppendEmpty().SetStr(frame.method)
 			lines.AppendEmpty().SetInt(int64(frame.line))
@@ -169,10 +176,6 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	uuid := uuidValue.Str()
 
 	var stack []string
-	var mappedClasses = attributes.PutEmptySlice(p.cfg.ClassesAttributeKey)
-	var mappedMethods = attributes.PutEmptySlice(p.cfg.MethodsAttributeKey)
-	var mappedLines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
-
 	var symbolicationFailed bool
 
 	// Reconstruct the stack trace with symbolicated frames
@@ -183,27 +186,55 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	// Cache FetchErrors to avoid redundant fetches for missing resources.
 	fetchErrorCache := make(map[string]error)
 
-	for i := 0; i < classes.Len(); i++ {
-		line := lines.At(i).Int()
+	// Set up iteration and output slices based on route
+	var mappedClasses, mappedMethods, mappedLines pcommon.Slice
+	var iterCount int
+
+	// Set up iteration based on whether we have a parsed stack trace or structured attributes
+	if parsedStackTrace != nil {
+		iterCount = len(parsedStackTrace.elements)
+	} else {
+		iterCount = classes.Len()
+		mappedClasses = attributes.PutEmptySlice(p.cfg.ClassesAttributeKey)
+		mappedMethods = attributes.PutEmptySlice(p.cfg.MethodsAttributeKey)
+		mappedLines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
+	}
+
+	for i := 0; i < iterCount; i++ {
+		var class, method, sourceFile string
+		var line int64
+
+		// Preserve raw lines that couldn't be parsed as frames
+		if parsedStackTrace != nil {
+			element := parsedStackTrace.elements[i]
+			if element.line != "" {
+				stack = append(stack, element.line)
+				continue
+			}
+		}
+
+		line = lines.At(i).Int()
+		class = classes.At(i).Str()
+		method = methods.At(i).Str()
+		sourceFile = sourceFiles.At(i).Str()
 
 		// Line numbers set to -2 and -1 are special values indicating a native method and unknown source respectively, per the Android docs.
 		if line < -2 || line > math.MaxUint32 {
-			stack = append(stack, fmt.Sprintf("\tInvalid line number %d for %s.%s", line, classes.At(i).Str(), methods.At(i).Str()))
+			stack = append(stack, fmt.Sprintf("\tInvalid line number %d for %s.%s", line, class, method))
 			symbolicationFailed = true
 			continue
 		}
 
 		p.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, p.attributes)
 
-		var mappedClass []*mappedStackFrame
+		var mappedFrames []*mappedStackFrame
 		var err error
 
 		// Check if we have a cached fetch error for this UUID
 		if cachedError, exists := fetchErrorCache[uuid]; exists {
 			err = cachedError
 		} else {
-			// maybe we should change this to take uint32?
-			mappedClass, err = p.symbolicator.symbolicate(ctx, uuid, classes.At(i).Str(), methods.At(i).Str(), int(line))
+			mappedFrames, err = p.symbolicator.symbolicate(ctx, uuid, class, method, int(line))
 
 			// Only cache FetchErrors (404, timeout, etc.) - not parse or validation errors
 			if err != nil {
@@ -215,21 +246,20 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		}
 
 		if err != nil {
-			stack = append(stack, fmt.Sprintf("\tFailed to symbolicate %s.%s(%d): %v", classes.At(i).Str(), methods.At(i).Str(), line, err))
+			stack = append(stack, fmt.Sprintf("\tFailed to symbolicate %s.%s(%d): %v", class, method, line, err))
 			symbolicationFailed = true
 			p.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, p.attributes)
 			continue
 		}
-		// Not a symbolication failure but no mapping found or needed; use original stacktrace data
-		if len(mappedClass) == 0 {
-			class := classes.At(i).Str()
-			method := methods.At(i).Str()
-			sourceFile := sourceFiles.At(i).Str()
 
-			// since we are using original stacktrace data, preserve original values in the output slices
-			mappedClasses.AppendEmpty().SetStr(class)
-			mappedMethods.AppendEmpty().SetStr(method)
-			mappedLines.AppendEmpty().SetInt(line)
+		// Not a symbolication failure but no mapping found or needed; use original stacktrace data
+		if len(mappedFrames) == 0 {
+			// Only populate output slices for structured route
+			if parsedStackTrace == nil {
+				mappedClasses.AppendEmpty().SetStr(class)
+				mappedMethods.AppendEmpty().SetStr(method)
+				mappedLines.AppendEmpty().SetInt(line)
+			}
 
 			if line == -2 {
 				// Native method, source file and line number are not applicable
@@ -243,12 +273,15 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			continue
 		}
 
-		for _, mappedClass := range mappedClass {
-			mappedClasses.AppendEmpty().SetStr(mappedClass.ClassName)
-			mappedMethods.AppendEmpty().SetStr(mappedClass.MethodName)
-			mappedLines.AppendEmpty().SetInt(mappedClass.LineNumber)
+		for _, mappedFrame := range mappedFrames {
+			// Only populate output slices for structured route
+			if parsedStackTrace == nil {
+				mappedClasses.AppendEmpty().SetStr(mappedFrame.ClassName)
+				mappedMethods.AppendEmpty().SetStr(mappedFrame.MethodName)
+				mappedLines.AppendEmpty().SetInt(mappedFrame.LineNumber)
+			}
 
-			stack = append(stack, fmt.Sprintf("\tat %s.%s(%s:%d)", mappedClass.ClassName, mappedClass.MethodName, mappedClass.SourceFile, mappedClass.LineNumber))
+			stack = append(stack, fmt.Sprintf("\tat %s.%s(%s:%d)", mappedFrame.ClassName, mappedFrame.MethodName, mappedFrame.SourceFile, mappedFrame.LineNumber))
 		}
 	}
 
