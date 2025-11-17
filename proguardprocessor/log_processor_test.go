@@ -603,6 +603,9 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 		MethodsAttributeKey:                   "methods",
 		LinesAttributeKey:                     "lines",
 		SourceFilesAttributeKey:               "source_files",
+		OriginalClassesAttributeKey:          "original_classes",
+		OriginalMethodsAttributeKey:          "original_methods",
+		OriginalLinesAttributeKey:            "original_lines",
 		ExceptionTypeAttributeKey:             "exception_type",
 		ExceptionMessageAttributeKey:          "exception_message",
 		ProguardUUIDAttributeKey:              "uuid",
@@ -658,6 +661,22 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 	assert.True(t, ok)
 	assert.False(t, failed.Bool())
 
+	// Verify that structured stack trace attributes were not populated
+	_, ok = attrs.Get("classes")
+	assert.False(t, ok)
+	_, ok = attrs.Get("methods")
+	assert.False(t, ok)
+	_, ok = attrs.Get("lines")
+	assert.False(t, ok)
+	_, ok = attrs.Get("source_files")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_classes")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_methods")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_lines")
+	assert.False(t, ok)
+
 	// Verify output stack trace was generated with original (unparsed) values
 	stackTrace, ok := attrs.Get("stack_trace")
 	assert.True(t, ok)
@@ -679,6 +698,9 @@ func TestProcessLogRecord_ParsedRouteWithSymbolication(t *testing.T) {
 		MethodsAttributeKey:                   "methods",
 		LinesAttributeKey:                     "lines",
 		SourceFilesAttributeKey:               "source_files",
+		OriginalClassesAttributeKey:           "original_classes",
+		OriginalMethodsAttributeKey:           "original_methods",
+		OriginalLinesAttributeKey:             "original_lines",
 		ExceptionTypeAttributeKey:             "exception_type",
 		ExceptionMessageAttributeKey:          "exception_message",
 		ProguardUUIDAttributeKey:              "uuid",
@@ -757,6 +779,22 @@ Caused by: java.lang.NullPointerException
 	failed, ok := attrs.Get("symbolication_failed")
 	assert.True(t, ok)
 	assert.False(t, failed.Bool())
+
+	// Verify that structured stack trace attributes were not populated
+	_, ok = attrs.Get("classes")
+	assert.False(t, ok)
+	_, ok = attrs.Get("methods")
+	assert.False(t, ok)
+	_, ok = attrs.Get("lines")
+	assert.False(t, ok)
+	_, ok = attrs.Get("source_files")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_classes")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_methods")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_lines")
+	assert.False(t, ok)
 
 	parsingMethod, ok := attrs.Get("parsing_method")
 	assert.True(t, ok)
