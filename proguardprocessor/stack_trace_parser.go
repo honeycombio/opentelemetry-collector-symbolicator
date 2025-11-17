@@ -24,7 +24,7 @@ type stackFrame struct {
 // element represents a single element in a stack trace.
 // Either a frame or a raw line can be stored. Not both at the same time.
 type element struct {
-	frame stackFrame
+	frame *stackFrame
 	line  string
 }
 
@@ -106,7 +106,7 @@ func parseStackTrace(stackTraceStr string) (*stackTrace, error) {
 		// if not, add the raw line to preserve it
 		frame := parseStackFrame(line)
 		if frame != nil {
-			result.elements = append(result.elements, element{frame: *frame})
+			result.elements = append(result.elements, element{frame: frame})
 		} else {
 			result.elements = append(result.elements, element{line: line})
 		}
