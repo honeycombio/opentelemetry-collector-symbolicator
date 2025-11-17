@@ -21,11 +21,18 @@ type stackFrame struct {
 	sourceFile string
 }
 
+// element represents a single element in a stack trace.
+// Either a frame or a raw line can be stored. Not both at the same time.
+type element struct {
+	frame stackFrame
+	line  string
+}
+
 // stackTrace represents the parsed stack trace.
 type stackTrace struct {
 	exceptionType    string
 	exceptionMessage string
-	frames           []stackFrame
+	elements         []element
 }
 
 // Regex patterns for parsing stack traces.
