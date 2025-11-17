@@ -123,25 +123,6 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			return fmt.Errorf("failed to parse raw stack trace from %s: %w", p.cfg.StackTraceAttributeKey, err)
 		}
 
-		// Set parsed data into otel slice attributes
-		classes = attributes.PutEmptySlice(p.cfg.ClassesAttributeKey)
-		methods = attributes.PutEmptySlice(p.cfg.MethodsAttributeKey)
-		lines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
-		sourceFiles = attributes.PutEmptySlice(p.cfg.SourceFilesAttributeKey)
-
-		for _, element := range parsedStackTrace.elements {
-			// This is a raw line, skip for now...
-			if element.line != "" {
-				continue
-			}
-
-			frame := element.frame
-			classes.AppendEmpty().SetStr(frame.class)
-			methods.AppendEmpty().SetStr(frame.method)
-			lines.AppendEmpty().SetInt(int64(frame.line))
-			sourceFiles.AppendEmpty().SetStr(frame.sourceFile)
-		}
-
 		attributes.PutStr(p.cfg.ExceptionTypeAttributeKey, parsedStackTrace.exceptionType)
 		exceptionType, hasExceptionType = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
 
@@ -151,26 +132,6 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		attributes.PutStr(p.cfg.SymbolicatorParsingMethodAttributeKey, "processor_parsed")
 	} else {
 		attributes.PutStr(p.cfg.SymbolicatorParsingMethodAttributeKey, "structured_stacktrace_attributes")
-	}
-
-	// Ensure all slices are the same length
-	if classes.Len() != methods.Len() || classes.Len() != lines.Len() || classes.Len() != sourceFiles.Len() {
-		return fmt.Errorf("%w: (%s %d) (%s %d) (%s %d) (%s %d)", errMismatchedLength,
-			p.cfg.ClassesAttributeKey, classes.Len(),
-			p.cfg.MethodsAttributeKey, methods.Len(),
-			p.cfg.LinesAttributeKey, lines.Len(),
-			p.cfg.SourceFilesAttributeKey, sourceFiles.Len(),
-		)
-	}
-
-	if p.cfg.PreserveStackTrace {
-		classes.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalClassesAttributeKey))
-		methods.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalMethodsAttributeKey))
-		lines.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalLinesAttributeKey))
-
-		if originalStackTrace, ok := attributes.Get(p.cfg.StackTraceAttributeKey); ok {
-			attributes.PutStr(p.cfg.OriginalStackTraceKey, originalStackTrace.Str())
-		}
 	}
 
 	uuid := uuidValue.Str()
@@ -198,6 +159,26 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		mappedClasses = attributes.PutEmptySlice(p.cfg.ClassesAttributeKey)
 		mappedMethods = attributes.PutEmptySlice(p.cfg.MethodsAttributeKey)
 		mappedLines = attributes.PutEmptySlice(p.cfg.LinesAttributeKey)
+
+		// Ensure all slices are the same length
+		if classes.Len() != methods.Len() || classes.Len() != lines.Len() || classes.Len() != sourceFiles.Len() {
+			return fmt.Errorf("%w: (%s %d) (%s %d) (%s %d) (%s %d)", errMismatchedLength,
+				p.cfg.ClassesAttributeKey, classes.Len(),
+				p.cfg.MethodsAttributeKey, methods.Len(),
+				p.cfg.LinesAttributeKey, lines.Len(),
+				p.cfg.SourceFilesAttributeKey, sourceFiles.Len(),
+			)
+		}
+
+		if p.cfg.PreserveStackTrace {
+			classes.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalClassesAttributeKey))
+			methods.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalMethodsAttributeKey))
+			lines.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalLinesAttributeKey))
+
+			if originalStackTrace, ok := attributes.Get(p.cfg.StackTraceAttributeKey); ok {
+				attributes.PutStr(p.cfg.OriginalStackTraceKey, originalStackTrace.Str())
+			}
+		}
 	}
 
 	for i := 0; i < iterCount; i++ {

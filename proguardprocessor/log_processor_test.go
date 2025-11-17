@@ -648,35 +648,7 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "java.lang.RuntimeException", exceptionType.Str())
 
-	// Verify that parsing succeeded and structured attributes were populated
-	classes, ok := attrs.Get("classes")
-	assert.True(t, ok)
-	assert.Equal(t, 3, classes.Slice().Len())
-	assert.Equal(t, "com.example.ObfuscatedClass", classes.Slice().At(0).Str())
-	assert.Equal(t, "com.example.AnotherClass", classes.Slice().At(1).Str())
-	assert.Equal(t, "com.example.ThirdClass", classes.Slice().At(2).Str())
-
-	methods, ok := attrs.Get("methods")
-	assert.True(t, ok)
-	assert.Equal(t, 3, methods.Slice().Len())
-	assert.Equal(t, "obfuscatedMethod", methods.Slice().At(0).Str())
-	assert.Equal(t, "anotherMethod", methods.Slice().At(1).Str())
-	assert.Equal(t, "thirdMethod", methods.Slice().At(2).Str())
-
-	lines, ok := attrs.Get("lines")
-	assert.True(t, ok)
-	assert.Equal(t, 3, lines.Slice().Len())
-	assert.Equal(t, int64(42), lines.Slice().At(0).Int())
-	assert.Equal(t, int64(-2), lines.Slice().At(1).Int()) // Native Method
-	assert.Equal(t, int64(-1), lines.Slice().At(2).Int()) // Unknown Source
-
-	sourceFiles, ok := attrs.Get("source_files")
-	assert.True(t, ok)
-	assert.Equal(t, 3, sourceFiles.Slice().Len())
-	assert.Equal(t, "SourceFile", sourceFiles.Slice().At(0).Str())
-	assert.Equal(t, "Native Method", sourceFiles.Slice().At(1).Str())
-	assert.Equal(t, "Unknown Source", sourceFiles.Slice().At(2).Str())
-
+	// Verify that parsing succeeded
 	exceptionMessage, ok := attrs.Get("exception_message")
 	assert.True(t, ok)
 	assert.Equal(t, "Test exception", exceptionMessage.Str())
