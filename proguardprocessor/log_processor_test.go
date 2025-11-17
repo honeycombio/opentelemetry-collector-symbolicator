@@ -603,6 +603,9 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 		MethodsAttributeKey:                   "methods",
 		LinesAttributeKey:                     "lines",
 		SourceFilesAttributeKey:               "source_files",
+		OriginalClassesAttributeKey:           "original_classes",
+		OriginalMethodsAttributeKey:           "original_methods",
+		OriginalLinesAttributeKey:             "original_lines",
 		ExceptionTypeAttributeKey:             "exception_type",
 		ExceptionMessageAttributeKey:          "exception_message",
 		ProguardUUIDAttributeKey:              "uuid",
@@ -637,6 +640,7 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 	rawStackTrace := `java.lang.RuntimeException: Test exception
 	at com.example.ObfuscatedClass.obfuscatedMethod(SourceFile:42)
 	at com.example.AnotherClass.anotherMethod(Native Method)
+	Caused by: java.lang.NullPointerException
 	at com.example.ThirdClass.thirdMethod(Unknown Source)`
 	attrs.PutStr("stack_trace", rawStackTrace)
 
@@ -647,35 +651,7 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "java.lang.RuntimeException", exceptionType.Str())
 
-	// Verify that parsing succeeded and structured attributes were populated
-	classes, ok := attrs.Get("classes")
-	assert.True(t, ok)
-	assert.Equal(t, 3, classes.Slice().Len())
-	assert.Equal(t, "com.example.ObfuscatedClass", classes.Slice().At(0).Str())
-	assert.Equal(t, "com.example.AnotherClass", classes.Slice().At(1).Str())
-	assert.Equal(t, "com.example.ThirdClass", classes.Slice().At(2).Str())
-
-	methods, ok := attrs.Get("methods")
-	assert.True(t, ok)
-	assert.Equal(t, 3, methods.Slice().Len())
-	assert.Equal(t, "obfuscatedMethod", methods.Slice().At(0).Str())
-	assert.Equal(t, "anotherMethod", methods.Slice().At(1).Str())
-	assert.Equal(t, "thirdMethod", methods.Slice().At(2).Str())
-
-	lines, ok := attrs.Get("lines")
-	assert.True(t, ok)
-	assert.Equal(t, 3, lines.Slice().Len())
-	assert.Equal(t, int64(42), lines.Slice().At(0).Int())
-	assert.Equal(t, int64(-2), lines.Slice().At(1).Int()) // Native Method
-	assert.Equal(t, int64(-1), lines.Slice().At(2).Int()) // Unknown Source
-
-	sourceFiles, ok := attrs.Get("source_files")
-	assert.True(t, ok)
-	assert.Equal(t, 3, sourceFiles.Slice().Len())
-	assert.Equal(t, "SourceFile", sourceFiles.Slice().At(0).Str())
-	assert.Equal(t, "Native Method", sourceFiles.Slice().At(1).Str())
-	assert.Equal(t, "Unknown Source", sourceFiles.Slice().At(2).Str())
-
+	// Verify that parsing succeeded
 	exceptionMessage, ok := attrs.Get("exception_message")
 	assert.True(t, ok)
 	assert.Equal(t, "Test exception", exceptionMessage.Str())
@@ -685,17 +661,147 @@ func TestProcessLogRecord_FallbackToRawStackTraceParsing(t *testing.T) {
 	assert.True(t, ok)
 	assert.False(t, failed.Bool())
 
+	// Verify that structured stack trace attributes were not populated
+	_, ok = attrs.Get("classes")
+	assert.False(t, ok)
+	_, ok = attrs.Get("methods")
+	assert.False(t, ok)
+	_, ok = attrs.Get("lines")
+	assert.False(t, ok)
+	_, ok = attrs.Get("source_files")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_classes")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_methods")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_lines")
+	assert.False(t, ok)
+
 	// Verify output stack trace was generated with original (unparsed) values
 	stackTrace, ok := attrs.Get("stack_trace")
 	assert.True(t, ok)
 	assert.Contains(t, stackTrace.Str(), "java.lang.RuntimeException: Test exception")
 	assert.Contains(t, stackTrace.Str(), "at com.example.ObfuscatedClass.obfuscatedMethod(SourceFile:42)")
 	assert.Contains(t, stackTrace.Str(), "at com.example.AnotherClass.anotherMethod(Native Method)")
+	assert.Contains(t, stackTrace.Str(), "Caused by: java.lang.NullPointerException")
 	assert.Contains(t, stackTrace.Str(), "at com.example.ThirdClass.thirdMethod(Unknown Source)")
 
 	parsingMethod, ok := attrs.Get("parsing_method")
 	assert.True(t, ok)
 	assert.Equal(t, "processor_parsed", parsingMethod.Str())
+}
+
+func TestProcessLogRecord_ParsedRouteWithSymbolication(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{
+		ClassesAttributeKey:                   "classes",
+		MethodsAttributeKey:                   "methods",
+		LinesAttributeKey:                     "lines",
+		SourceFilesAttributeKey:               "source_files",
+		OriginalClassesAttributeKey:           "original_classes",
+		OriginalMethodsAttributeKey:           "original_methods",
+		OriginalLinesAttributeKey:             "original_lines",
+		ExceptionTypeAttributeKey:             "exception_type",
+		ExceptionMessageAttributeKey:          "exception_message",
+		ProguardUUIDAttributeKey:              "uuid",
+		StackTraceAttributeKey:                "stack_trace",
+		SymbolicatorFailureAttributeKey:       "symbolication_failed",
+		SymbolicatorParsingMethodAttributeKey: "parsing_method",
+	}
+
+	settings := processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}
+
+	store := &mockLogProcessorStore{}
+	// Return actual mapped frames
+	symbolicator := &mockLogProcessorSymbolicator{
+		frames: []*mappedStackFrame{
+			{
+				ClassName:  "com.example.RealClass",
+				MethodName: "realMethod",
+				SourceFile: "RealClass.java",
+				LineNumber: 100,
+			},
+		},
+		err: nil,
+	}
+	tb, attributes := createMockTelemetry(t)
+
+	processor, _ := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
+
+	lr := plog.NewLogRecord()
+	attrs := lr.Attributes()
+
+	resourceAttrs := pcommon.NewMap()
+	resourceAttrs.PutStr("uuid", "test-uuid-123")
+
+	// Stack trace with obfuscated frames and "Caused by" line
+	rawStackTrace := `java.lang.RuntimeException: Top level exception
+	at com.example.a.b(SourceFile:10)
+	at com.example.c.d(SourceFile:20)
+Caused by: java.lang.NullPointerException
+	at com.example.e.f(SourceFile:30)
+	... 5 more`
+	attrs.PutStr("stack_trace", rawStackTrace)
+
+	processor.processLogRecord(context.Background(), lr, resourceAttrs)
+
+	// Verify exception type and message were set
+	exceptionType, ok := attrs.Get("exception_type")
+	assert.True(t, ok)
+	assert.Equal(t, "java.lang.RuntimeException", exceptionType.Str())
+
+	exceptionMessage, ok := attrs.Get("exception_message")
+	assert.True(t, ok)
+	assert.Equal(t, "Top level exception", exceptionMessage.Str())
+
+	// Verify output stack trace has symbolicated frames AND preserves raw lines
+	stackTrace, ok := attrs.Get("stack_trace")
+	assert.True(t, ok)
+
+	// Should have the exception header
+	assert.Contains(t, stackTrace.Str(), "java.lang.RuntimeException: Top level exception")
+
+	// Should have symbolicated frames (not the obfuscated ones)
+	assert.Contains(t, stackTrace.Str(), "at com.example.RealClass.realMethod(RealClass.java:100)")
+
+	// Should NOT contain obfuscated frames since they were symbolicated
+	assert.NotContains(t, stackTrace.Str(), "at com.example.a.b(SourceFile:10)")
+
+	// Should preserve "Caused by" and "... 5 more" lines
+	assert.Contains(t, stackTrace.Str(), "Caused by: java.lang.NullPointerException")
+	assert.Contains(t, stackTrace.Str(), "... 5 more")
+
+	// Verify symbolication succeeded
+	failed, ok := attrs.Get("symbolication_failed")
+	assert.True(t, ok)
+	assert.False(t, failed.Bool())
+
+	// Verify that structured stack trace attributes were not populated
+	_, ok = attrs.Get("classes")
+	assert.False(t, ok)
+	_, ok = attrs.Get("methods")
+	assert.False(t, ok)
+	_, ok = attrs.Get("lines")
+	assert.False(t, ok)
+	_, ok = attrs.Get("source_files")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_classes")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_methods")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_lines")
+	assert.False(t, ok)
+
+	parsingMethod, ok := attrs.Get("parsing_method")
+	assert.True(t, ok)
+	assert.Equal(t, "processor_parsed", parsingMethod.Str())
+
+	// Verify symbolicator was called 3 times (once for each parseable frame)
+	assert.Equal(t, 3, symbolicator.callCount)
 }
 
 func TestProcessLogRecord_MissingBothStructuredAndRawStackTrace(t *testing.T) {

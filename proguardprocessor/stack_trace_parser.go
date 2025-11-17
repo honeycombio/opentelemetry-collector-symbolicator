@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	errEmptyStackTrace = errors.New("stack trace is empty")
+	errEmptyStackTrace   = errors.New("stack trace is empty")
 	errInvalidStackTrace = errors.New("invalid stack trace format")
-	errNoFramesParsed  = errors.New("no valid stack frames found in stack trace")
+	errNoFramesParsed    = errors.New("no valid stack frames found in stack trace")
 )
 
 // stackFrame represents a single frame in a stack trace.
@@ -21,11 +21,18 @@ type stackFrame struct {
 	sourceFile string
 }
 
+// element represents a single element in a stack trace.
+// Either a frame or a raw line can be stored. Not both at the same time.
+type element struct {
+	frame *stackFrame
+	line  string
+}
+
 // stackTrace represents the parsed stack trace.
 type stackTrace struct {
 	exceptionType    string
 	exceptionMessage string
-	frames           []stackFrame
+	elements         []element
 }
 
 // Regex patterns for parsing stack traces.
@@ -73,7 +80,7 @@ func parseStackTrace(stackTraceStr string) (*stackTrace, error) {
 	}
 
 	result := &stackTrace{
-		frames: make([]stackFrame, 0),
+		elements: make([]element, 0),
 	}
 
 	// Parse the first line to extract exception type and message
@@ -95,20 +102,18 @@ func parseStackTrace(stackTraceStr string) (*stackTrace, error) {
 			continue
 		}
 
-		// Skip "Caused by:" lines and similar
-		if strings.Contains(line, "Caused by:") || strings.Contains(line, "Suppressed:") {
-			// We could extend this to handle caused-by chains in the future
-			break
-		}
-
+		// Try to parse the line as a stack frame, adding as a frame if successful,
+		// if not, add the raw line to preserve it
 		frame := parseStackFrame(line)
 		if frame != nil {
-			result.frames = append(result.frames, *frame)
+			result.elements = append(result.elements, element{frame: frame})
+		} else {
+			result.elements = append(result.elements, element{line: line})
 		}
 	}
 
 	// If we didn't parse any frames, return an error
-	if len(result.frames) == 0 {
+	if len(result.elements) == 0 {
 		return nil, errNoFramesParsed
 	}
 
