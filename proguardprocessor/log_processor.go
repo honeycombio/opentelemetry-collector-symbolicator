@@ -204,19 +204,26 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		var class, method, sourceFile string
 		var line int64
 
-		// Preserve raw lines that couldn't be parsed as frames
+		// Get frame data based on route
 		if parsedStackTrace != nil {
 			element := parsedStackTrace.elements[i]
+			// Preserve raw lines that couldn't be parsed as frames
 			if element.line != "" {
 				stack = append(stack, element.line)
 				continue
 			}
+			// Extract from parsed frame
+			class = element.frame.class
+			method = element.frame.method
+			line = int64(element.frame.line)
+			sourceFile = element.frame.sourceFile
+		} else {
+			// Extract from structured attributes
+			class = classes.At(i).Str()
+			method = methods.At(i).Str()
+			line = lines.At(i).Int()
+			sourceFile = sourceFiles.At(i).Str()
 		}
-
-		line = lines.At(i).Int()
-		class = classes.At(i).Str()
-		method = methods.At(i).Str()
-		sourceFile = sourceFiles.At(i).Str()
 
 		// Line numbers set to -2 and -1 are special values indicating a native method and unknown source respectively, per the Android docs.
 		if line < -2 || line > math.MaxUint32 {
