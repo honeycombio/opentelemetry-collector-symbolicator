@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	errEmptyStackTrace = errors.New("stack trace is empty")
+	errEmptyStackTrace   = errors.New("stack trace is empty")
 	errInvalidStackTrace = errors.New("invalid stack trace format")
-	errNoFramesParsed  = errors.New("no valid stack frames found in stack trace")
+	errNoFramesParsed    = errors.New("no valid stack frames found in stack trace")
 )
 
 // stackFrame represents a single frame in a stack trace.
