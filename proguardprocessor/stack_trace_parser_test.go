@@ -13,9 +13,7 @@ func TestParseStackTrace(t *testing.T) {
 		input            string
 		expectedType     string
 		expectedMessage  string
-		expectedFrames   int
-		expectedFrame0   *stackFrame
-		expectedFrame1   *stackFrame
+		expectedElements []element
 		expectError      error
 	}{
 		{
@@ -25,18 +23,9 @@ func TestParseStackTrace(t *testing.T) {
 	at com.example.AnotherClass.anotherMethod(AnotherClass.java:456)`,
 			expectedType:    "java.lang.RuntimeException",
 			expectedMessage: "Something went wrong",
-			expectedFrames:  2,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "myMethod",
-				sourceFile: "MyClass.java",
-				line:       123,
-			},
-			expectedFrame1: &stackFrame{
-				class:      "com.example.AnotherClass",
-				method:     "anotherMethod",
-				sourceFile: "AnotherClass.java",
-				line:       456,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "myMethod", sourceFile: "MyClass.java", line: 123}},
+				{frame: stackFrame{class: "com.example.AnotherClass", method: "anotherMethod", sourceFile: "AnotherClass.java", line: 456}},
 			},
 		},
 		{
@@ -47,18 +36,10 @@ func TestParseStackTrace(t *testing.T) {
 	at com.example.MyClass.method2(MyClass.java:200)`,
 			expectedType:    "java.lang.NullPointerException",
 			expectedMessage: "Null value",
-			expectedFrames:  3,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "method1",
-				sourceFile: "MyClass.java",
-				line:       100,
-			},
-			expectedFrame1: &stackFrame{
-				class:      "com.example.NativeClass",
-				method:     "nativeMethod",
-				sourceFile: "Native Method",
-				line:       -2,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "method1", sourceFile: "MyClass.java", line: 100}},
+				{frame: stackFrame{class: "com.example.NativeClass", method: "nativeMethod", sourceFile: "Native Method", line: -2}},
+				{frame: stackFrame{class: "com.example.MyClass", method: "method2", sourceFile: "MyClass.java", line: 200}},
 			},
 		},
 		{
@@ -68,18 +49,9 @@ func TestParseStackTrace(t *testing.T) {
 	at com.example.UnknownClass.unknownMethod(Unknown Source)`,
 			expectedType:    "java.io.IOException",
 			expectedMessage: "IO error",
-			expectedFrames:  2,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "method1",
-				sourceFile: "MyClass.java",
-				line:       50,
-			},
-			expectedFrame1: &stackFrame{
-				class:      "com.example.UnknownClass",
-				method:     "unknownMethod",
-				sourceFile: "Unknown Source",
-				line:       -1,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "method1", sourceFile: "MyClass.java", line: 50}},
+				{frame: stackFrame{class: "com.example.UnknownClass", method: "unknownMethod", sourceFile: "Unknown Source", line: -1}},
 			},
 		},
 		{
@@ -89,18 +61,9 @@ func TestParseStackTrace(t *testing.T) {
 	at com.example.AnotherClass.method(AnotherClass.java:100)`,
 			expectedType:    "java.lang.Exception",
 			expectedMessage: "Test",
-			expectedFrames:  2,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "method",
-				sourceFile: "MyClass.java",
-				line:       -1,
-			},
-			expectedFrame1: &stackFrame{
-				class:      "com.example.AnotherClass",
-				method:     "method",
-				sourceFile: "AnotherClass.java",
-				line:       100,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "method", sourceFile: "MyClass.java", line: -1}},
+				{frame: stackFrame{class: "com.example.AnotherClass", method: "method", sourceFile: "AnotherClass.java", line: 100}},
 			},
 		},
 		{
@@ -110,18 +73,9 @@ func TestParseStackTrace(t *testing.T) {
 	at com.example.AnotherClass.method(AnotherClass.java:-2)`,
 			expectedType:    "java.lang.RuntimeException",
 			expectedMessage: "Error",
-			expectedFrames:  2,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "method",
-				sourceFile: "MyClass.java",
-				line:       -1,
-			},
-			expectedFrame1: &stackFrame{
-				class:      "com.example.AnotherClass",
-				method:     "method",
-				sourceFile: "AnotherClass.java",
-				line:       -2,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "method", sourceFile: "MyClass.java", line: -1}},
+				{frame: stackFrame{class: "com.example.AnotherClass", method: "method", sourceFile: "AnotherClass.java", line: -2}},
 			},
 		},
 		{
@@ -131,18 +85,9 @@ func TestParseStackTrace(t *testing.T) {
 	at x.y.z(SourceFile:20)`,
 			expectedType:    "java.lang.RuntimeException",
 			expectedMessage: "Error",
-			expectedFrames:  2,
-			expectedFrame0: &stackFrame{
-				class:      "a.b.c",
-				method:     "d",
-				sourceFile: "SourceFile",
-				line:       10,
-			},
-			expectedFrame1: &stackFrame{
-				class:      "x.y",
-				method:     "z",
-				sourceFile: "SourceFile",
-				line:       20,
+			expectedElements: []element{
+				{frame: stackFrame{class: "a.b.c", method: "d", sourceFile: "SourceFile", line: 10}},
+				{frame: stackFrame{class: "x.y", method: "z", sourceFile: "SourceFile", line: 20}},
 			},
 		},
 		{
@@ -151,28 +96,22 @@ func TestParseStackTrace(t *testing.T) {
 	at com.example.OuterClass$InnerClass.method(OuterClass.java:100)`,
 			expectedType:    "java.lang.IllegalStateException",
 			expectedMessage: "Bad state",
-			expectedFrames:  1,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.OuterClass$InnerClass",
-				method:     "method",
-				sourceFile: "OuterClass.java",
-				line:       100,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.OuterClass$InnerClass", method: "method", sourceFile: "OuterClass.java", line: 100}},
 			},
 		},
 		{
-			name: "Stack trace with Caused by (should stop parsing)",
+			name: "Stack trace with Caused by (should preserve all lines)",
 			input: `java.lang.RuntimeException: Error
 	at com.example.MyClass.method(MyClass.java:100)
 Caused by: java.lang.IOException: IO error
 	at com.example.IOClass.read(IOClass.java:50)`,
 			expectedType:    "java.lang.RuntimeException",
 			expectedMessage: "Error",
-			expectedFrames:  1,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "method",
-				sourceFile: "MyClass.java",
-				line:       100,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "method", sourceFile: "MyClass.java", line: 100}},
+				{line: "Caused by: java.lang.IOException: IO error"},
+				{frame: stackFrame{class: "com.example.IOClass", method: "read", sourceFile: "IOClass.java", line: 50}},
 			},
 		},
 		{
@@ -183,18 +122,9 @@ Caused by: java.lang.IOException: IO error
 	at com.example.AnotherClass.method(AnotherClass.java:200)`,
 			expectedType:    "java.lang.RuntimeException",
 			expectedMessage: "Error",
-			expectedFrames:  2,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "method",
-				sourceFile: "MyClass.java",
-				line:       100,
-			},
-			expectedFrame1: &stackFrame{
-				class:      "com.example.AnotherClass",
-				method:     "method",
-				sourceFile: "AnotherClass.java",
-				line:       200,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "method", sourceFile: "MyClass.java", line: 100}},
+				{frame: stackFrame{class: "com.example.AnotherClass", method: "method", sourceFile: "AnotherClass.java", line: 200}},
 			},
 		},
 		{
@@ -203,12 +133,8 @@ Caused by: java.lang.IOException: IO error
 	at com.example.MyClass.method(MyClass.java:100)`,
 			expectedType:    "java.lang.RuntimeException",
 			expectedMessage: "",
-			expectedFrames:  1,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "method",
-				sourceFile: "MyClass.java",
-				line:       100,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "method", sourceFile: "MyClass.java", line: 100}},
 			},
 		},
 		{
@@ -217,12 +143,8 @@ Caused by: java.lang.IOException: IO error
 	at com.example.MyClass.method(MyClass.java:100)`,
 			expectedType:    "foo",
 			expectedMessage: "bar: baz",
-			expectedFrames:  1,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "method",
-				sourceFile: "MyClass.java",
-				line:       100,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "method", sourceFile: "MyClass.java", line: 100}},
 			},
 		},
 		{
@@ -231,12 +153,8 @@ Caused by: java.lang.IOException: IO error
 	at com.example.MyClass.method(MyClass.java:100)`,
 			expectedType:    "foo.bar",
 			expectedMessage: "baz",
-			expectedFrames:  1,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "method",
-				sourceFile: "MyClass.java",
-				line:       100,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "method", sourceFile: "MyClass.java", line: 100}},
 			},
 		},
 		{
@@ -245,12 +163,8 @@ Caused by: java.lang.IOException: IO error
 	at com.example.MyClass.method(MyClass.java:100)`,
 			expectedType:    "Foo",
 			expectedMessage: "bar baz",
-			expectedFrames:  1,
-			expectedFrame0: &stackFrame{
-				class:      "com.example.MyClass",
-				method:     "method",
-				sourceFile: "MyClass.java",
-				line:       100,
+			expectedElements: []element{
+				{frame: stackFrame{class: "com.example.MyClass", method: "method", sourceFile: "MyClass.java", line: 100}},
 			},
 		},
 		{
@@ -289,14 +203,10 @@ Caused by: java.lang.IOException: IO error
 			require.NotNil(t, result)
 			assert.Equal(t, tt.expectedType, result.exceptionType)
 			assert.Equal(t, tt.expectedMessage, result.exceptionMessage)
-			assert.Len(t, result.frames, tt.expectedFrames)
 
-			if tt.expectedFrame0 != nil && len(result.frames) > 0 {
-				assert.Equal(t, *tt.expectedFrame0, result.frames[0])
-			}
-
-			if tt.expectedFrame1 != nil && len(result.frames) > 1 {
-				assert.Equal(t, *tt.expectedFrame1, result.frames[1])
+			// Check expected elements if provided
+			if tt.expectedElements != nil {
+				assert.Equal(t, tt.expectedElements, result.elements)
 			}
 		})
 	}
