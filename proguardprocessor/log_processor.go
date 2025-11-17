@@ -95,22 +95,22 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	}
 
 	var classes, methods, lines, sourceFiles pcommon.Slice
-	var classesOk, methodsOk, linesOk, sourceFilesOk bool
+	var hasClasses, hasMethods, hasLines, hasSourceFiles bool
 
 	var exceptionType, hasExceptionType = attributes.Get(p.cfg.ExceptionTypeAttributeKey)
 	var exceptionMessage, hasExceptionMessage = attributes.Get(p.cfg.ExceptionMessageAttributeKey)
 
 	// Attempt to get structured stack trace attributes first
-	classes, classesOk = getSlice(p.cfg.ClassesAttributeKey, attributes)
-	methods, methodsOk = getSlice(p.cfg.MethodsAttributeKey, attributes)
-	lines, linesOk = getSlice(p.cfg.LinesAttributeKey, attributes)
-	sourceFiles, sourceFilesOk = getSlice(p.cfg.SourceFilesAttributeKey, attributes)
+	classes, hasClasses = getSlice(p.cfg.ClassesAttributeKey, attributes)
+	methods, hasMethods = getSlice(p.cfg.MethodsAttributeKey, attributes)
+	lines, hasLines = getSlice(p.cfg.LinesAttributeKey, attributes)
+	sourceFiles, hasSourceFiles = getSlice(p.cfg.SourceFilesAttributeKey, attributes)
 	rawStackTrace, hasRawStackTrace := attributes.Get(p.cfg.StackTraceAttributeKey)
 
 	// If any of the structured attributes are missing, attempt to parse the raw stack trace
 	var parsedStackTrace *stackTrace
 	var err error
-	if !classesOk || !methodsOk || !linesOk || !sourceFilesOk {
+	if !hasClasses || !hasMethods || !hasLines || !hasSourceFiles {
 		if !hasRawStackTrace {
 			return fmt.Errorf("%w: missing structured stack trace attributes and %s attribute is missing",
 				errMissingAttribute,
