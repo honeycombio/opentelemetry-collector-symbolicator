@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- refactor: prevent running sourcemap processor on traces/logs without exception attributes (#126) | @jairo-mendoza
 - feat: Add log support to the source map processor (#123) | @jairo-mendoza
 
 ## v0.0.13 [beta] - 2025/11/10

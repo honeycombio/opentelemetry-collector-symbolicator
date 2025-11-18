@@ -105,6 +105,40 @@ func TestProcessTraces(t *testing.T) {
 		AssertOutput            func(td ptrace.Traces)
 	}{
 		{
+			Name: "skip processing for non-exception trace without StackTraceAttributeKey",
+			ApplyAttributes: func(span ptrace.Span) {
+				// Regular trace without any exception attributes
+				span.Attributes().PutStr("http.method", "GET")
+				span.Attributes().PutStr("http.url", "https://example.com/api/users")
+				span.Attributes().PutInt("http.status_code", 200)
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Should NOT call symbolicate at all
+				assert.Empty(t, s.SymbolicatedLines)
+			},
+			AssertOutput: func(td ptrace.Traces) {
+				rs := td.ResourceSpans().At(0)
+				ils := rs.ScopeSpans().At(0)
+				span := ils.Spans().At(0)
+
+				// Verify processor type and version attributes are NOT set
+				_, ok := span.Attributes().Get("honeycomb.processor_type")
+				assert.False(t, ok)
+
+				_, ok = span.Attributes().Get("honeycomb.processor_version")
+				assert.False(t, ok)
+
+				// Verify symbolicator failure attributes are NOT set
+				_, ok = span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+				assert.False(t, ok)
+
+				// Verify original attributes are preserved
+				attr, ok := span.Attributes().Get("http.method")
+				assert.True(t, ok)
+				assert.Equal(t, "GET", attr.Str())
+			},
+		},
+		{
 			Name: "symbolicated stacktrace attribute provided",
 			ApplyAttributes: func(span ptrace.Span) {
 				span.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().AppendEmpty().SetInt(42)
@@ -113,6 +147,7 @@ func TestProcessTraces(t *testing.T) {
 				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("url")
 				span.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
 				span.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("Test error!")
+				span.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: Test error!\n    at function (url:42:42)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -133,7 +168,7 @@ func TestProcessTraces(t *testing.T) {
 				assert.True(t, ok)
 				assert.Equal(t, processorVersion, processorVersionAttr.Str())
 
-				attr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
+				attr, ok := span.Attributes().Get(cfg.StackTraceAttributeKey)
 				assert.True(t, ok)
 				// testSymbolicator now maps: line*2, col+10, function -> mapped_function_line_col, url -> original_url
 				assert.Equal(t, "Error: Test error!\n    at mapped_function_42_42(original_url:84:52)", attr.Str())
@@ -169,7 +204,7 @@ func TestProcessTraces(t *testing.T) {
 				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
 				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
 				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
-				span.Attributes().PutEmpty(cfg.OutputStackTraceKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
+				span.Attributes().PutEmpty(cfg.StackTraceAttributeKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -211,7 +246,7 @@ func TestProcessTraces(t *testing.T) {
 				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
 				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
 				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
-				span.Attributes().PutEmpty(cfg.OutputStackTraceKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
+				span.Attributes().PutEmpty(cfg.StackTraceAttributeKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -310,7 +345,7 @@ func TestProcessTraces(t *testing.T) {
 				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
 				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
 				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
-				span.Attributes().PutEmpty(cfg.OutputStackTraceKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:5000000000)\n    at func3 (url3:6:3)")
+				span.Attributes().PutEmpty(cfg.StackTraceAttributeKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:5000000000)\n    at func3 (url3:6:3)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -393,6 +428,40 @@ func TestProcessLogs(t *testing.T) {
 		AssertOutput            func(logs plog.Logs)
 	}{
 		{
+			Name: "skip processing for non-exception log without StackTraceAttributeKey",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				// Regular log without any exception attributes
+				logRecord.Attributes().PutStr("level", "info")
+				logRecord.Attributes().PutStr("message", "User logged in successfully")
+				logRecord.Attributes().PutStr("user.id", "12345")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Should NOT call symbolicate at all
+				assert.Empty(t, s.SymbolicatedLines)
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				// Verify processor type and version attributes are NOT set
+				_, ok := logRecord.Attributes().Get("honeycomb.processor_type")
+				assert.False(t, ok)
+
+				_, ok = logRecord.Attributes().Get("honeycomb.processor_version")
+				assert.False(t, ok)
+
+				// Verify symbolicator failure attributes are NOT set
+				_, ok = logRecord.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+				assert.False(t, ok)
+
+				// Verify original attributes are preserved
+				attr, ok := logRecord.Attributes().Get("message")
+				assert.True(t, ok)
+				assert.Equal(t, "User logged in successfully", attr.Str())
+			},
+		},
+		{
 			Name: "symbolicated stacktrace attribute provided",
 			ApplyAttributes: func(logRecord plog.LogRecord) {
 				logRecord.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().AppendEmpty().SetInt(42)
@@ -401,6 +470,7 @@ func TestProcessLogs(t *testing.T) {
 				logRecord.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("url")
 				logRecord.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
 				logRecord.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("Test error!")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: Test error!\n    at function (url:42:42)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -421,7 +491,7 @@ func TestProcessLogs(t *testing.T) {
 				assert.True(t, ok)
 				assert.Equal(t, processorVersion, processorVersionAttr.Str())
 
-				attr, ok := logRecord.Attributes().Get(cfg.OutputStackTraceKey)
+				attr, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
 				assert.True(t, ok)
 				assert.Equal(t, "Error: Test error!\n    at mapped_function_42_42(original_url:84:52)", attr.Str())
 
@@ -439,6 +509,7 @@ func TestProcessLogs(t *testing.T) {
 				logRecord.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
 				logRecord.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
 				logRecord.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("test error")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -480,6 +551,7 @@ func TestProcessLogs(t *testing.T) {
 				logRecord.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
 				logRecord.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
 				logRecord.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("test error")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:5000000000)\n    at func3 (url3:6:3)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -575,6 +647,18 @@ func TestDeduplication(t *testing.T) {
 		})
 		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
 		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span.Attributes().PutStr(cfg.StackTraceAttributeKey,
+			"Error: test error\n"+
+				"    at f1 (app.js:100:1)\n"+
+				"    at f2 (app.js:200:2)\n"+
+				"    at f3 (app.js:300:3)\n"+
+				"    at f4 (app.js:400:4)\n"+
+				"    at f5 (app.js:500:5)\n"+
+				"    at f6 (app.js:600:6)\n"+
+				"    at f7 (app.js:700:7)\n"+
+				"    at f8 (app.js:800:8)\n"+
+				"    at f9 (app.js:900:9)\n"+
+				"    at f10 (app.js:1000:10)")
 
 		_, err := processor.processTraces(ctx, td)
 		assert.NoError(t, err)
@@ -608,6 +692,18 @@ func TestDeduplication(t *testing.T) {
 		})
 		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
 		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span.Attributes().PutStr(cfg.StackTraceAttributeKey,
+			"Error: test error\n"+
+				"    at f1 (app.js:100:1)\n"+
+				"    at f2 (app.js:200:2)\n"+
+				"    at f3 (app.js:300:3)\n"+
+				"    at f4 (app.js:400:4)\n"+
+				"    at f5 (vendor.js:500:5)\n"+
+				"    at f6 (vendor.js:600:6)\n"+
+				"    at f7 (vendor.js:700:7)\n"+
+				"    at f8 (utils.js:800:8)\n"+
+				"    at f9 (utils.js:900:9)\n"+
+				"    at f10 (utils.js:1000:10)")
 
 		_, err := processor.processTraces(ctx, td)
 		assert.NoError(t, err)
@@ -641,6 +737,11 @@ func TestDeduplication(t *testing.T) {
 		span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"app.js", "app.js", "app.js"})
 		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
 		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span.Attributes().PutStr(cfg.StackTraceAttributeKey,
+			"Error: test error\n"+
+				"    at onClick (app.js:100:5)\n"+
+				"    at render (app.js:200:15)\n"+
+				"    at init (app.js:300:25)")
 
 		_, err := processor.processTraces(ctx, td)
 		assert.NoError(t, err)
@@ -683,6 +784,10 @@ func TestDeduplication(t *testing.T) {
 		span1.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"app.js", "app.js"})
 		span1.Attributes().PutStr(cfg.StackTypeKey, "Error")
 		span1.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span1.Attributes().PutStr(cfg.StackTraceAttributeKey,
+			"Error: test error\n"+
+				"    at f1 (app.js:100:1)\n"+
+				"    at f2 (app.js:200:2)")
 
 		// Second span with buildUUID-2 (same resource, different span simulates different stacktrace)
 		span2 := ils.Spans().AppendEmpty()
@@ -692,6 +797,10 @@ func TestDeduplication(t *testing.T) {
 		span2.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"app.js", "app.js"})
 		span2.Attributes().PutStr(cfg.StackTypeKey, "Error")
 		span2.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span2.Attributes().PutStr(cfg.StackTraceAttributeKey,
+			"Error: test error\n"+
+				"    at f1 (app.js:100:1)\n"+
+				"    at f2 (app.js:200:2)")
 
 		_, err := processor.processTraces(ctx, td)
 		assert.NoError(t, err)
@@ -739,6 +848,18 @@ func TestDeduplication(t *testing.T) {
 		})
 		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
 		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span.Attributes().PutStr(cfg.StackTraceAttributeKey,
+			"Error: test error\n"+
+				"    at f1 (missing.js:100:1)\n"+
+				"    at f2 (missing.js:200:2)\n"+
+				"    at f3 (missing.js:300:3)\n"+
+				"    at f4 (missing.js:400:4)\n"+
+				"    at f5 (missing.js:500:5)\n"+
+				"    at f6 (missing.js:600:6)\n"+
+				"    at f7 (missing.js:700:7)\n"+
+				"    at f8 (missing.js:800:8)\n"+
+				"    at f9 (missing.js:900:9)\n"+
+				"    at f10 (missing.js:1000:10)")
 
 		_, processErr := errorProcessor.processTraces(ctx, td)
 		assert.NoError(t, processErr) // Processing should succeed even if symbolication fails
@@ -754,7 +875,7 @@ func TestDeduplication(t *testing.T) {
 		assert.True(t, attr.Bool())
 
 		// Verify the stacktrace indicates failure
-		stackAttr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
+		stackAttr, ok := span.Attributes().Get(cfg.StackTraceAttributeKey)
 		assert.True(t, ok)
 		assert.Contains(t, stackAttr.Str(), "failed to fetch source map")
 	})
@@ -794,6 +915,11 @@ func TestDeduplication(t *testing.T) {
 		span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"app.js", "app.js", "app.js"})
 		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
 		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span.Attributes().PutStr(cfg.StackTraceAttributeKey,
+			"Error: test error\n"+
+				"    at f1 (app.js:100:1)\n"+
+				"    at f2 (app.js:200:2)\n"+
+				"    at f3 (app.js:300:3)")
 
 		_, processErr := parseErrorProcessor.processTraces(ctx, td)
 		assert.NoError(t, processErr) // Processing should succeed even if symbolication fails
@@ -809,7 +935,7 @@ func TestDeduplication(t *testing.T) {
 		assert.True(t, attr.Bool())
 
 		// Verify the stacktrace indicates parse failure (not fetch failure)
-		stackAttr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
+		stackAttr, ok := span.Attributes().Get(cfg.StackTraceAttributeKey)
 		assert.True(t, ok)
 		assert.Contains(t, stackAttr.Str(), "failed to parse source map")
 	})

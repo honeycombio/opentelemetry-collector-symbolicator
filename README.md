@@ -67,7 +67,7 @@ The following configuration options can also be provided to change the attribute
 | `functions_attribute_key`                    | Which attribute should the functions of the stack trace be sourced from                           | `exception.structured_stacktrace.functions`          |
 | `lines_attribute_key`                        | Which attribute should the lines of the stack trace be sourced from                               | `exception.structured_stacktrace.lines`              |
 | `urls_attribute_key`                         | Which attribute should the urls of the stack trace be sourced from                                | `exception.structured_stacktrace.urls`               |
-| `output_stack_trace_key`                     | Which attribute should the symbolicated stack trace be populated into                             | `exception.stacktrace`                               |
+| `stack_trace_attribute_key`                  | Which attribute should the symbolicated stack trace be populated into                             | `exception.stacktrace`                               |
 | `stack_type_key`                             | Which attribute contains the exception type                                                       | `exception.type`                                     |
 | `stack_message_key`                          | Which attribute contains the exception message                                                    | `exception.message`                                  |
 | `preserve_stack_trace`                       | After the stack trace has been symbolicated should the original values be preserved as attributes | `true`                                               |

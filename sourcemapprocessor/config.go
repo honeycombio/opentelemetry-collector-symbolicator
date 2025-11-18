@@ -30,9 +30,9 @@ type Config struct {
 	// trace.
 	UrlsAttributeKey string `mapstructure:"urls_attribute_key"`
 
-	// OutputStackTraceKey is the attribute key that the symbolicated stack trace
+	// StackTraceAttributeKey is the attribute key that the symbolicated stack trace
 	// will be written to.
-	OutputStackTraceKey string `mapstructure:"output_stack_trace_key"`
+	StackTraceAttributeKey string `mapstructure:"stack_trace_attribute_key"`
 
 	// StackTypeKey is the attribute key that contains the type of the stack trace.
 	StackTypeKey string `mapstructure:"stack_type_key"`
