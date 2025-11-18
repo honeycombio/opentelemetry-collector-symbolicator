@@ -57,13 +57,11 @@ func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Sett
 func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Traces) (ptrace.Traces, error) {
 	sp.logger.Debug("Processing traces")
 
-	startTime := time.Now()
 	for i := 0; i < td.ResourceSpans().Len(); i++ {
 		rs := td.ResourceSpans().At(i)
 		sp.processResourceSpans(ctx, rs)
 	}
 
-	sp.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
 	return td, nil
 }
 
@@ -90,13 +88,11 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 func (sp *symbolicatorProcessor) processLogs(ctx context.Context, logs plog.Logs) (plog.Logs, error) {
 	sp.logger.Debug("Processing logs")
 
-	startTime := time.Now()
 	for i := 0; i < logs.ResourceLogs().Len(); i++ {
 		rl := logs.ResourceLogs().At(i)
 		sp.processResourceLogs(ctx, rl)
 	}
 
-	sp.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
 	return logs, nil
 }
 
@@ -126,6 +122,18 @@ func formatStackFrame(sf *mappedStackFrame) string {
 
 // processAttributes takes the attributes of a span and returns an error if symbolication failed.
 func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) error {
+	// Skip all processing if StackTraceAttributeKey is not present
+	if _, ok := attributes.Get(sp.cfg.StackTraceAttributeKey); !ok {
+		return nil
+	}
+
+	// Start timing symbolication only when we actually perform it
+	// End timing deferred to after processing is done
+	startTime := time.Now()
+	defer func() {
+		sp.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
+	}()
+
 	// Add processor type and version as attributes
 	attributes.PutStr("honeycomb.processor_type", typeStr.String())
 	attributes.PutStr("honeycomb.processor_version", processorVersion)
