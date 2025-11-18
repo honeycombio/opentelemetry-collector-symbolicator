@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- refactor: prevent running proguard processor on logs without exception attributes (#127) | @jairo-mendoza
 - feat: Preserve all stack lines in the proguard processor stack trace parser (#125) | @jairo-mendoza
 - feat: add parsing method attribute to the proguard processor (#124) | @jairo-mendoza
 - feat: Implement stack trace parser in the proguard processor (#118) | @jairo-mendoza

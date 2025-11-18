@@ -40,13 +40,11 @@ type proguardLogsProcessor struct {
 func (p *proguardLogsProcessor) ProcessLogs(ctx context.Context, logs plog.Logs) (plog.Logs, error) {
 	p.logger.Debug("Processing logs")
 
-	startTime := time.Now()
 	for i := 0; i < logs.ResourceLogs().Len(); i++ {
 		rl := logs.ResourceLogs().At(i)
 		p.processResourceLogs(ctx, rl)
 	}
 
-	p.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), p.attributes)
 	return logs, nil
 }
 
@@ -67,6 +65,18 @@ func (p *proguardLogsProcessor) processScopeLogs(ctx context.Context, sl plog.Sc
 
 func (p *proguardLogsProcessor) processLogRecord(ctx context.Context, lr plog.LogRecord, resourceAttrs pcommon.Map) {
 	attributes := lr.Attributes()
+
+	// Skip all processing if StackTraceAttributeKey is not present
+	if _, ok := attributes.Get(p.cfg.StackTraceAttributeKey); !ok {
+		return
+	}
+
+	// Start timing symbolication only when we actually perform it
+	// End timing deferred to after processing is done
+	startTime := time.Now()
+	defer func() {
+		p.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), p.attributes)
+	}()
 
 	// Add processor type and version as attributes
 	attributes.PutStr("honeycomb.processor_type", typeStr.String())
