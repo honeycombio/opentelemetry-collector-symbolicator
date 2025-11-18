@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- perf: enhance symbolication process with per stacktrace error caching | @clintonnkemdilim
+- refactor: move telemetry in dsym processor to only symbolicated logs (#128) | @jairo-mendoza
+- perf: enhance symbolication process with per stacktrace error caching (#119) | @clintonnkemdilim
 
 ## v0.0.8 [beta] - 2025/11/10
 

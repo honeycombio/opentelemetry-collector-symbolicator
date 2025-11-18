@@ -58,13 +58,11 @@ func newSymbolicatorProcessor(_ context.Context, cfg *Config, set processor.Sett
 func (sp *symbolicatorProcessor) processLogs(ctx context.Context, logs plog.Logs) (plog.Logs, error) {
 	sp.logger.Debug("Processing logs")
 
-	startTime := time.Now()
 	for i := 0; i < logs.ResourceLogs().Len(); i++ {
 		rl := logs.ResourceLogs().At(i)
 		sp.processResourceSpans(ctx, rl)
 	}
 
-	sp.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
 	return logs, nil
 }
 
@@ -107,6 +105,13 @@ func formatStackFrames(prefix, binaryName string, offset uint64, frames []*mappe
 }
 
 func (sp *symbolicatorProcessor) processStackTraceAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) {
+	// Start timing symbolication only when we actually perform it
+	// End timing deferred to after processing is done
+	startTime := time.Now()
+	defer func() {
+		sp.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
+	}()
+
 	// Add processor type and version as attributes
 	attributes.PutStr("honeycomb.processor_type", typeStr.String())
 	attributes.PutStr("honeycomb.processor_version", processorVersion)
@@ -264,6 +269,13 @@ type MetricKitCallStackFrame struct {
 }
 
 func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context, attributes pcommon.Map) {
+	// Start timing symbolication only when we actually perform it
+	// End timing deferred to after processing is done
+	startTime := time.Now()
+	defer func() {
+		sp.telemetryBuilder.ProcessorSymbolicationDuration.Record(ctx, time.Since(startTime).Seconds(), sp.attributes)
+	}()
+
 	// Add processor type and version as attributes
 	attributes.PutStr("honeycomb.processor_type", typeStr.String())
 	attributes.PutStr("honeycomb.processor_version", processorVersion)
