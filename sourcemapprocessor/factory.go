@@ -29,7 +29,7 @@ func createDefaultConfig() component.Config {
 		FunctionsAttributeKey:                  "exception.structured_stacktrace.functions",
 		LinesAttributeKey:                      "exception.structured_stacktrace.lines",
 		UrlsAttributeKey:                       "exception.structured_stacktrace.urls",
-		OutputStackTraceKey:                    "exception.stacktrace",
+		StackTraceAttributeKey:                 "exception.stacktrace",
 		StackTypeKey:                           "exception.type",
 		StackMessageKey:                        "exception.message",
 		PreserveStackTrace:                     true,

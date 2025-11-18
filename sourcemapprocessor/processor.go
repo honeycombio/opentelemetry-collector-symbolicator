@@ -186,7 +186,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		var origUrls = attributes.PutEmptySlice(sp.cfg.OriginalUrlsAttributeKey)
 		urls.CopyTo(origUrls)
 
-		var origStackTraceStr, _ = attributes.Get(sp.cfg.OutputStackTraceKey)
+		var origStackTraceStr, _ = attributes.Get(sp.cfg.StackTraceAttributeKey)
 		attributes.PutStr(sp.cfg.OriginalStackTraceKey, origStackTraceStr.Str())
 	}
 
@@ -262,7 +262,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	if symbolicationError != nil {
 		attributes.PutStr(sp.cfg.SymbolicatorFailureMessageAttributeKey, symbolicationError.Error())
 	}
-	attributes.PutStr(sp.cfg.OutputStackTraceKey, strings.Join(stack, "\n"))
+	attributes.PutStr(sp.cfg.StackTraceAttributeKey, strings.Join(stack, "\n"))
 
 	if hasSymbolicationFailed {
 		return errPartialSymbolication

@@ -133,7 +133,7 @@ func TestProcessTraces(t *testing.T) {
 				assert.True(t, ok)
 				assert.Equal(t, processorVersion, processorVersionAttr.Str())
 
-				attr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
+				attr, ok := span.Attributes().Get(cfg.StackTraceAttributeKey)
 				assert.True(t, ok)
 				// testSymbolicator now maps: line*2, col+10, function -> mapped_function_line_col, url -> original_url
 				assert.Equal(t, "Error: Test error!\n    at mapped_function_42_42(original_url:84:52)", attr.Str())
@@ -169,7 +169,7 @@ func TestProcessTraces(t *testing.T) {
 				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
 				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
 				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
-				span.Attributes().PutEmpty(cfg.OutputStackTraceKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
+				span.Attributes().PutEmpty(cfg.StackTraceAttributeKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -211,7 +211,7 @@ func TestProcessTraces(t *testing.T) {
 				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
 				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
 				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
-				span.Attributes().PutEmpty(cfg.OutputStackTraceKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
+				span.Attributes().PutEmpty(cfg.StackTraceAttributeKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -310,7 +310,7 @@ func TestProcessTraces(t *testing.T) {
 				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
 				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
 				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
-				span.Attributes().PutEmpty(cfg.OutputStackTraceKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:5000000000)\n    at func3 (url3:6:3)")
+				span.Attributes().PutEmpty(cfg.StackTraceAttributeKey).SetStr("Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:5000000000)\n    at func3 (url3:6:3)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
 				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
@@ -421,7 +421,7 @@ func TestProcessLogs(t *testing.T) {
 				assert.True(t, ok)
 				assert.Equal(t, processorVersion, processorVersionAttr.Str())
 
-				attr, ok := logRecord.Attributes().Get(cfg.OutputStackTraceKey)
+				attr, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
 				assert.True(t, ok)
 				assert.Equal(t, "Error: Test error!\n    at mapped_function_42_42(original_url:84:52)", attr.Str())
 
@@ -754,7 +754,7 @@ func TestDeduplication(t *testing.T) {
 		assert.True(t, attr.Bool())
 
 		// Verify the stacktrace indicates failure
-		stackAttr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
+		stackAttr, ok := span.Attributes().Get(cfg.StackTraceAttributeKey)
 		assert.True(t, ok)
 		assert.Contains(t, stackAttr.Str(), "failed to fetch source map")
 	})
@@ -809,7 +809,7 @@ func TestDeduplication(t *testing.T) {
 		assert.True(t, attr.Bool())
 
 		// Verify the stacktrace indicates parse failure (not fetch failure)
-		stackAttr, ok := span.Attributes().Get(cfg.OutputStackTraceKey)
+		stackAttr, ok := span.Attributes().Get(cfg.StackTraceAttributeKey)
 		assert.True(t, ok)
 		assert.Contains(t, stackAttr.Str(), "failed to parse source map")
 	})
