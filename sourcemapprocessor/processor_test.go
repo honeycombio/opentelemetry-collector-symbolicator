@@ -814,3 +814,131 @@ func TestDeduplication(t *testing.T) {
 		assert.Contains(t, stackAttr.Str(), "failed to parse source map")
 	})
 }
+
+// TestRawStackTraceParsing verifies that raw stack traces are correctly parsed and structured
+func TestRawStackTraceParsing(t *testing.T) {
+	ctx := context.Background()
+	cfg := createDefaultConfig().(*Config)
+	cfg.EnableRawStackTraceParsing = true
+	cfg.RawStackTraceAttributeKey = "raw_stacktrace"
+	s := &testSymbolicator{}
+
+	testTel := componenttest.NewTelemetry()
+	tb, err := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
+	assert.NoError(t, err)
+	defer tb.Shutdown()
+
+	attributes := attribute.NewSet(
+		attribute.String("processor_type", "symbolicator"),
+	)
+
+	processor := newSymbolicatorProcessor(ctx, cfg, processorhelper.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}, s, tb, attributes)
+
+	t.Run("raw stack trace is parsed into structured format", func(t *testing.T) {
+		s.clear()
+
+		// Chrome-style stack trace
+		rawStackTrace := `Error: Something went wrong
+    at myFunction (http://example.com/app.js:10:5)
+    at anotherFunction (http://example.com/app.js:20:15)
+    at <anonymous> (http://example.com/app.js:30:1)`
+
+		td := ptrace.NewTraces()
+		rs := td.ResourceSpans().AppendEmpty()
+		ss := rs.ScopeSpans().AppendEmpty()
+		span := ss.Spans().AppendEmpty()
+
+		// Add raw stack trace and error info
+		span.Attributes().PutStr(cfg.RawStackTraceAttributeKey, rawStackTrace)
+		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
+		span.Attributes().PutStr(cfg.StackMessageKey, "Something went wrong")
+
+		// Process the trace - should parse raw trace and populate structured attributes
+		otd, err := processor.processTraces(ctx, td)
+		assert.NoError(t, err)
+
+		// Verify structured attributes were populated
+		processedSpan := otd.ResourceSpans().At(0).ScopeSpans().At(0).Spans().At(0)
+
+		linesAttr, ok := processedSpan.Attributes().Get(cfg.LinesAttributeKey)
+		assert.True(t, ok)
+		assert.Equal(t, 3, linesAttr.Slice().Len())
+		assert.Equal(t, int64(10), linesAttr.Slice().At(0).Int())
+		assert.Equal(t, int64(20), linesAttr.Slice().At(1).Int())
+		assert.Equal(t, int64(30), linesAttr.Slice().At(2).Int())
+
+		columnsAttr, ok := processedSpan.Attributes().Get(cfg.ColumnsAttributeKey)
+		assert.True(t, ok)
+		assert.Equal(t, 3, columnsAttr.Slice().Len())
+		assert.Equal(t, int64(5), columnsAttr.Slice().At(0).Int())
+		assert.Equal(t, int64(15), columnsAttr.Slice().At(1).Int())
+		assert.Equal(t, int64(1), columnsAttr.Slice().At(2).Int())
+
+		functionsAttr, ok := processedSpan.Attributes().Get(cfg.FunctionsAttributeKey)
+		assert.True(t, ok)
+		assert.Equal(t, 3, functionsAttr.Slice().Len())
+		assert.Equal(t, "myFunction", functionsAttr.Slice().At(0).Str())
+		assert.Equal(t, "anotherFunction", functionsAttr.Slice().At(1).Str())
+
+		urlsAttr, ok := processedSpan.Attributes().Get(cfg.UrlsAttributeKey)
+		assert.True(t, ok)
+		assert.Equal(t, 3, urlsAttr.Slice().Len())
+		assert.Equal(t, "http://example.com/app.js", urlsAttr.Slice().At(0).Str())
+		assert.Equal(t, "http://example.com/app.js", urlsAttr.Slice().At(1).Str())
+		assert.Equal(t, "http://example.com/app.js", urlsAttr.Slice().At(2).Str())
+
+		// Verify symbolication was called with parsed frames
+		assert.Equal(t, 3, s.callCount)
+		assert.Equal(t, int64(10), s.SymbolicatedLines[0].Line)
+		assert.Equal(t, int64(5), s.SymbolicatedLines[0].Column)
+		assert.Equal(t, "myFunction", s.SymbolicatedLines[0].Function)
+	})
+
+	t.Run("raw stack trace parsing is skipped when disabled", func(t *testing.T) {
+		s.clear()
+		cfg.EnableRawStackTraceParsing = false
+
+		rawStackTrace := `Error: Something went wrong
+    at myFunction (http://example.com/app.js:10:5)`
+
+		td := ptrace.NewTraces()
+		rs := td.ResourceSpans().AppendEmpty()
+		ss := rs.ScopeSpans().AppendEmpty()
+		span := ss.Spans().AppendEmpty()
+
+		span.Attributes().PutStr(cfg.RawStackTraceAttributeKey, rawStackTrace)
+		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
+		span.Attributes().PutStr(cfg.StackMessageKey, "Something went wrong")
+
+		// Should fail because structured attributes are not present
+		_, err := processor.processTraces(ctx, td)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing attribute")
+	})
+
+	t.Run("raw stack trace parsing handles invalid traces gracefully", func(t *testing.T) {
+		s.clear()
+		cfg.EnableRawStackTraceParsing = true
+
+		// Invalid stack trace that won't parse
+		rawStackTrace := "This is not a valid stack trace"
+
+		td := ptrace.NewTraces()
+		rs := td.ResourceSpans().AppendEmpty()
+		ss := rs.ScopeSpans().AppendEmpty()
+		span := ss.Spans().AppendEmpty()
+
+		span.Attributes().PutStr(cfg.RawStackTraceAttributeKey, rawStackTrace)
+		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
+		span.Attributes().PutStr(cfg.StackMessageKey, "Test")
+
+		// Should fail because parsing failed and structured attributes are missing
+		_, err := processor.processTraces(ctx, td)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing attribute")
+	})
+}

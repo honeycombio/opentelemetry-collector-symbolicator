@@ -40,6 +40,13 @@ type Config struct {
 	// StackMessageKey is the attribute key that contains the message of the stack trace.
 	StackMessageKey string `mapstructure:"stack_message_key"`
 
+	// RawStackTraceAttributeKey is the attribute key that contains the raw, unstructured
+	// stack trace string. If provided, TraceKit will parse it into structured format.
+	RawStackTraceAttributeKey string `mapstructure:"raw_stack_trace_attribute_key"`
+
+	// EnableRawStackTraceParsing enables parsing of raw stack traces using TraceKit.
+	EnableRawStackTraceParsing bool `mapstructure:"enable_raw_stack_trace_parsing"`
+
 	// preserveStackTrace is a config option that determines whether to keep the
 	// original stack trace in the output.
 	PreserveStackTrace bool `mapstructure:"preserve_stack_trace"`

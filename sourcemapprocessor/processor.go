@@ -149,6 +149,23 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	var symbolicationError error
 	var lines, columns, functions, urls pcommon.Slice
 
+	// Check if raw stack trace parsing is enabled and a raw stack trace is present
+	if sp.cfg.EnableRawStackTraceParsing && sp.cfg.RawStackTraceAttributeKey != "" {
+		if rawStackTraceValue, hasRawTrace := attributes.Get(sp.cfg.RawStackTraceAttributeKey); hasRawTrace {
+			rawStackTrace := rawStackTraceValue.Str()
+			if rawStackTrace != "" {
+				// Parse the raw stack trace using TraceKit
+				err := sp.parseRawStackTrace(attributes, rawStackTrace)
+				if err != nil {
+					sp.logger.Debug("Error parsing raw stack trace", zap.Error(err))
+					// Continue to try structured format if parsing fails
+				} else {
+					// Successfully parsed raw trace, continue with normal processing
+				}
+			}
+		}
+	}
+
 	if columns, ok = getSlice(sp.cfg.ColumnsAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.ColumnsAttributeKey)
 	}
@@ -269,6 +286,68 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	} else {
 		return nil
 	}
+}
+
+// parseRawStackTrace parses a raw stack trace string using TraceKit and populates
+// the structured stack trace attributes.
+func (sp *symbolicatorProcessor) parseRawStackTrace(attributes pcommon.Map, rawStackTrace string) error {
+	tk := NewTraceKit()
+
+	// Extract error name and message from attributes if available
+	errorName := ""
+	errorMessage := ""
+
+	if stackTypeVal, ok := attributes.Get(sp.cfg.StackTypeKey); ok {
+		errorName = stackTypeVal.Str()
+	}
+	if stackMsgVal, ok := attributes.Get(sp.cfg.StackMessageKey); ok {
+		errorMessage = stackMsgVal.Str()
+	}
+
+	// Parse the raw stack trace
+	parsedTrace := tk.ComputeStackTrace(errorName, errorMessage, rawStackTrace, 0)
+
+	if parsedTrace == nil || len(parsedTrace.Stack) == 0 {
+		return fmt.Errorf("failed to parse raw stack trace")
+	}
+
+	// Populate structured attributes from parsed trace
+	var linesSlice = attributes.PutEmptySlice(sp.cfg.LinesAttributeKey)
+	var columnsSlice = attributes.PutEmptySlice(sp.cfg.ColumnsAttributeKey)
+	var functionsSlice = attributes.PutEmptySlice(sp.cfg.FunctionsAttributeKey)
+	var urlsSlice = attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
+
+	for _, frame := range parsedTrace.Stack {
+		// Add line number
+		if frame.Line != nil {
+			linesSlice.AppendEmpty().SetInt(int64(*frame.Line))
+		} else {
+			linesSlice.AppendEmpty().SetInt(0)
+		}
+
+		// Add column number
+		if frame.Column != nil {
+			columnsSlice.AppendEmpty().SetInt(int64(*frame.Column))
+		} else {
+			columnsSlice.AppendEmpty().SetInt(0)
+		}
+
+		// Add function name
+		functionsSlice.AppendEmpty().SetStr(frame.Func)
+
+		// Add URL
+		urlsSlice.AppendEmpty().SetStr(frame.URL)
+	}
+
+	// Update stack type and message if they were extracted from the trace
+	if parsedTrace.Name != "" {
+		attributes.PutStr(sp.cfg.StackTypeKey, parsedTrace.Name)
+	}
+	if parsedTrace.Message != "" {
+		attributes.PutStr(sp.cfg.StackMessageKey, parsedTrace.Message)
+	}
+
+	return nil
 }
 
 // getSlice retrieves a slice from a map, returning an empty slice if the key is not found.
