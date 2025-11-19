@@ -867,31 +867,35 @@ func TestRawStackTraceParsing(t *testing.T) {
 		linesAttr, ok := processedSpan.Attributes().Get(cfg.LinesAttributeKey)
 		assert.True(t, ok)
 		assert.Equal(t, 3, linesAttr.Slice().Len())
-		assert.Equal(t, int64(10), linesAttr.Slice().At(0).Int())
-		assert.Equal(t, int64(20), linesAttr.Slice().At(1).Int())
-		assert.Equal(t, int64(30), linesAttr.Slice().At(2).Int())
+		// testSymbolicator multiplies line by 2
+		assert.Equal(t, int64(20), linesAttr.Slice().At(0).Int()) // 10 * 2 = 20
+		assert.Equal(t, int64(40), linesAttr.Slice().At(1).Int()) // 20 * 2 = 40
+		assert.Equal(t, int64(60), linesAttr.Slice().At(2).Int()) // 30 * 2 = 60
 
 		columnsAttr, ok := processedSpan.Attributes().Get(cfg.ColumnsAttributeKey)
 		assert.True(t, ok)
 		assert.Equal(t, 3, columnsAttr.Slice().Len())
-		assert.Equal(t, int64(5), columnsAttr.Slice().At(0).Int())
-		assert.Equal(t, int64(15), columnsAttr.Slice().At(1).Int())
-		assert.Equal(t, int64(1), columnsAttr.Slice().At(2).Int())
+		// testSymbolicator adds 10 to column
+		assert.Equal(t, int64(15), columnsAttr.Slice().At(0).Int()) // 5 + 10 = 15
+		assert.Equal(t, int64(25), columnsAttr.Slice().At(1).Int()) // 15 + 10 = 25
+		assert.Equal(t, int64(11), columnsAttr.Slice().At(2).Int()) // 1 + 10 = 11
 
 		functionsAttr, ok := processedSpan.Attributes().Get(cfg.FunctionsAttributeKey)
 		assert.True(t, ok)
 		assert.Equal(t, 3, functionsAttr.Slice().Len())
-		assert.Equal(t, "myFunction", functionsAttr.Slice().At(0).Str())
-		assert.Equal(t, "anotherFunction", functionsAttr.Slice().At(1).Str())
+		// testSymbolicator prefixes with "mapped_" and appends line/column
+		assert.Equal(t, "mapped_myFunction_10_5", functionsAttr.Slice().At(0).Str())
+		assert.Equal(t, "mapped_anotherFunction_20_15", functionsAttr.Slice().At(1).Str())
 
 		urlsAttr, ok := processedSpan.Attributes().Get(cfg.UrlsAttributeKey)
 		assert.True(t, ok)
 		assert.Equal(t, 3, urlsAttr.Slice().Len())
-		assert.Equal(t, "http://example.com/app.js", urlsAttr.Slice().At(0).Str())
-		assert.Equal(t, "http://example.com/app.js", urlsAttr.Slice().At(1).Str())
-		assert.Equal(t, "http://example.com/app.js", urlsAttr.Slice().At(2).Str())
+		// testSymbolicator prefixes URL with "original_"
+		assert.Equal(t, "original_http://example.com/app.js", urlsAttr.Slice().At(0).Str())
+		assert.Equal(t, "original_http://example.com/app.js", urlsAttr.Slice().At(1).Str())
+		assert.Equal(t, "original_http://example.com/app.js", urlsAttr.Slice().At(2).Str())
 
-		// Verify symbolication was called with parsed frames
+		// Verify symbolication was called with parsed frames (original values before transformation)
 		assert.Equal(t, 3, s.callCount)
 		assert.Equal(t, int64(10), s.SymbolicatedLines[0].Line)
 		assert.Equal(t, int64(5), s.SymbolicatedLines[0].Column)
@@ -914,10 +918,15 @@ func TestRawStackTraceParsing(t *testing.T) {
 		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
 		span.Attributes().PutStr(cfg.StackMessageKey, "Something went wrong")
 
-		// Should fail because structured attributes are not present
-		_, err := processor.processTraces(ctx, td)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "missing attribute")
+		// Process should succeed but symbolication should fail due to missing structured attributes
+		otd, err := processor.processTraces(ctx, td)
+		assert.NoError(t, err)
+
+		// Verify failure attribute is set
+		processedSpan := otd.ResourceSpans().At(0).ScopeSpans().At(0).Spans().At(0)
+		failureAttr, ok := processedSpan.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+		assert.True(t, ok)
+		assert.True(t, failureAttr.Bool())
 	})
 
 	t.Run("raw stack trace parsing handles invalid traces gracefully", func(t *testing.T) {
@@ -936,9 +945,14 @@ func TestRawStackTraceParsing(t *testing.T) {
 		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
 		span.Attributes().PutStr(cfg.StackMessageKey, "Test")
 
-		// Should fail because parsing failed and structured attributes are missing
-		_, err := processor.processTraces(ctx, td)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "missing attribute")
+		// Process should succeed but symbolication should fail because parsing failed
+		otd, err := processor.processTraces(ctx, td)
+		assert.NoError(t, err)
+
+		// Verify failure attribute is set
+		processedSpan := otd.ResourceSpans().At(0).ScopeSpans().At(0).Spans().At(0)
+		failureAttr, ok := processedSpan.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+		assert.True(t, ok)
+		assert.True(t, failureAttr.Bool())
 	})
 }
