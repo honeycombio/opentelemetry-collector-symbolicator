@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.0.9 [beta] - 2025/11/19
+
+### 💡 Enhancements
+
 - refactor: move telemetry in dsym processor to only symbolicated logs (#128) | @jairo-mendoza
 - perf: enhance symbolication process with per stacktrace error caching (#119) | @clintonnkemdilim
 

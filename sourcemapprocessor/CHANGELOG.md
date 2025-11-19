@@ -2,13 +2,24 @@
 
 ## Unreleased
 
-- refactor: prevent running sourcemap processor on traces/logs without exception attributes (#126) | @jairo-mendoza
+## v0.0.14 [beta] - 2025/11/19
+
+### ✨ Features
+
 - feat: Add log support to the source map processor (#123) | @jairo-mendoza
+
+### 💡 Enhancements
+
+- refactor: prevent running sourcemap processor on traces/logs without exception attributes (#126) | @jairo-mendoza
+
+### 🚨 Breaking Changes
+
+- renamed top-level config key from `output_stack_trace_key` to `stack_trace_attribute_key`
 
 ## v0.0.13 [beta] - 2025/11/10
 
 - maint: bump dependency to v1.45.0/v0.139.0 (#121) | @TylerHelmuth
-- perf: enhance symbolication process with per stacktrace error caching (#116)  | @clintonnkemdilim
+- perf: enhance symbolication process with per stacktrace error caching (#116) | @clintonnkemdilim
 
 ## v0.0.12 [beta] - 2025/10/22
 

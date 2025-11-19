@@ -2,10 +2,21 @@
 
 ## Unreleased
 
-- refactor: prevent running proguard processor on logs without exception attributes (#127) | @jairo-mendoza
+## v0.0.7 [beta] - 2025/11/19
+
+### ✨ Features
+
 - feat: Preserve all stack lines in the proguard processor stack trace parser (#125) | @jairo-mendoza
 - feat: add parsing method attribute to the proguard processor (#124) | @jairo-mendoza
 - feat: Implement stack trace parser in the proguard processor (#118) | @jairo-mendoza
+
+### 💡 Enhancements
+
+- refactor: prevent running proguard processor on logs without exception attributes (#127) | @jairo-mendoza
+
+### 🚨 Breaking Changes
+
+- renamed top-level config key from `output_stack_trace_key` to `stack_trace_attribute_key`
 
 ## v0.0.6 [beta] - 2025/11/10
 
