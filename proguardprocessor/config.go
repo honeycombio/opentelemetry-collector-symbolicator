@@ -59,6 +59,10 @@ type Config struct {
 	// line numbers.
 	OriginalLinesAttributeKey string `mapstructure:"original_lines_attribute_key"`
 
+	// OriginalSourceFilesAttributeKey is the attribute key that preserves the original
+	// source file names.
+	OriginalSourceFilesAttributeKey string `mapstructure:"original_source_files_attribute_key"`
+
 	// OriginalStackTraceKey is the attribute key that preserves the original stack
 	// trace.
 	OriginalStackTraceKey string `mapstructure:"original_stack_trace_key"`
