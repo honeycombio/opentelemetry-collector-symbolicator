@@ -35,7 +35,11 @@ mechanisms documented below](#storage-mechanisms).
 
 ### Exception information format
 
-The processor expects the stacktrace information to be formatted into four separate attributes:
+The processor supports two input formats for stacktrace information:
+
+#### 1. Structured Format (Separate Attributes)
+
+The processor can accept stacktrace information formatted into four separate attributes:
 
 - columns
 - functions
@@ -53,6 +57,29 @@ lines: [3582,2,2,2,2]
 urls: ["https://example.com/static/dist/main.c383b093b0b66825a9c3.js","https://example.com/static/dist/vendor.1c285a50f5307be9648d.js","https://example.com/static/dist/vendor.1c285a50f5307be9648d.js","https://example.com/static/dist/vendor.1c285a50f5307be9648d.js","https://example.com/static/dist/vendor.1c285a50f5307be9648d.js"]
 ```
 
+#### 2. Unstructured Format (Raw Stack Trace String)
+
+The processor can also accept raw, unstructured stacktrace strings (such as those from `error.stack` in JavaScript) and automatically parse them before symbolication. This supports both Chrome/Edge and Safari/Firefox formats.
+
+To use this format, provide the raw stacktrace in a single attribute (default: `exception.stacktrace.unstructured`). The processor will automatically parse it into the structured format before symbolication.
+
+**Chrome/Edge format example:**
+```
+Error: Something went wrong
+    at myFunction (https://example.com/app.js:10:15)
+    at anotherFunction (https://example.com/bundle.js:100:200)
+    at main (https://example.com/index.js:5:10)
+```
+
+**Safari/Firefox format example:**
+```
+myFunction@https://example.com/app.js:10:15
+anotherFunction@https://example.com/bundle.js:100:200
+main@https://example.com/index.js:5:10
+```
+
+The processor will automatically detect the format and extract the function names, URLs, line numbers, and column numbers from the raw stacktrace string.
+
 ### Advanced Configuration
 
 #### Attribute Mapping
@@ -63,6 +90,7 @@ The following configuration options can also be provided to change the attribute
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | `symbolicator_failure_attribute_key`         | Signals if the the symbolicator fails to fully symbolicate the stack trace                        | `exception.symbolicator.failed`                      |
 | `symbolicator_failure_message_attribute_key` | Contains the error message if the the symbolicator fails to fully symbolicate the stack trace     | `exception.symbolicator.error`                       |
+| `unstructured_stack_trace_attribute_key`     | Which attribute contains an unstructured (raw) stack trace string that should be parsed first     | `exception.stacktrace.unstructured`                  |
 | `columns_attribute_key`                      | Which attribute should the columns of the stack trace be sourced from                             | `exception.structured_stacktrace.columns`            |
 | `functions_attribute_key`                    | Which attribute should the functions of the stack trace be sourced from                           | `exception.structured_stacktrace.functions`          |
 | `lines_attribute_key`                        | Which attribute should the lines of the stack trace be sourced from                               | `exception.structured_stacktrace.lines`              |
