@@ -164,6 +164,10 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 	// Set up iteration based on whether we have a parsed stack trace or structured attributes
 	if parsedStackTrace != nil {
 		iterCount = len(parsedStackTrace.elements)
+
+		if p.cfg.PreserveStackTrace {
+			attributes.PutStr(p.cfg.OriginalStackTraceKey, rawStackTrace.Str())
+		}
 	} else {
 		iterCount = classes.Len()
 		mappedClasses = attributes.PutEmptySlice(p.cfg.ClassesAttributeKey)
@@ -184,10 +188,8 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			classes.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalClassesAttributeKey))
 			methods.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalMethodsAttributeKey))
 			lines.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalLinesAttributeKey))
-
-			if originalStackTrace, ok := attributes.Get(p.cfg.StackTraceAttributeKey); ok {
-				attributes.PutStr(p.cfg.OriginalStackTraceKey, originalStackTrace.Str())
-			}
+			sourceFiles.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalSourceFilesAttributeKey))
+			attributes.PutStr(p.cfg.OriginalStackTraceKey, rawStackTrace.Str())
 		}
 	}
 
