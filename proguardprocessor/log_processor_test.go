@@ -779,6 +779,8 @@ func TestProcessLogRecord_ParsedRouteWithSymbolication(t *testing.T) {
 		OriginalClassesAttributeKey:           "original_classes",
 		OriginalMethodsAttributeKey:           "original_methods",
 		OriginalLinesAttributeKey:             "original_lines",
+		OriginalStackTraceKey: 			       "original_stack_trace",
+		PreserveStackTrace:                    true,
 		ExceptionTypeAttributeKey:             "exception_type",
 		ExceptionMessageAttributeKey:          "exception_message",
 		ProguardUUIDAttributeKey:              "uuid",
@@ -827,6 +829,16 @@ Caused by: java.lang.NullPointerException
 
 	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
+	// Verify symbolication succeeded
+	failed, ok := attrs.Get("symbolication_failed")
+	assert.True(t, ok)
+	assert.False(t, failed.Bool())
+
+	// Verify original stack trace is preserved
+	originalStackTrace, ok := attrs.Get("original_stack_trace")
+	assert.True(t, ok)
+	assert.Equal(t, rawStackTrace, originalStackTrace.Str())
+
 	// Verify exception type and message were set
 	exceptionType, ok := attrs.Get("exception_type")
 	assert.True(t, ok)
@@ -853,12 +865,7 @@ Caused by: java.lang.NullPointerException
 	assert.Contains(t, stackTrace.Str(), "Caused by: java.lang.NullPointerException")
 	assert.Contains(t, stackTrace.Str(), "... 5 more")
 
-	// Verify symbolication succeeded
-	failed, ok := attrs.Get("symbolication_failed")
-	assert.True(t, ok)
-	assert.False(t, failed.Bool())
-
-	// Verify that structured stack trace attributes were not populated
+	// Verify that structured stack trace attributes were NOT populated
 	_, ok = attrs.Get("classes")
 	assert.False(t, ok)
 	_, ok = attrs.Get("methods")
