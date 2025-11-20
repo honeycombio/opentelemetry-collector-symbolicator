@@ -9,6 +9,7 @@ import (
 
 	"github.com/honeycombio/opentelemetry-collector-symbolicator/sourcemapprocessor/internal/metadata"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/pdata/plog"
@@ -76,6 +77,178 @@ func (ts *testSymbolicator) symbolicate(ctx context.Context, line, column int64,
 		Line:         mappedLine,
 		URL:          mappedURL,
 	}, nil
+}
+
+func TestProcessUnstructuredStackTrace(t *testing.T) {
+	ctx := context.Background()
+	cfg := createDefaultConfig().(*Config)
+	s := &testSymbolicator{}
+
+	testTel := componenttest.NewTelemetry()
+	tb, err := metadata.NewTelemetryBuilder(testTel.NewTelemetrySettings())
+	assert.NoError(t, err)
+	defer tb.Shutdown()
+
+	attributes := attribute.NewSet(
+		attribute.String("processor_type", "symbolicator"),
+	)
+
+	processor := newSymbolicatorProcessor(ctx, cfg, processorhelper.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}, s, tb, attributes)
+
+	t.Run("chrome format stacktrace", func(t *testing.T) {
+		s.clear()
+
+		traces := ptrace.NewTraces()
+		rs := traces.ResourceSpans().AppendEmpty()
+		ss := rs.ScopeSpans().AppendEmpty()
+		span := ss.Spans().AppendEmpty()
+
+		// Add unstructured stacktrace in Chrome format
+		unstructuredStackTrace := `Error: Something went wrong
+    at myFunction (https://example.com/app.js:10:15)
+    at anotherFunction (https://example.com/bundle.js:100:200)
+    at main (https://example.com/index.js:5:10)`
+
+		span.Attributes().PutStr(cfg.UnstructuredStackTraceAttributeKey, unstructuredStackTrace)
+		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
+		span.Attributes().PutStr(cfg.StackMessageKey, "Something went wrong")
+
+		err := processor.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
+		assert.NoError(t, err)
+
+		// Verify that structured arrays were created
+		columns, ok := span.Attributes().Get(cfg.ColumnsAttributeKey)
+		require.True(t, ok, "columns should be present")
+		require.Equal(t, 3, columns.Slice().Len(), "should have 3 frames")
+
+		functions, ok := span.Attributes().Get(cfg.FunctionsAttributeKey)
+		require.True(t, ok, "functions should be present")
+		require.Equal(t, 3, functions.Slice().Len())
+
+		lines, ok := span.Attributes().Get(cfg.LinesAttributeKey)
+		require.True(t, ok, "lines should be present")
+		require.Equal(t, 3, lines.Slice().Len())
+
+		urls, ok := span.Attributes().Get(cfg.UrlsAttributeKey)
+		require.True(t, ok, "urls should be present")
+		require.Equal(t, 3, urls.Slice().Len())
+
+		// Verify the symbolicated values (the test symbolicator transforms the values)
+		// Original: line=10, col=15 -> Symbolicated: line=20, col=25
+		assert.Equal(t, int64(25), columns.Slice().At(0).Int())
+		assert.Equal(t, "mapped_myFunction_10_15", functions.Slice().At(0).Str())
+		assert.Equal(t, int64(20), lines.Slice().At(0).Int())
+		assert.Equal(t, "original_https://example.com/app.js", urls.Slice().At(0).Str())
+
+		// Original: line=100, col=200 -> Symbolicated: line=200, col=210
+		assert.Equal(t, int64(210), columns.Slice().At(1).Int())
+		assert.Equal(t, "mapped_anotherFunction_100_200", functions.Slice().At(1).Str())
+		assert.Equal(t, int64(200), lines.Slice().At(1).Int())
+		assert.Equal(t, "original_https://example.com/bundle.js", urls.Slice().At(1).Str())
+
+		// Verify symbolication was called for each frame
+		assert.Equal(t, 3, s.callCount, "symbolicate should be called for each frame")
+	})
+
+	t.Run("safari format stacktrace", func(t *testing.T) {
+		s.clear()
+
+		traces := ptrace.NewTraces()
+		rs := traces.ResourceSpans().AppendEmpty()
+		ss := rs.ScopeSpans().AppendEmpty()
+		span := ss.Spans().AppendEmpty()
+
+		// Add unstructured stacktrace in Safari format
+		unstructuredStackTrace := `myFunction@https://example.com/app.js:10:15
+anotherFunction@https://example.com/bundle.js:100:200
+main@https://example.com/index.js:5:10`
+
+		span.Attributes().PutStr(cfg.UnstructuredStackTraceAttributeKey, unstructuredStackTrace)
+		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
+		span.Attributes().PutStr(cfg.StackMessageKey, "Something went wrong")
+
+		err := processor.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
+		assert.NoError(t, err)
+
+		// Verify that structured arrays were created
+		columns, ok := span.Attributes().Get(cfg.ColumnsAttributeKey)
+		require.True(t, ok, "columns should be present")
+		require.Equal(t, 3, columns.Slice().Len(), "should have 3 frames")
+
+		functions, ok := span.Attributes().Get(cfg.FunctionsAttributeKey)
+		require.True(t, ok, "functions should be present")
+		require.Equal(t, 3, functions.Slice().Len())
+
+		lines, ok := span.Attributes().Get(cfg.LinesAttributeKey)
+		require.True(t, ok, "lines should be present")
+		require.Equal(t, 3, lines.Slice().Len())
+
+		urls, ok := span.Attributes().Get(cfg.UrlsAttributeKey)
+		require.True(t, ok, "urls should be present")
+		require.Equal(t, 3, urls.Slice().Len())
+
+		// Verify the symbolicated values for Safari format
+		// Original: line=10, col=15 -> Symbolicated: line=20, col=25
+		assert.Equal(t, int64(25), columns.Slice().At(0).Int())
+		assert.Equal(t, "mapped_myFunction_10_15", functions.Slice().At(0).Str())
+		assert.Equal(t, int64(20), lines.Slice().At(0).Int())
+		assert.Equal(t, "original_https://example.com/app.js", urls.Slice().At(0).Str())
+
+		// Verify symbolication was called for each frame
+		assert.Equal(t, 3, s.callCount, "symbolicate should be called for each frame")
+	})
+
+	t.Run("empty unstructured stacktrace", func(t *testing.T) {
+		s.clear()
+
+		traces := ptrace.NewTraces()
+		rs := traces.ResourceSpans().AppendEmpty()
+		ss := rs.ScopeSpans().AppendEmpty()
+		span := ss.Spans().AppendEmpty()
+
+		// Add empty unstructured stacktrace
+		span.Attributes().PutStr(cfg.UnstructuredStackTraceAttributeKey, "")
+		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
+		span.Attributes().PutStr(cfg.StackMessageKey, "Something went wrong")
+
+		err := processor.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
+		// Empty stacktrace results in parse error
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no valid stack frames found")
+	})
+
+	t.Run("mixed format with error message", func(t *testing.T) {
+		s.clear()
+
+		traces := ptrace.NewTraces()
+		rs := traces.ResourceSpans().AppendEmpty()
+		ss := rs.ScopeSpans().AppendEmpty()
+		span := ss.Spans().AppendEmpty()
+
+		// Add unstructured stacktrace with error message line
+		unstructuredStackTrace := `TypeError: Cannot read property 'foo' of undefined
+    at myFunction (https://example.com/app.js:10:15)
+    at main (https://example.com/index.js:5:10)`
+
+		span.Attributes().PutStr(cfg.UnstructuredStackTraceAttributeKey, unstructuredStackTrace)
+		span.Attributes().PutStr(cfg.StackTypeKey, "TypeError")
+		span.Attributes().PutStr(cfg.StackMessageKey, "Cannot read property 'foo' of undefined")
+
+		err := processor.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
+		assert.NoError(t, err)
+
+		// Verify that structured arrays were created (error message line should be skipped)
+		columns, ok := span.Attributes().Get(cfg.ColumnsAttributeKey)
+		require.True(t, ok, "columns should be present")
+		require.Equal(t, 2, columns.Slice().Len(), "should have 2 frames (error message line skipped)")
+
+		// Verify symbolication was called for each valid frame
+		assert.Equal(t, 2, s.callCount, "symbolicate should be called for each valid frame")
+	})
 }
 
 func TestProcessTraces(t *testing.T) {

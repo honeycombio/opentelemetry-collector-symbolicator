@@ -25,6 +25,7 @@ func createDefaultConfig() component.Config {
 	return &Config{
 		SymbolicatorFailureAttributeKey:        "exception.symbolicator.failed",
 		SymbolicatorFailureMessageAttributeKey: "exception.symbolicator.error",
+		UnstructuredStackTraceAttributeKey:     "exception.stacktrace.unstructured",
 		ColumnsAttributeKey:                    "exception.structured_stacktrace.columns",
 		FunctionsAttributeKey:                  "exception.structured_stacktrace.functions",
 		LinesAttributeKey:                      "exception.structured_stacktrace.lines",

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/honeycombio/opentelemetry-collector-symbolicator/sourcemapprocessor/internal/metadata"
+	"github.com/teamconclude/jsstacktrace"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -141,6 +142,50 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	}
 }
 
+// parseUnstructuredStackTrace takes an unstructured stack trace string and converts it
+// into structured arrays (lines, columns, functions, urls) that can be processed by the symbolicator.
+func (sp *symbolicatorProcessor) parseUnstructuredStackTrace(stackTraceStr string, attributes pcommon.Map) error {
+	// Parse the unstructured stack trace using jsstacktrace library
+	stackTrace := jsstacktrace.ParseStackTrace(stackTraceStr)
+
+	if len(stackTrace) == 0 {
+		return fmt.Errorf("no valid stack frames found in unstructured stack trace")
+	}
+
+	// Create arrays for the structured format
+	columns := attributes.PutEmptySlice(sp.cfg.ColumnsAttributeKey)
+	functions := attributes.PutEmptySlice(sp.cfg.FunctionsAttributeKey)
+	lines := attributes.PutEmptySlice(sp.cfg.LinesAttributeKey)
+	urls := attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
+
+	// Convert parsed frames to structured arrays
+	frameCount := 0
+	for _, frame := range stackTrace {
+		// Skip frames that don't have valid data (e.g., error message lines)
+		if frame.Other != "" {
+			// Store the "other" content (like error messages) separately if needed
+			continue
+		}
+
+		// Skip frames with empty URLs (invalid/empty frames)
+		if frame.Url == "" {
+			continue
+		}
+
+		columns.AppendEmpty().SetInt(int64(frame.Column))
+		functions.AppendEmpty().SetStr(frame.Function)
+		lines.AppendEmpty().SetInt(int64(frame.Line))
+		urls.AppendEmpty().SetStr(frame.Url)
+		frameCount++
+	}
+
+	if frameCount == 0 {
+		return fmt.Errorf("no valid stack frames found in unstructured stack trace")
+	}
+
+	return nil
+}
+
 // processThrow takes the attributes and determines if they contain
 // required stacktrace information. If they do, it symbolicates the stack
 // trace and adds it to the attributes.
@@ -148,6 +193,17 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	var ok bool
 	var symbolicationError error
 	var lines, columns, functions, urls pcommon.Slice
+
+	// Check if we have an unstructured stack trace that needs to be parsed first
+	if sp.cfg.UnstructuredStackTraceAttributeKey != "" {
+		if unstructuredStackTrace, hasUnstructured := attributes.Get(sp.cfg.UnstructuredStackTraceAttributeKey); hasUnstructured {
+			sp.logger.Debug("Processing unstructured stack trace")
+			err := sp.parseUnstructuredStackTrace(unstructuredStackTrace.Str(), attributes)
+			if err != nil {
+				return fmt.Errorf("failed to parse unstructured stack trace: %w", err)
+			}
+		}
+	}
 
 	if columns, ok = getSlice(sp.cfg.ColumnsAttributeKey, attributes); !ok {
 		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.ColumnsAttributeKey)

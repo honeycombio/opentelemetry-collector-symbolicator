@@ -14,6 +14,11 @@ type Config struct {
 	// the error message if the symbolicator fails to fully symbolicate a stack trace.
 	SymbolicatorFailureMessageAttributeKey string `mapstructure:"symbolicator_failure_message_attribute_key"`
 
+	// UnstructuredStackTraceAttributeKey is the attribute key that contains an unstructured
+	// stack trace string (e.g., from error.stack in JavaScript). If present, this will be
+	// parsed and converted to structured arrays before symbolication.
+	UnstructuredStackTraceAttributeKey string `mapstructure:"unstructured_stack_trace_attribute_key"`
+
 	// ColumnsAttributeKey is the attribute key that contains the column numbers
 	// of the stack trace.
 	ColumnsAttributeKey string `mapstructure:"columns_attribute_key"`
