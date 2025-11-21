@@ -555,6 +555,7 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 		OriginalClassesAttributeKey:     "original_classes",
 		OriginalMethodsAttributeKey:     "original_methods",
 		OriginalLinesAttributeKey:       "original_lines",
+		OriginalSourceFilesAttributeKey: "original_source_files",
 		OriginalStackTraceKey:           "original_stack_trace",
 	}
 
@@ -596,6 +597,21 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, 1, originalClasses.Slice().Len())
 	assert.Equal(t, "com.example.Class", originalClasses.Slice().At(0).Str())
+
+	originalMethods, ok := attrs.Get("original_methods")
+	assert.True(t, ok)
+	assert.Equal(t, 1, originalMethods.Slice().Len())
+	assert.Equal(t, "method1", originalMethods.Slice().At(0).Str())
+
+	originalLines, ok := attrs.Get("original_lines")
+	assert.True(t, ok)
+	assert.Equal(t, 1, originalLines.Slice().Len())
+	assert.Equal(t, int64(42), originalLines.Slice().At(0).Int())
+
+	originalSourceFiles, ok := attrs.Get("original_source_files")
+	assert.True(t, ok)
+	assert.Equal(t, 1, originalSourceFiles.Slice().Len())
+	assert.Equal(t, "Class.java", originalSourceFiles.Slice().At(0).Str())
 
 	originalStackTrace, ok := attrs.Get("original_stack_trace")
 	assert.True(t, ok)
@@ -779,6 +795,9 @@ func TestProcessLogRecord_ParsedRouteWithSymbolication(t *testing.T) {
 		OriginalClassesAttributeKey:           "original_classes",
 		OriginalMethodsAttributeKey:           "original_methods",
 		OriginalLinesAttributeKey:             "original_lines",
+		OriginalSourceFilesAttributeKey:       "original_source_files",
+		OriginalStackTraceKey: 			       "original_stack_trace",
+		PreserveStackTrace:                    true,
 		ExceptionTypeAttributeKey:             "exception_type",
 		ExceptionMessageAttributeKey:          "exception_message",
 		ProguardUUIDAttributeKey:              "uuid",
@@ -827,6 +846,16 @@ Caused by: java.lang.NullPointerException
 
 	processor.processLogRecord(context.Background(), lr, resourceAttrs)
 
+	// Verify symbolication succeeded
+	failed, ok := attrs.Get("symbolication_failed")
+	assert.True(t, ok)
+	assert.False(t, failed.Bool())
+
+	// Verify original stack trace is preserved
+	originalStackTrace, ok := attrs.Get("original_stack_trace")
+	assert.True(t, ok)
+	assert.Equal(t, rawStackTrace, originalStackTrace.Str())
+
 	// Verify exception type and message were set
 	exceptionType, ok := attrs.Get("exception_type")
 	assert.True(t, ok)
@@ -853,12 +882,7 @@ Caused by: java.lang.NullPointerException
 	assert.Contains(t, stackTrace.Str(), "Caused by: java.lang.NullPointerException")
 	assert.Contains(t, stackTrace.Str(), "... 5 more")
 
-	// Verify symbolication succeeded
-	failed, ok := attrs.Get("symbolication_failed")
-	assert.True(t, ok)
-	assert.False(t, failed.Bool())
-
-	// Verify that structured stack trace attributes were not populated
+	// Verify that structured stack trace attributes were NOT populated
 	_, ok = attrs.Get("classes")
 	assert.False(t, ok)
 	_, ok = attrs.Get("methods")
@@ -872,6 +896,8 @@ Caused by: java.lang.NullPointerException
 	_, ok = attrs.Get("original_methods")
 	assert.False(t, ok)
 	_, ok = attrs.Get("original_lines")
+	assert.False(t, ok)
+	_, ok = attrs.Get("original_source_files")
 	assert.False(t, ok)
 
 	parsingMethod, ok := attrs.Get("parsing_method")

@@ -251,6 +251,7 @@ The following configuration options can also be provided to change the attribute
 | `original_classes_attribute_key`     | If the stack trace is being preserved which key should the classes be copied to                   | `exception.structured_stacktrace.classes.original`   |
 | `original_methods_attribute_key`     | If the stack trace is being preserved which key should the methods be copied to                   | `exception.structured_stacktrace.methods.original`   |
 | `original_lines_attribute_key`       | If the stack trace is being preserved which key should the lines be copied to                     | `exception.structured_stacktrace.lines.original`     |
+| `original_source_files_attribute_key` | If the stack trace is being preserved which key should the source files be copied to                   | `exception.structured_stacktrace.source_files.original` |
 | `original_stack_trace_key`           | If the stack trace is being preserved which key should it be copied to                            | `exception.stacktrace.original`                      |
 | `proguard_uuid_attribute_key`        | Which resource attribute should the proguard UUID of a generic stacktrace log be sourced from     | `app.debug.proguard_uuid`                            |
 
