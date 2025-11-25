@@ -73,12 +73,7 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 
 		for j := 0; j < ss.Spans().Len(); j++ {
 			span := ss.Spans().At(j)
-
-			err := sp.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
-
-			if err != nil {
-				sp.logger.Debug("Error processing span", zap.Error(err))
-			}
+			sp.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
 		}
 	}
 }
@@ -104,12 +99,7 @@ func (sp *symbolicatorProcessor) processResourceLogs(ctx context.Context, rl plo
 
 		for j := 0; j < sl.LogRecords().Len(); j++ {
 			logRecord := sl.LogRecords().At(j)
-
-			err := sp.processAttributes(ctx, logRecord.Attributes(), rl.Resource().Attributes())
-
-			if err != nil {
-				sp.logger.Debug("Error processing log record", zap.Error(err))
-			}
+			sp.processAttributes(ctx, logRecord.Attributes(), rl.Resource().Attributes())
 		}
 	}
 }
@@ -121,10 +111,10 @@ func formatStackFrame(sf *mappedStackFrame) string {
 }
 
 // processAttributes takes the attributes of a span and returns an error if symbolication failed.
-func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) error {
+func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) {
 	// Skip all processing if StackTraceAttributeKey is not present
 	if _, ok := attributes.Get(sp.cfg.StackTraceAttributeKey); !ok {
-		return nil
+		return
 	}
 
 	// Start timing symbolication only when we actually perform it
@@ -146,8 +136,6 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 	} else {
 		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
 	}
-
-	return nil
 }
 
 // processThrow takes the attributes and determines if they contain
