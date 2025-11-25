@@ -23,9 +23,10 @@ const (
 // createDefaultConfig creates the default configuration for the processor.
 func createDefaultConfig() component.Config {
 	return &Config{
-		SymbolicatorFailureAttributeKey: "exception.symbolicator.failed",
-		SymbolicatorErrorAttributeKey:   "exception.symbolicator.error",
-		ColumnsAttributeKey:             "exception.structured_stacktrace.columns",
+		SymbolicatorFailureAttributeKey:       "exception.symbolicator.failed",
+		SymbolicatorErrorAttributeKey:         "exception.symbolicator.error",
+		SymbolicatorParsingMethodAttributeKey: "exception.symbolicator.parsing_method",
+		ColumnsAttributeKey:                   "exception.structured_stacktrace.columns",
 		FunctionsAttributeKey:           "exception.structured_stacktrace.functions",
 		LinesAttributeKey:               "exception.structured_stacktrace.lines",
 		UrlsAttributeKey:                "exception.structured_stacktrace.urls",
