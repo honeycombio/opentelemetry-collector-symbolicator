@@ -47,9 +47,9 @@ type Config struct {
 	// original stack trace in the output.
 	PreserveStackTrace bool `mapstructure:"preserve_stack_trace"`
 
-	// OriginalStackTraceKey is the attribute key that preserves the original stack
+	// OriginalStackTraceAttributeKey is the attribute key that preserves the original stack
 	// trace.
-	OriginalStackTraceKey string `mapstructure:"original_stack_trace_key"`
+	OriginalStackTraceAttributeKey string `mapstructure:"original_stack_trace_attribute_key"`
 
 	// OriginalClassesAttributeKey is the attribute key that preserves the original class
 	// names.

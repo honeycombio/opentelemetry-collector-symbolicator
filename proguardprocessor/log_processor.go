@@ -166,7 +166,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 		iterCount = len(parsedStackTrace.elements)
 
 		if p.cfg.PreserveStackTrace {
-			attributes.PutStr(p.cfg.OriginalStackTraceKey, rawStackTrace.Str())
+			attributes.PutStr(p.cfg.OriginalStackTraceAttributeKey, rawStackTrace.Str())
 		}
 	} else {
 		iterCount = classes.Len()
@@ -189,7 +189,7 @@ func (p *proguardLogsProcessor) processLogRecordThrow(ctx context.Context, attri
 			methods.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalMethodsAttributeKey))
 			lines.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalLinesAttributeKey))
 			sourceFiles.CopyTo(attributes.PutEmptySlice(p.cfg.OriginalSourceFilesAttributeKey))
-			attributes.PutStr(p.cfg.OriginalStackTraceKey, rawStackTrace.Str())
+			attributes.PutStr(p.cfg.OriginalStackTraceAttributeKey, rawStackTrace.Str())
 		}
 	}
 

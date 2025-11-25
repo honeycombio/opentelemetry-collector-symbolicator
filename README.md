@@ -71,7 +71,7 @@ The following configuration options can also be provided to change the attribute
 | `exception_type_attribute_key`               | Which attribute contains the exception type                                                       | `exception.type`                                     |
 | `exception_message_attribute_key`            | Which attribute contains the exception message                                                    | `exception.message`                                  |
 | `preserve_stack_trace`                       | After the stack trace has been symbolicated should the original values be preserved as attributes | `true`                                               |
-| `original_stack_trace_key`                   | If the stack trace is being preserved which key should it be copied to                            | `exception.stacktrace.original`                      |
+| `original_stack_trace_attribute_key`         | If the stack trace is being preserved which key should it be copied to                            | `exception.stacktrace.original`                      |
 | `original_columns_attribute_key`             | If the stack trace is being preserved which key should the functions be copied to                 | `exception.structured_stacktrace.functions.original` |
 | `original_functions_attribute_key`           | If the stack trace is being preserved which key should the lines be copied to                     | `exception.structured_stacktrace.lines.original`     |
 | `original_lines_attribute_key`               | If the stack trace is being preserved which key should the columns be copied to                   | `exception.structured_stacktrace.columns.original`   |
@@ -182,7 +182,7 @@ The following configuration options can also be provided to change the attribute
 | `output_metrickit_exception_type_attribute_key`    | Which attribute should the exception type be populated into                                                | `exception.type`.                                      |
 | `output_metrickit_exception_message_attribute_key` | Which attribute should the exception message be populated into                                             | `exception.message`.                                   |
 | `preserve_stack_trace`                             | After the stack trace has been symbolicated should the original values be preserved as attributes          | `true`                                                 |
-| `original_stack_trace_key`                         | If the stack trace is being preserved, which key should it be copied to                                    | `exception.stacktrace.original`                        |
+| `original_stack_trace_attribute_key`               | If the stack trace is being preserved, which key should it be copied to                                    | `exception.stacktrace.original`                        |
 | `build_uuid_attribute_key`                         | Which resource attribute should the binary UUID of a generic stacktrace log be sourced from                | `app.debug.build_uuid`                                 |
 | `app_executable_attribute_key`                     | Which resource attribute should the name of the app executable of a generic stacktrace log be sourced from | `app.bundle.executable`                                |
 
@@ -248,7 +248,7 @@ The following configuration options can also be provided to change the attribute
 | `exception_type_attribute_key`       | Which attribute should the exception type be sourced from                                         | `exception.type`                                     |
 | `exception_message_attribute_key`    | Which attribute should the exception message be sourced from                                      | `exception.message`                                  |
 | `preserve_stack_trace`               | After the stack trace has been symbolicated should the original values be preserved as attributes | `true`                                               |
-| `original_stack_trace_key`           | If the stack trace is being preserved which key should it be copied to                            | `exception.stacktrace.original`                      |
+| `original_stack_trace_attribute_key` | If the stack trace is being preserved which key should it be copied to                            | `exception.stacktrace.original`                      |
 | `original_classes_attribute_key`     | If the stack trace is being preserved which key should the classes be copied to                   | `exception.structured_stacktrace.classes.original`   |
 | `original_methods_attribute_key`     | If the stack trace is being preserved which key should the methods be copied to                   | `exception.structured_stacktrace.methods.original`   |
 | `original_lines_attribute_key`       | If the stack trace is being preserved which key should the lines be copied to                     | `exception.structured_stacktrace.lines.original`     |

@@ -132,7 +132,7 @@ func TestProcessStackTrace(t *testing.T) {
 			assert.False(t, hasFailureMessage)
 
 			// original json is preserved based on key
-			originalStackTrace, found := log.Attributes().Get(cfg.OriginalStackTraceKey)
+			originalStackTrace, found := log.Attributes().Get(cfg.OriginalStackTraceAttributeKey)
 			if preserveStack {
 				assert.True(t, found)
 				assert.Equal(t, stacktrace, originalStackTrace.Str())

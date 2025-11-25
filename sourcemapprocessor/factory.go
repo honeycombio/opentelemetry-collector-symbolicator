@@ -33,7 +33,7 @@ func createDefaultConfig() component.Config {
 		ExceptionTypeAttributeKey:              "exception.type",
 		ExceptionMessageAttributeKey:           "exception.message",
 		PreserveStackTrace:                     true,
-		OriginalStackTraceKey:                  "exception.stacktrace.original",
+		OriginalStackTraceAttributeKey:         "exception.stacktrace.original",
 		OriginalColumnsAttributeKey:            "exception.structured_stacktrace.columns.original",
 		OriginalFunctionsAttributeKey:          "exception.structured_stacktrace.functions.original",
 		OriginalLinesAttributeKey:              "exception.structured_stacktrace.lines.original",

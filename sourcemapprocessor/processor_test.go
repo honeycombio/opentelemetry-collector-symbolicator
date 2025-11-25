@@ -233,7 +233,7 @@ func TestProcessTraces(t *testing.T) {
 				assert.True(t, ok)
 				assert.Equal(t, "[\"url1\",\"url2\",\"url3\"]", attr.AsString())
 
-				attr, ok = span.Attributes().Get(cfg.OriginalStackTraceKey)
+				attr, ok = span.Attributes().Get(cfg.OriginalStackTraceAttributeKey)
 				assert.True(t, ok)
 				assert.Equal(t, "Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)", attr.AsString())
 			},
@@ -271,7 +271,7 @@ func TestProcessTraces(t *testing.T) {
 				_, ok = span.Attributes().Get(cfg.OriginalUrlsAttributeKey)
 				assert.False(t, ok)
 
-				_, ok = span.Attributes().Get(cfg.OriginalStackTraceKey)
+				_, ok = span.Attributes().Get(cfg.OriginalStackTraceAttributeKey)
 				assert.False(t, ok)
 			},
 		},

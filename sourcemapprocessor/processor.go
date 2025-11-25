@@ -195,7 +195,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		urls.CopyTo(origUrls)
 
 		var origStackTraceStr, _ = attributes.Get(sp.cfg.StackTraceAttributeKey)
-		attributes.PutStr(sp.cfg.OriginalStackTraceKey, origStackTraceStr.Str())
+		attributes.PutStr(sp.cfg.OriginalStackTraceAttributeKey, origStackTraceStr.Str())
 	}
 
 	buildUUID := ""

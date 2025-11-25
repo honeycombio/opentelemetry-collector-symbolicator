@@ -31,7 +31,7 @@ func createDefaultConfig() component.Config {
 		OutputMetricKitExceptionTypeAttributeKey:    "exception.type",
 		OutputMetricKitExceptionMessageAttributeKey: "exception.message",
 		PreserveStackTrace:                          true,
-		OriginalStackTraceKey:                       "exception.stacktrace.original",
+		OriginalStackTraceAttributeKey:              "exception.stacktrace.original",
 		BuildUUIDAttributeKey:                       "app.debug.build_uuid",
 		AppExecutableAttributeKey:                   "app.bundle.executable",
 		DSYMStoreKey:                                "file_store",
