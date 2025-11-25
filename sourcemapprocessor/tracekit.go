@@ -488,55 +488,6 @@ func (tk *TraceKit) ComputeStackTraceFromOperaMultiLineMessage(name, message str
 	}
 }
 
-// AugmentStackTraceWithInitialElement adds information about the first frame to incomplete stack traces.
-func (tk *TraceKit) AugmentStackTraceWithInitialElement(stackInfo *StackTrace, url string, lineNo int, message string) bool {
-	initial := StackFrame{
-		URL: url,
-	}
-	if lineNo > 0 {
-		initial.Line = &lineNo
-	}
-
-	if initial.URL != "" && initial.Line != nil {
-		stackInfo.Incomplete = false
-
-		if initial.Func == "" {
-			initial.Func = tk.GuessFunctionName(initial.URL, *initial.Line)
-		}
-
-		if initial.Context == nil {
-			initial.Context = tk.GatherContext(initial.URL, *initial.Line)
-		}
-
-		referenceRE := regexp.MustCompile(`'([^']+)'`)
-		if matches := referenceRE.FindStringSubmatch(message); matches != nil {
-			col := tk.FindSourceInLine(matches[1], initial.URL, *initial.Line)
-			if col != nil {
-				initial.Column = col
-			}
-		}
-
-		if len(stackInfo.Stack) > 0 {
-			if stackInfo.Stack[0].URL == initial.URL {
-				if stackInfo.Stack[0].Line != nil && initial.Line != nil && *stackInfo.Stack[0].Line == *initial.Line {
-					return false
-				} else if stackInfo.Stack[0].Line == nil && stackInfo.Stack[0].Func == initial.Func {
-					stackInfo.Stack[0].Line = initial.Line
-					stackInfo.Stack[0].Context = initial.Context
-					return false
-				}
-			}
-		}
-
-		stackInfo.Stack = append([]StackFrame{initial}, stackInfo.Stack...)
-		stackInfo.Partial = true
-		return true
-	}
-
-	stackInfo.Incomplete = true
-	return false
-}
-
 // ComputeStackTrace parses a JavaScript error stack trace.
 // It tries multiple parsing strategies based on the stack trace format.
 func (tk *TraceKit) ComputeStackTrace(name, message, stack string, depth int) *StackTrace {
