@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- refactor: improve parity between processor's configs (#131) | @jairo-mendoza
+- refactor: improve parity between processors' configs (#131) | @jairo-mendoza
 - feat(proguard-processor): Add stack trace preservation to collector-parsed route and add original source files preservation to structured route (#130) | @jairo-mendoza
 
 ## v0.0.7 [beta] - 2025/11/19
