@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- refactor: improve parity between processor's configs (#131) | @jairo-mendoza
+
 ## v0.0.9 [beta] - 2025/11/19
 
 ### 💡 Enhancements
