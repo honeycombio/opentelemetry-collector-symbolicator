@@ -373,7 +373,11 @@ func TestProcessTraces(t *testing.T) {
 				assert.Equal(t, true, attr.Bool())
 				attr, ok = span.Attributes().Get(cfg.SymbolicatorErrorAttributeKey)
 				assert.True(t, ok)
-				assert.Equal(t, "column must be uint32: 4294967296", attr.Str())
+				assert.Equal(t, "symbolication failed for some stack frames", attr.Str())
+				attr, ok = span.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				assert.Contains(t, attr.AsString(), "Failed to symbolicate func2 at url2:5:4294967296")
+				assert.Contains(t, attr.AsString(), "column must be uint32: 4294967296")
 			},
 		},
 	}
@@ -581,7 +585,11 @@ func TestProcessLogs(t *testing.T) {
 
 				attr, ok = logRecord.Attributes().Get(cfg.SymbolicatorErrorAttributeKey)
 				assert.True(t, ok)
-				assert.Equal(t, "column must be uint32: 4294967296", attr.Str())
+				assert.Equal(t, "symbolication failed for some stack frames", attr.Str())
+				attr, ok = logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				assert.Contains(t, attr.AsString(), "Failed to symbolicate func2 at url2:5:4294967296")
+				assert.Contains(t, attr.AsString(), "column must be uint32: 4294967296")
 			},
 		},
 	}
