@@ -24,16 +24,16 @@ const (
 func createDefaultConfig() component.Config {
 	return &Config{
 		SymbolicatorFailureAttributeKey:             "exception.symbolicator.failed",
-		SymbolicatorFailureMessageAttributeKey:      "exception.symbolicator.error",
+		SymbolicatorErrorAttributeKey:               "exception.symbolicator.error",
 		StackTraceAttributeKey:                      "exception.stacktrace",
-		OriginalStackTraceKey:                       "exception.stacktrace.original",
-		AppExecutableAttributeKey:                   "app.bundle.executable",
-		BuildUUIDAttributeKey:                       "app.debug.build_uuid",
 		MetricKitStackTraceAttributeKey:             "metrickit.diagnostic.crash.exception.stacktrace_json",
 		OutputMetricKitStackTraceAttributeKey:       "exception.stacktrace",
 		OutputMetricKitExceptionTypeAttributeKey:    "exception.type",
 		OutputMetricKitExceptionMessageAttributeKey: "exception.message",
 		PreserveStackTrace:                          true,
+		OriginalStackTraceAttributeKey:              "exception.stacktrace.original",
+		BuildUUIDAttributeKey:                       "app.debug.build_uuid",
+		AppExecutableAttributeKey:                   "app.bundle.executable",
 		DSYMStoreKey:                                "file_store",
 		LocalDSYMConfiguration: &LocalDSYMConfiguration{
 			Path: ".",

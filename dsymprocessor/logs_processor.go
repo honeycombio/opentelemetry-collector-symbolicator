@@ -167,7 +167,7 @@ func (sp *symbolicatorProcessor) processStackTraceAttributesThrows(ctx context.C
 	}
 
 	if sp.cfg.PreserveStackTrace {
-		attributes.PutStr(sp.cfg.OriginalStackTraceKey, rawStackTrace)
+		attributes.PutStr(sp.cfg.OriginalStackTraceAttributeKey, rawStackTrace)
 	}
 	attributes.PutStr(sp.cfg.StackTraceAttributeKey, strings.Join(res, "\n"))
 

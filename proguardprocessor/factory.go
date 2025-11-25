@@ -36,11 +36,11 @@ func createDefaultConfig() component.Config {
 		ExceptionTypeAttributeKey:             "exception.type",
 		ExceptionMessageAttributeKey:          "exception.message",
 		PreserveStackTrace:                    true,
+		OriginalStackTraceAttributeKey:        "exception.stacktrace.original",
 		OriginalClassesAttributeKey:           "exception.structured_stacktrace.classes.original",
 		OriginalMethodsAttributeKey:           "exception.structured_stacktrace.methods.original",
 		OriginalLinesAttributeKey:             "exception.structured_stacktrace.lines.original",
 		OriginalSourceFilesAttributeKey:       "exception.structured_stacktrace.source_files.original",
-		OriginalStackTraceKey:                 "exception.stacktrace.original",
 		ProguardUUIDAttributeKey:              "app.debug.proguard_uuid",
 		ProguardStoreKey:                      "file_store",
 		LocalProguardConfiguration: &LocalStoreConfiguration{
