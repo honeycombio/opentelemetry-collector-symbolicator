@@ -556,7 +556,7 @@ func TestProcessLogRecord_PreserveStackTrace(t *testing.T) {
 		OriginalMethodsAttributeKey:     "original_methods",
 		OriginalLinesAttributeKey:       "original_lines",
 		OriginalSourceFilesAttributeKey: "original_source_files",
-		OriginalStackTraceAttributeKey:           "original_stack_trace",
+		OriginalStackTraceAttributeKey:  "original_stack_trace",
 	}
 
 	settings := processor.Settings{
@@ -796,7 +796,7 @@ func TestProcessLogRecord_ParsedRouteWithSymbolication(t *testing.T) {
 		OriginalMethodsAttributeKey:           "original_methods",
 		OriginalLinesAttributeKey:             "original_lines",
 		OriginalSourceFilesAttributeKey:       "original_source_files",
-		OriginalStackTraceAttributeKey: 			       "original_stack_trace",
+		OriginalStackTraceAttributeKey:        "original_stack_trace",
 		PreserveStackTrace:                    true,
 		ExceptionTypeAttributeKey:             "exception_type",
 		ExceptionMessageAttributeKey:          "exception_message",
