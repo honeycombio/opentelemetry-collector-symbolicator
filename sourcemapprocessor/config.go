@@ -10,9 +10,9 @@ type Config struct {
 	// true if the symbolicator fails to fully symbolicate a stack trace.
 	SymbolicatorFailureAttributeKey string `mapstructure:"symbolicator_failure_attribute_key"`
 
-	// SymbolicatorFailureMessageAttributeKey is the attribute key that will be include
-	// the error message if the symbolicator fails to fully symbolicate a stack trace.
-	SymbolicatorFailureMessageAttributeKey string `mapstructure:"symbolicator_failure_message_attribute_key"`
+	// SymbolicatorErrorAttributeKey is the attribute key that contains the error
+	// message if the symbolicator fails to fully symbolicate a stack trace.
+	SymbolicatorErrorAttributeKey string `mapstructure:"symbolicator_error_attribute_key"`
 
 	// ColumnsAttributeKey is the attribute key that contains the column numbers
 	// of the stack trace.
@@ -34,11 +34,11 @@ type Config struct {
 	// will be written to.
 	StackTraceAttributeKey string `mapstructure:"stack_trace_attribute_key"`
 
-	// StackTypeKey is the attribute key that contains the type of the stack trace.
-	StackTypeKey string `mapstructure:"stack_type_key"`
+	// ExceptionTypeAttributeKey is the attribute key that contains the type of the exception.
+	ExceptionTypeAttributeKey string `mapstructure:"exception_type_attribute_key"`
 
-	// StackMessageKey is the attribute key that contains the message of the stack trace.
-	StackMessageKey string `mapstructure:"stack_message_key"`
+	// ExceptionMessageAttributeKey is the attribute key that contains the message of the exception.
+	ExceptionMessageAttributeKey string `mapstructure:"exception_message_attribute_key"`
 
 	// preserveStackTrace is a config option that determines whether to keep the
 	// original stack trace in the output.

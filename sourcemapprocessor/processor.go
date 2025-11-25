@@ -210,8 +210,8 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	var mappedLines = attributes.PutEmptySlice(sp.cfg.LinesAttributeKey)
 	var mappedUrls = attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
 
-	var stackType, _ = attributes.Get(sp.cfg.StackTypeKey)
-	var stackMessage, _ = attributes.Get(sp.cfg.StackMessageKey)
+	var stackType, _ = attributes.Get(sp.cfg.ExceptionTypeAttributeKey)
+	var stackMessage, _ = attributes.Get(sp.cfg.ExceptionMessageAttributeKey)
 
 	stack = append(stack, fmt.Sprintf("%s: %s", stackType.Str(), stackMessage.Str()))
 
@@ -268,7 +268,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	}
 
 	if symbolicationError != nil {
-		attributes.PutStr(sp.cfg.SymbolicatorFailureMessageAttributeKey, symbolicationError.Error())
+		attributes.PutStr(sp.cfg.SymbolicatorErrorAttributeKey, symbolicationError.Error())
 	}
 	attributes.PutStr(sp.cfg.StackTraceAttributeKey, strings.Join(stack, "\n"))
 

@@ -24,14 +24,14 @@ const (
 func createDefaultConfig() component.Config {
 	return &Config{
 		SymbolicatorFailureAttributeKey:        "exception.symbolicator.failed",
-		SymbolicatorFailureMessageAttributeKey: "exception.symbolicator.error",
+		SymbolicatorErrorAttributeKey:          "exception.symbolicator.error",
 		ColumnsAttributeKey:                    "exception.structured_stacktrace.columns",
 		FunctionsAttributeKey:                  "exception.structured_stacktrace.functions",
 		LinesAttributeKey:                      "exception.structured_stacktrace.lines",
 		UrlsAttributeKey:                       "exception.structured_stacktrace.urls",
 		StackTraceAttributeKey:                 "exception.stacktrace",
-		StackTypeKey:                           "exception.type",
-		StackMessageKey:                        "exception.message",
+		ExceptionTypeAttributeKey:              "exception.type",
+		ExceptionMessageAttributeKey:           "exception.message",
 		PreserveStackTrace:                     true,
 		OriginalStackTraceKey:                  "exception.stacktrace.original",
 		OriginalFunctionsAttributeKey:          "exception.structured_stacktrace.functions.original",

@@ -145,8 +145,8 @@ func TestProcessTraces(t *testing.T) {
 				span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().AppendEmpty().SetInt(42)
 				span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("function")
 				span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("url")
-				span.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
-				span.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("Test error!")
+				span.Attributes().PutEmpty(cfg.ExceptionTypeAttributeKey).SetStr("Error")
+				span.Attributes().PutEmpty(cfg.ExceptionMessageAttributeKey).SetStr("Test error!")
 				span.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: Test error!\n    at function (url:42:42)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
@@ -193,7 +193,7 @@ func TestProcessTraces(t *testing.T) {
 				assert.True(t, ok)
 				assert.Equal(t, false, attr.Bool())
 
-				_, ok = span.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
+				_, ok = span.Attributes().Get(cfg.SymbolicatorErrorAttributeKey)
 				assert.False(t, ok)
 			},
 		},
@@ -371,7 +371,7 @@ func TestProcessTraces(t *testing.T) {
 				attr, ok := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
 				assert.True(t, ok)
 				assert.Equal(t, true, attr.Bool())
-				attr, ok = span.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
+				attr, ok = span.Attributes().Get(cfg.SymbolicatorErrorAttributeKey)
 				assert.True(t, ok)
 				assert.Equal(t, "column must be uint32: 4294967296", attr.Str())
 			},
@@ -468,8 +468,8 @@ func TestProcessLogs(t *testing.T) {
 				logRecord.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().AppendEmpty().SetInt(42)
 				logRecord.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("function")
 				logRecord.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("url")
-				logRecord.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
-				logRecord.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("Test error!")
+				logRecord.Attributes().PutEmpty(cfg.ExceptionTypeAttributeKey).SetStr("Error")
+				logRecord.Attributes().PutEmpty(cfg.ExceptionMessageAttributeKey).SetStr("Test error!")
 				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: Test error!\n    at function (url:42:42)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
@@ -507,8 +507,8 @@ func TestProcessLogs(t *testing.T) {
 				logRecord.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
 				logRecord.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
 				logRecord.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
-				logRecord.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
-				logRecord.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("test error")
+				logRecord.Attributes().PutEmpty(cfg.ExceptionTypeAttributeKey).SetStr("Error")
+				logRecord.Attributes().PutEmpty(cfg.ExceptionMessageAttributeKey).SetStr("test error")
 				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:2)\n    at func3 (url3:6:3)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
@@ -549,8 +549,8 @@ func TestProcessLogs(t *testing.T) {
 				logRecord.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{4, 5, 6})
 				logRecord.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"func1", "func2", "func3"})
 				logRecord.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"url1", "url2", "url3"})
-				logRecord.Attributes().PutEmpty(cfg.StackTypeKey).SetStr("Error")
-				logRecord.Attributes().PutEmpty(cfg.StackMessageKey).SetStr("test error")
+				logRecord.Attributes().PutEmpty(cfg.ExceptionTypeAttributeKey).SetStr("Error")
+				logRecord.Attributes().PutEmpty(cfg.ExceptionMessageAttributeKey).SetStr("test error")
 				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: test error\n    at func1 (url1:4:1)\n    at func2 (url2:5:5000000000)\n    at func3 (url3:6:3)")
 			},
 			AssertSymbolicatorCalls: func(s *testSymbolicator) {
@@ -579,7 +579,7 @@ func TestProcessLogs(t *testing.T) {
 				assert.True(t, ok)
 				assert.Equal(t, true, attr.Bool())
 
-				attr, ok = logRecord.Attributes().Get(cfg.SymbolicatorFailureMessageAttributeKey)
+				attr, ok = logRecord.Attributes().Get(cfg.SymbolicatorErrorAttributeKey)
 				assert.True(t, ok)
 				assert.Equal(t, "column must be uint32: 4294967296", attr.Str())
 			},
@@ -645,8 +645,8 @@ func TestDeduplication(t *testing.T) {
 			"app.js", "app.js", "app.js", "app.js", "app.js",
 			"app.js", "app.js", "app.js", "app.js", "app.js",
 		})
-		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
-		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+		span.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test error")
 		span.Attributes().PutStr(cfg.StackTraceAttributeKey,
 			"Error: test error\n"+
 				"    at f1 (app.js:100:1)\n"+
@@ -690,8 +690,8 @@ func TestDeduplication(t *testing.T) {
 			"vendor.js", "vendor.js", "vendor.js",
 			"utils.js", "utils.js", "utils.js",
 		})
-		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
-		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+		span.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test error")
 		span.Attributes().PutStr(cfg.StackTraceAttributeKey,
 			"Error: test error\n"+
 				"    at f1 (app.js:100:1)\n"+
@@ -735,8 +735,8 @@ func TestDeduplication(t *testing.T) {
 		span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"onClick", "render", "init"})
 		span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{100, 200, 300})
 		span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"app.js", "app.js", "app.js"})
-		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
-		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+		span.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test error")
 		span.Attributes().PutStr(cfg.StackTraceAttributeKey,
 			"Error: test error\n"+
 				"    at onClick (app.js:100:5)\n"+
@@ -782,8 +782,8 @@ func TestDeduplication(t *testing.T) {
 		span1.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"f1", "f2"})
 		span1.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{100, 200})
 		span1.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"app.js", "app.js"})
-		span1.Attributes().PutStr(cfg.StackTypeKey, "Error")
-		span1.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span1.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+		span1.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test error")
 		span1.Attributes().PutStr(cfg.StackTraceAttributeKey,
 			"Error: test error\n"+
 				"    at f1 (app.js:100:1)\n"+
@@ -795,8 +795,8 @@ func TestDeduplication(t *testing.T) {
 		span2.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"f1", "f2"})
 		span2.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{100, 200})
 		span2.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"app.js", "app.js"})
-		span2.Attributes().PutStr(cfg.StackTypeKey, "Error")
-		span2.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span2.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+		span2.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test error")
 		span2.Attributes().PutStr(cfg.StackTraceAttributeKey,
 			"Error: test error\n"+
 				"    at f1 (app.js:100:1)\n"+
@@ -846,8 +846,8 @@ func TestDeduplication(t *testing.T) {
 			"missing.js", "missing.js", "missing.js", "missing.js", "missing.js",
 			"missing.js", "missing.js", "missing.js", "missing.js", "missing.js",
 		})
-		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
-		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+		span.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test error")
 		span.Attributes().PutStr(cfg.StackTraceAttributeKey,
 			"Error: test error\n"+
 				"    at f1 (missing.js:100:1)\n"+
@@ -913,8 +913,8 @@ func TestDeduplication(t *testing.T) {
 		span.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().FromRaw([]any{"f1", "f2", "f3"})
 		span.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().FromRaw([]any{100, 200, 300})
 		span.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().FromRaw([]any{"app.js", "app.js", "app.js"})
-		span.Attributes().PutStr(cfg.StackTypeKey, "Error")
-		span.Attributes().PutStr(cfg.StackMessageKey, "test error")
+		span.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+		span.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test error")
 		span.Attributes().PutStr(cfg.StackTraceAttributeKey,
 			"Error: test error\n"+
 				"    at f1 (app.js:100:1)\n"+
