@@ -47,6 +47,10 @@ type Config struct {
 	// original stack trace in the output.
 	PreserveStackTrace bool `mapstructure:"preserve_stack_trace"`
 
+	// OriginalStackTraceKey is the attribute key that preserves the original stack
+	// trace.
+	OriginalStackTraceKey string `mapstructure:"original_stack_trace_key"`
+
 	// OriginalClassesAttributeKey is the attribute key that preserves the original class
 	// names.
 	OriginalClassesAttributeKey string `mapstructure:"original_classes_attribute_key"`
@@ -62,10 +66,6 @@ type Config struct {
 	// OriginalSourceFilesAttributeKey is the attribute key that preserves the original
 	// source file names.
 	OriginalSourceFilesAttributeKey string `mapstructure:"original_source_files_attribute_key"`
-
-	// OriginalStackTraceKey is the attribute key that preserves the original stack
-	// trace.
-	OriginalStackTraceKey string `mapstructure:"original_stack_trace_key"`
 
 	// ProguardUUIDAttributeKey is the attribute key that contains the UUID
 	// of the proguard mapping file.
