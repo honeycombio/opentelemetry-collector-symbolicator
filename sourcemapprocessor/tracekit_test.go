@@ -49,6 +49,21 @@ func TestTraceKit(t *testing.T) {
 			},
 			expectedMode: "stack",
 		},
+		{
+			name:            "Stack trace with native functions",
+			exceptionName:   "Error",
+			exceptionMsg:    "Test error",
+			stack:           "Error: Test error\n    at Array.map (native)\n    at funcA (fileA.js:10:15)\n    at Array.forEach (native)\n    at funcB (fileB.js:20:25)",
+			expectedName:    "Error",
+			expectedMessage: "Test error",
+			expectedFrames: []StackFrame{
+				{URL: "", Func: "Array.map", Line: nil, Column: nil},
+				{URL: "fileA.js", Func: "funcA", Line: &line10, Column: &col15},
+				{URL: "", Func: "Array.forEach", Line: nil, Column: nil},
+				{URL: "fileB.js", Func: "funcB", Line: &line20, Column: &col25},
+			},
+			expectedMode: "stack",
+		},
 	}
 
 	for _, tt := range tests {
@@ -68,10 +83,14 @@ func TestTraceKit(t *testing.T) {
 				if expectedFrame.Line != nil {
 					require.NotNil(t, result.StackFrames[i].Line)
 					assert.Equal(t, *expectedFrame.Line, *result.StackFrames[i].Line)
+				} else {
+					assert.Nil(t, result.StackFrames[i].Line)
 				}
 				if expectedFrame.Column != nil {
 					require.NotNil(t, result.StackFrames[i].Column)
 					assert.Equal(t, *expectedFrame.Column, *result.StackFrames[i].Column)
+				} else {
+					assert.Nil(t, result.StackFrames[i].Column)
 				}
 			}
 		})
