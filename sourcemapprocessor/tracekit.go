@@ -20,10 +20,10 @@ type StackFrame struct {
 
 // StackTrace represents a complete JavaScript stack trace.
 type StackTrace struct {
-	Name       string
-	Message    string
-	Mode       string // 'stack', 'stacktrace', 'multiline', or 'failed'
-	StackFrames      []StackFrame
+	Name        string
+	Message     string
+	Mode        string // 'stack', 'stacktrace', 'multiline', or 'failed'
+	StackFrames []StackFrame
 }
 
 // TraceKit provides methods for parsing JavaScript stack traces.
@@ -94,9 +94,9 @@ func (tk *TraceKit) ComputeStackTraceFromStackProp(name, message, stack string) 
 			// Try WinJS format
 			lineInt := parseInt(matches[3])
 			element = &StackFrame{
-				URL:  matches[2],
-				Func: matches[1],
-				Line: &lineInt,
+				URL:    matches[2],
+				Func:   matches[1],
+				Line:   &lineInt,
 				Column: nil,
 			}
 			if matches[4] != "" {
@@ -151,10 +151,10 @@ func (tk *TraceKit) ComputeStackTraceFromStackProp(name, message, stack string) 
 	}
 
 	return &StackTrace{
-		Name:    name,
-		Message: message,
-		Mode:    "stack",
-		StackFrames:   stackFrames,
+		Name:        name,
+		Message:     message,
+		Mode:        "stack",
+		StackFrames: stackFrames,
 	}
 }
 
@@ -176,9 +176,9 @@ func (tk *TraceKit) ComputeStackTraceFromStacktraceProp(name, message, stacktrac
 		if matches := opera10RE.FindStringSubmatch(lines[i]); matches != nil {
 			lineInt := parseInt(matches[1])
 			element = &StackFrame{
-				URL:  matches[2],
-				Func: matches[3],
-				Line: &lineInt,
+				URL:    matches[2],
+				Func:   matches[3],
+				Line:   &lineInt,
 				Column: nil,
 			}
 		} else if matches := opera11RE.FindStringSubmatch(lines[i]); matches != nil {
@@ -208,10 +208,10 @@ func (tk *TraceKit) ComputeStackTraceFromStacktraceProp(name, message, stacktrac
 	}
 
 	return &StackTrace{
-		Name:    name,
-		Message: message,
-		Mode:    "stacktrace",
-		StackFrames:   stackFrames,
+		Name:        name,
+		Message:     message,
+		Mode:        "stacktrace",
+		StackFrames: stackFrames,
 	}
 }
 
@@ -234,17 +234,17 @@ func (tk *TraceKit) ComputeStackTraceFromOperaMultiLineMessage(name, message str
 		if matches := lineRE1.FindStringSubmatch(lines[line]); matches != nil {
 			lineInt := parseInt(matches[1])
 			item = &StackFrame{
-				URL:  matches[2],
-				Func: matches[3],
-				Line: &lineInt,
+				URL:    matches[2],
+				Func:   matches[3],
+				Line:   &lineInt,
 				Column: nil,
 			}
 		} else if matches := lineRE2.FindStringSubmatch(lines[line]); matches != nil {
 			lineInt := parseInt(matches[1])
 			item = &StackFrame{
-				URL:  matches[3],
-				Func: matches[4],
-				Line: &lineInt,
+				URL:    matches[3],
+				Func:   matches[4],
+				Line:   &lineInt,
 				Column: nil,
 			}
 		} else if matches := lineRE3.FindStringSubmatch(lines[line]); matches != nil {
@@ -266,10 +266,10 @@ func (tk *TraceKit) ComputeStackTraceFromOperaMultiLineMessage(name, message str
 	}
 
 	return &StackTrace{
-		Name:    name,
-		Message: lines[0],
-		Mode:    "multiline",
-		StackFrames:   stackFrames,
+		Name:        name,
+		Message:     lines[0],
+		Mode:        "multiline",
+		StackFrames: stackFrames,
 	}
 }
 
@@ -300,10 +300,10 @@ func (tk *TraceKit) ComputeStackTrace(name, message, stack string) *StackTrace {
 
 	// Fallback if parsing failed
 	return &StackTrace{
-		Name:    name,
-		Message: message,
-		Mode:    "failed",
-		StackFrames:   []StackFrame{},
+		Name:        name,
+		Message:     message,
+		Mode:        "failed",
+		StackFrames: []StackFrame{},
 	}
 }
 
