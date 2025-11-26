@@ -41,12 +41,13 @@ type TraceKit struct {
 }
 
 // NewTraceKit creates a new TraceKit instance.
+// Remote fetching is disabled by default since the processor shouldn't make HTTP requests.
 func NewTraceKit() *TraceKit {
 	return &TraceKit{
-		remoteFetching: true,
+		remoteFetching: false,
 		linesOfContext: 11,
 		sourceCache:    make(map[string][]string),
-		httpClient:     &http.Client{},
+		httpClient:     nil,
 	}
 }
 
