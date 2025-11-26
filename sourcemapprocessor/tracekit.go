@@ -24,8 +24,6 @@ type StackTrace struct {
 	Message    string
 	Mode       string // 'stack', 'stacktrace', 'multiline', or 'failed'
 	StackFrames      []StackFrame
-	Incomplete bool
-	Partial    bool
 }
 
 // TraceKit provides methods for parsing JavaScript stack traces.
