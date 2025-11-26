@@ -14,7 +14,6 @@ const (
 type StackFrame struct {
 	URL    string
 	Func   string
-	Args   []string
 	Line   *int
 	Column *int
 }
@@ -79,11 +78,6 @@ func (tk *TraceKit) ComputeStackTraceFromStackProp(name, message, stack string) 
 			element = &StackFrame{
 				URL:  url,
 				Func: matches[1],
-				Args: []string{},
-			}
-
-			if isNative && matches[2] != "" {
-				element.Args = []string{matches[2]}
 			}
 
 			if lineNo != "" {
@@ -102,10 +96,9 @@ func (tk *TraceKit) ComputeStackTraceFromStackProp(name, message, stack string) 
 			// Try WinJS format
 			lineInt := parseInt(matches[3])
 			element = &StackFrame{
-				URL:    matches[2],
-				Func:   matches[1],
-				Args:   []string{},
-				Line:   &lineInt,
+				URL:  matches[2],
+				Func: matches[1],
+				Line: &lineInt,
 				Column: nil,
 			}
 			if matches[4] != "" {
@@ -132,11 +125,6 @@ func (tk *TraceKit) ComputeStackTraceFromStackProp(name, message, stack string) 
 			element = &StackFrame{
 				URL:  matches[3],
 				Func: matches[1],
-				Args: []string{},
-			}
-
-			if matches[2] != "" {
-				element.Args = strings.Split(matches[2], ",")
 			}
 
 			if lineNo != "" {
@@ -190,11 +178,10 @@ func (tk *TraceKit) ComputeStackTraceFromStacktraceProp(name, message, stacktrac
 		if matches := opera10RE.FindStringSubmatch(lines[i]); matches != nil {
 			lineInt := parseInt(matches[1])
 			element = &StackFrame{
-				URL:    matches[2],
-				Line:   &lineInt,
+				URL:  matches[2],
+				Func: matches[3],
+				Line: &lineInt,
 				Column: nil,
-				Func:   matches[3],
-				Args:   []string{},
 			}
 		} else if matches := opera11RE.FindStringSubmatch(lines[i]); matches != nil {
 			lineInt := parseInt(matches[1])
@@ -207,13 +194,9 @@ func (tk *TraceKit) ComputeStackTraceFromStacktraceProp(name, message, stacktrac
 
 			element = &StackFrame{
 				URL:    matches[6],
+				Func:   func_,
 				Line:   &lineInt,
 				Column: &colInt,
-				Func:   func_,
-				Args:   []string{},
-			}
-			if matches[5] != "" {
-				element.Args = strings.Split(matches[5], ",")
 			}
 		}
 
@@ -253,26 +236,23 @@ func (tk *TraceKit) ComputeStackTraceFromOperaMultiLineMessage(name, message str
 		if matches := lineRE1.FindStringSubmatch(lines[line]); matches != nil {
 			lineInt := parseInt(matches[1])
 			item = &StackFrame{
-				URL:    matches[2],
-				Func:   matches[3],
-				Args:   []string{},
-				Line:   &lineInt,
+				URL:  matches[2],
+				Func: matches[3],
+				Line: &lineInt,
 				Column: nil,
 			}
 		} else if matches := lineRE2.FindStringSubmatch(lines[line]); matches != nil {
 			lineInt := parseInt(matches[1])
 			item = &StackFrame{
-				URL:    matches[3],
-				Func:   matches[4],
-				Args:   []string{},
-				Line:   &lineInt,
+				URL:  matches[3],
+				Func: matches[4],
+				Line: &lineInt,
 				Column: nil,
 			}
 		} else if matches := lineRE3.FindStringSubmatch(lines[line]); matches != nil {
 			item = &StackFrame{
 				URL:    "",
 				Func:   "",
-				Args:   []string{},
 				Line:   nil,
 				Column: nil,
 			}

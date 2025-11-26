@@ -31,8 +31,8 @@ func TestTraceKit(t *testing.T) {
 			expectedName:    "Error",
 			expectedMessage: "Something went wrong",
 			expectedFrames: []StackFrame{
-				{URL: "fileA.js", Func: "funcA", Args: []string{}, Line: &line10, Column: &col15, Context: nil},
-				{URL: "fileB.js", Func: "funcB", Args: []string{}, Line: &line20, Column: &col25, Context: nil},
+				{URL: "fileA.js", Func: "funcA", Line: &line10, Column: &col15},
+				{URL: "fileB.js", Func: "funcB", Line: &line20, Column: &col25},
 			},
 			expectedMode: "stack",
 		},
@@ -44,8 +44,8 @@ func TestTraceKit(t *testing.T) {
 			expectedName:    "",
 			expectedMessage: "",
 			expectedFrames: []StackFrame{
-				{URL: "fileA.js", Func: "funcA", Args: []string{}, Line: &line10, Column: &col15, Context: nil},
-				{URL: "fileB.js", Func: "funcB", Args: []string{}, Line: &line20, Column: &col25, Context: nil},
+				{URL: "fileA.js", Func: "funcA", Line: &line10, Column: &col15},
+				{URL: "fileB.js", Func: "funcB", Line: &line20, Column: &col25},
 			},
 			expectedMode: "stack",
 		},
@@ -65,7 +65,6 @@ func TestTraceKit(t *testing.T) {
 			for i, expectedFrame := range tt.expectedFrames {
 				assert.Equal(t, expectedFrame.URL, result.Stack[i].URL)
 				assert.Equal(t, expectedFrame.Func, result.Stack[i].Func)
-				assert.Equal(t, expectedFrame.Args, result.Stack[i].Args)
 				if expectedFrame.Line != nil {
 					require.NotNil(t, result.Stack[i].Line)
 					assert.Equal(t, *expectedFrame.Line, *result.Stack[i].Line)
