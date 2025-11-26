@@ -7,6 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func intPtr(i int) *int {
+	return &i
+}
+
 func TestTraceKit(t *testing.T) {
 	line10 := 10
 	col15 := 15
@@ -63,6 +67,30 @@ func TestTraceKit(t *testing.T) {
 				{URL: "fileB.js", Func: "funcB", Line: &line20, Column: &col25},
 			},
 			expectedMode: "stack",
+		},
+		{
+			name:            "Stack trace with anonymous functions",
+			exceptionName:   "Error",
+			exceptionMsg:    "",
+			stack:           "" +
+							"  Error: \n" +
+							"    at new <anonymous> (http://example.com/js/test.js:63:1)\n" +   // stack[0]
+							"    at namedFunc0 (http://example.com/js/script.js:10:2)\n" +      // stack[1]
+							"    at http://example.com/js/test.js:65:10\n" +                    // stack[2]
+							"    at namedFunc2 (http://example.com/js/script.js:20:5)\n" +      // stack[3]
+							"    at http://example.com/js/test.js:67:5\n" +                     // stack[4]
+							"    at namedFunc4 (http://example.com/js/script.js:100001:10002)", // stack[5]
+			expectedFrames: []StackFrame{
+				{URL: "http://example.com/js/test.js", Func: "new <anonymous>", Line: intPtr(63), Column: intPtr(1)},
+				{URL: "http://example.com/js/script.js", Func: "namedFunc0", Line: intPtr(10), Column: intPtr(2)},
+				{URL: "http://example.com/js/test.js", Func: UnknownFunction, Line: intPtr(65), Column: intPtr(10)},
+				{URL: "http://example.com/js/script.js", Func: "namedFunc2", Line: intPtr(20), Column: intPtr(5)},
+				{URL: "http://example.com/js/test.js", Func: UnknownFunction, Line: intPtr(67), Column: intPtr(5)},
+				{URL: "http://example.com/js/script.js", Func: "namedFunc4", Line: intPtr(100001), Column: intPtr(10002)},
+			},
+			expectedName:    "Error",
+			expectedMessage: "",
+			expectedMode:    "stack",
 		},
 	}
 
