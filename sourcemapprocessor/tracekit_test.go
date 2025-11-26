@@ -54,7 +54,7 @@ func TestTraceKit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tk := NewTraceKit()
-			result := tk.ComputeStackTrace(tt.exceptionName, tt.exceptionMsg, tt.stack, 0)
+			result := tk.ComputeStackTrace(tt.exceptionName, tt.exceptionMsg, tt.stack)
 
 			require.NotNil(t, result)
 			assert.Equal(t, tt.expectedName, result.Name)

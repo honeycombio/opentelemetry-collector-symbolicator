@@ -491,7 +491,7 @@ func (tk *TraceKit) ComputeStackTraceFromOperaMultiLineMessage(name, message str
 
 // ComputeStackTrace parses a JavaScript error stack trace.
 // It tries multiple parsing strategies based on the stack trace format.
-func (tk *TraceKit) ComputeStackTrace(name, message, stack string, depth int) *StackTrace {
+func (tk *TraceKit) ComputeStackTrace(name, message, stack string) *StackTrace {
 	var result *StackTrace
 
 	// Try stacktrace property first (Opera 10+)
