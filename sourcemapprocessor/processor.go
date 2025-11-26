@@ -206,7 +206,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 
 	// Set up iteration based on whether we have a parsed stack trace or structured attributes
 	if parsedStackTrace != nil {
-		iterCount = len(parsedStackTrace.Stack)
+		iterCount = len(parsedStackTrace.StackFrames)
 
 		if sp.cfg.PreserveStackTrace {
 			attributes.PutStr(sp.cfg.OriginalStackTraceAttributeKey, rawStackTrace.Str())
@@ -244,7 +244,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		// Get frame data based on route
 		if parsedStackTrace != nil {
 			// Extract from parsed frame
-			frame := parsedStackTrace.Stack[i]
+			frame := parsedStackTrace.StackFrames[i]
 			url = frame.URL
 			function = frame.Func
 			if frame.Line != nil {

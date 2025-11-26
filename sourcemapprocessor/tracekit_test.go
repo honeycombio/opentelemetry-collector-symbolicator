@@ -60,18 +60,18 @@ func TestTraceKit(t *testing.T) {
 			assert.Equal(t, tt.expectedName, result.Name)
 			assert.Equal(t, tt.expectedMessage, result.Message)
 			assert.Equal(t, tt.expectedMode, result.Mode)
-			assert.Equal(t, len(tt.expectedFrames), len(result.Stack))
+			assert.Equal(t, len(tt.expectedFrames), len(result.StackFrames))
 
 			for i, expectedFrame := range tt.expectedFrames {
-				assert.Equal(t, expectedFrame.URL, result.Stack[i].URL)
-				assert.Equal(t, expectedFrame.Func, result.Stack[i].Func)
+				assert.Equal(t, expectedFrame.URL, result.StackFrames[i].URL)
+				assert.Equal(t, expectedFrame.Func, result.StackFrames[i].Func)
 				if expectedFrame.Line != nil {
-					require.NotNil(t, result.Stack[i].Line)
-					assert.Equal(t, *expectedFrame.Line, *result.Stack[i].Line)
+					require.NotNil(t, result.StackFrames[i].Line)
+					assert.Equal(t, *expectedFrame.Line, *result.StackFrames[i].Line)
 				}
 				if expectedFrame.Column != nil {
-					require.NotNil(t, result.Stack[i].Column)
-					assert.Equal(t, *expectedFrame.Column, *result.Stack[i].Column)
+					require.NotNil(t, result.StackFrames[i].Column)
+					assert.Equal(t, *expectedFrame.Column, *result.StackFrames[i].Column)
 				}
 			}
 		})

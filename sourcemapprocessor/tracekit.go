@@ -23,7 +23,7 @@ type StackTrace struct {
 	Name       string
 	Message    string
 	Mode       string // 'stack', 'stacktrace', 'multiline', or 'failed'
-	Stack      []StackFrame
+	StackFrames      []StackFrame
 	Incomplete bool
 	Partial    bool
 }
@@ -156,7 +156,7 @@ func (tk *TraceKit) ComputeStackTraceFromStackProp(name, message, stack string) 
 		Name:    name,
 		Message: message,
 		Mode:    "stack",
-		Stack:   stackFrames,
+		StackFrames:   stackFrames,
 	}
 }
 
@@ -213,7 +213,7 @@ func (tk *TraceKit) ComputeStackTraceFromStacktraceProp(name, message, stacktrac
 		Name:    name,
 		Message: message,
 		Mode:    "stacktrace",
-		Stack:   stackFrames,
+		StackFrames:   stackFrames,
 	}
 }
 
@@ -271,7 +271,7 @@ func (tk *TraceKit) ComputeStackTraceFromOperaMultiLineMessage(name, message str
 		Name:    name,
 		Message: lines[0],
 		Mode:    "multiline",
-		Stack:   stackFrames,
+		StackFrames:   stackFrames,
 	}
 }
 
@@ -305,7 +305,7 @@ func (tk *TraceKit) ComputeStackTrace(name, message, stack string) *StackTrace {
 		Name:    name,
 		Message: message,
 		Mode:    "failed",
-		Stack:   []StackFrame{},
+		StackFrames:   []StackFrame{},
 	}
 }
 

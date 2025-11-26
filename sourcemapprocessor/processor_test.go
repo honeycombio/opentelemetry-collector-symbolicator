@@ -380,6 +380,59 @@ func TestProcessTraces(t *testing.T) {
 				assert.Contains(t, attr.AsString(), "column must be uint32: 4294967296")
 			},
 		},
+		{
+			Name: "processor parses raw stack trace when structured attributes missing",
+			ApplyAttributes: func(span ptrace.Span) {
+				// Only provide raw stack trace - no structured attributes
+				span.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				span.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "Test error!")
+				span.Attributes().PutStr(
+					cfg.StackTraceAttributeKey,
+					"Error: Test error!\n"+
+						"    at myFunction (https://example.com/app.js:10:15)\n"+
+						"    at anotherFunc (https://example.com/app.js:20:25)",
+				)
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				assert.Equal(t, 2, len(s.SymbolicatedLines))
+				// First frame
+				assert.Equal(t, int64(10), s.SymbolicatedLines[0].Line)
+				assert.Equal(t, int64(15), s.SymbolicatedLines[0].Column)
+				assert.Equal(t, "myFunction", s.SymbolicatedLines[0].Function)
+				assert.Equal(t, "https://example.com/app.js", s.SymbolicatedLines[0].URL)
+				// Second frame
+				assert.Equal(t, int64(20), s.SymbolicatedLines[1].Line)
+				assert.Equal(t, int64(25), s.SymbolicatedLines[1].Column)
+				assert.Equal(t, "anotherFunc", s.SymbolicatedLines[1].Function)
+				assert.Equal(t, "https://example.com/app.js", s.SymbolicatedLines[1].URL)
+			},
+			AssertOutput: func(td ptrace.Traces) {
+				rs := td.ResourceSpans().At(0)
+				ils := rs.ScopeSpans().At(0)
+				span := ils.Spans().At(0)
+
+				// Verify parsing method attribute is set
+				parsingMethod, ok := span.Attributes().Get(cfg.SymbolicatorParsingMethodAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "processor_parsed", parsingMethod.Str())
+
+				// Verify symbolication succeeded
+				attr, ok := span.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, false, attr.Bool())
+
+				// Verify stack trace was symbolicated with both frames
+				stackTrace, ok := span.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				assert.Contains(t, stackTrace.Str(), "Error: Test error!")
+				// First frame symbolicated: line*2=20, col+10=25
+				assert.Contains(t, stackTrace.Str(), "mapped_myFunction_10_15")
+				assert.Contains(t, stackTrace.Str(), "original_https://example.com/app.js:20:25")
+				// Second frame symbolicated: line*2=40, col+10=35
+				assert.Contains(t, stackTrace.Str(), "mapped_anotherFunc_20_25")
+				assert.Contains(t, stackTrace.Str(), "original_https://example.com/app.js:40:35")
+			},
+		},
 	}
 
 	for _, tt := range tts {
@@ -590,6 +643,59 @@ func TestProcessLogs(t *testing.T) {
 				assert.True(t, ok)
 				assert.Contains(t, attr.AsString(), "Failed to symbolicate func2 at url2:5:4294967296")
 				assert.Contains(t, attr.AsString(), "column must be uint32: 4294967296")
+			},
+		},
+		{
+			Name: "processor parses raw stack trace when structured attributes missing",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				// Only provide raw stack trace - no structured attributes
+				logRecord.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "TypeError")
+				logRecord.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "Cannot read property 'x'")
+				logRecord.Attributes().PutStr(
+					cfg.StackTraceAttributeKey,
+					"TypeError: Cannot read property 'x'\n"+
+						"    at processData (https://example.com/bundle.js:100:50)\n"+
+						"    at main (https://example.com/bundle.js:200:30)",
+				)
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				assert.Equal(t, 2, len(s.SymbolicatedLines))
+				// First frame
+				assert.Equal(t, int64(100), s.SymbolicatedLines[0].Line)
+				assert.Equal(t, int64(50), s.SymbolicatedLines[0].Column)
+				assert.Equal(t, "processData", s.SymbolicatedLines[0].Function)
+				assert.Equal(t, "https://example.com/bundle.js", s.SymbolicatedLines[0].URL)
+				// Second frame
+				assert.Equal(t, int64(200), s.SymbolicatedLines[1].Line)
+				assert.Equal(t, int64(30), s.SymbolicatedLines[1].Column)
+				assert.Equal(t, "main", s.SymbolicatedLines[1].Function)
+				assert.Equal(t, "https://example.com/bundle.js", s.SymbolicatedLines[1].URL)
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				// Verify parsing method attribute is set
+				parsingMethod, ok := logRecord.Attributes().Get(cfg.SymbolicatorParsingMethodAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "processor_parsed", parsingMethod.Str())
+
+				// Verify symbolication succeeded
+				attr, ok := logRecord.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, false, attr.Bool())
+
+				// Verify stack trace was symbolicated with both frames
+				stackTrace, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				assert.Contains(t, stackTrace.Str(), "TypeError: Cannot read property 'x'")
+				// First frame symbolicated: line*2=200, col+10=60
+				assert.Contains(t, stackTrace.Str(), "mapped_processData_100_50")
+				assert.Contains(t, stackTrace.Str(), "original_https://example.com/bundle.js:200:60")
+				// Second frame symbolicated: line*2=400, col+10=40
+				assert.Contains(t, stackTrace.Str(), "mapped_main_200_30")
+				assert.Contains(t, stackTrace.Str(), "original_https://example.com/bundle.js:400:40")
 			},
 		},
 	}
