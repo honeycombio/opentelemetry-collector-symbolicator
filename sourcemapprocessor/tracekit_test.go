@@ -28,10 +28,13 @@ func TestTraceKit(t *testing.T) {
 		expectedMode    string
 	}{
 		{
-			name:            "Valid TraceKit stack trace with provided exception info",
-			exceptionName:   "Error",
-			exceptionMsg:    "Something went wrong",
-			stack:           "Error: Something went wrong\n    at funcA (fileA.js:10:15)\n    at funcB (fileB.js:20:25)",
+			name:          "Valid TraceKit stack trace with provided exception info",
+			exceptionName: "Error",
+			exceptionMsg:  "Something went wrong",
+			stack: "" +
+				"Error: Something went wrong\n" +
+				"    at funcA (fileA.js:10:15)\n" + // stack[0]
+				"    at funcB (fileB.js:20:25)", // stack[1]
 			expectedName:    "Error",
 			expectedMessage: "Something went wrong",
 			expectedFrames: []StackFrame{
@@ -41,10 +44,13 @@ func TestTraceKit(t *testing.T) {
 			expectedMode: "stack",
 		},
 		{
-			name:            "Stack trace without exception info uses empty strings",
-			exceptionName:   "",
-			exceptionMsg:    "",
-			stack:           "Error: Something went wrong\n    at funcA (fileA.js:10:15)\n    at funcB (fileB.js:20:25)",
+			name:          "Stack trace without exception info uses empty strings",
+			exceptionName: "",
+			exceptionMsg:  "",
+			stack: "" +
+				"Error: Something went wrong\n" + // stack[0]
+				"    at funcA (fileA.js:10:15)\n" + // stack[1]
+				"    at funcB (fileB.js:20:25)", // stack[2]
 			expectedName:    "",
 			expectedMessage: "",
 			expectedFrames: []StackFrame{
@@ -54,10 +60,15 @@ func TestTraceKit(t *testing.T) {
 			expectedMode: "stack",
 		},
 		{
-			name:            "Stack trace with native functions",
-			exceptionName:   "Error",
-			exceptionMsg:    "Test error",
-			stack:           "Error: Test error\n    at Array.map (native)\n    at funcA (fileA.js:10:15)\n    at Array.forEach (native)\n    at funcB (fileB.js:20:25)",
+			name:          "Stack trace with 'native' frames",
+			exceptionName: "Error",
+			exceptionMsg:  "Test error",
+			stack: "" +
+				"Error: Test error\n" +
+				"   at Array.map (native)\n" + // stack[0]
+				"   at funcA (fileA.js:10:15)\n" + // stack[1]
+				"   at Array.forEach (native)\n" + // stack[2]
+				"   at funcB (fileB.js:20:25)", // stack[3]
 			expectedName:    "Error",
 			expectedMessage: "Test error",
 			expectedFrames: []StackFrame{
