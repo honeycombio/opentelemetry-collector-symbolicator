@@ -14,6 +14,32 @@ const (
 	UnknownFunction = "?"
 )
 
+// Compiled regular expressions for parsing stack traces from various browsers.
+var (
+	// Chrome/V8 stack trace format
+	chromeRE = regexp.MustCompile(`^\s*at (.*?) ?\(((?:file|https?|blob|chrome-extension|native|eval|webpack|<anonymous>|\/).*?)(?::(\d+))?(?::(\d+))?\)?\s*$`)
+	// Gecko/Firefox stack trace format
+	geckoRE = regexp.MustCompile(`^\s*(.*?)(?:\((.*?)\))?(?:^|@)((?:file|https?|blob|chrome|webpack|resource|\[native).*?|[^@]*bundle)(?::(\d+))?(?::(\d+))?\s*$`)
+	// Windows JavaScript (WinJS) stack trace format
+	winJSRE = regexp.MustCompile(`^\s*at (?:((?:\[object object\])?.+) )?\(?((?:file|ms-appx|https?|webpack|blob):.*?):(\d+)(?::(\d+))?\)?\s*$`)
+	// Gecko eval format
+	geckoEvalRE = regexp.MustCompile(`(\S+) line (\d+)(?: > eval line \d+)* > eval`)
+	// Chrome eval format
+	chromeEvalRE = regexp.MustCompile(`\((\S*)(?::(\d+))(?::(\d+))\)`)
+
+	// Opera 10 stack trace format
+	opera10RE = regexp.MustCompile(`line (\d+).*script (?:in )?(\S+)(?:: in function (\S+))?$`)
+	// Opera 11+ stack trace format
+	opera11RE = regexp.MustCompile(`line (\d+), column (\d+)\s*(?:in (?:<anonymous function: ([^>]+)>|([^\)]+))\((.*)\))? in (.*):\s*$`)
+
+	// Opera 9 and earlier (linked script format)
+	lineRE1 = regexp.MustCompile(`^\s*Line (\d+) of linked script ((?:file|https?|blob)\S+)(?:: in function (\S+))?\s*$`)
+	// Opera 9 and earlier (inline script format)
+	lineRE2 = regexp.MustCompile(`^\s*Line (\d+) of inline#(\d+) script in ((?:file|https?|blob)\S+)(?:: in function (\S+))?\s*$`)
+	// Opera 9 and earlier (function script format)
+	lineRE3 = regexp.MustCompile(`^\s*Line (\d+) of function script\s*$`)
+)
+
 // StackFrame represents a single frame in a stack trace.
 type StackFrame struct {
 	URL    string
@@ -43,12 +69,6 @@ func (tk *TraceKit) ComputeStackTraceFromStackProp(name, message, stack string) 
 	if stack == "" {
 		return nil
 	}
-
-	chromeRE := regexp.MustCompile(`^\s*at (.*?) ?\(((?:file|https?|blob|chrome-extension|native|eval|webpack|<anonymous>|\/).*?)(?::(\d+))?(?::(\d+))?\)?\s*$`)
-	geckoRE := regexp.MustCompile(`^\s*(.*?)(?:\((.*?)\))?(?:^|@)((?:file|https?|blob|chrome|webpack|resource|\[native).*?|[^@]*bundle)(?::(\d+))?(?::(\d+))?\s*$`)
-	winJSRE := regexp.MustCompile(`^\s*at (?:((?:\[object object\])?.+) )?\(?((?:file|ms-appx|https?|webpack|blob):.*?):(\d+)(?::(\d+))?\)?\s*$`)
-	geckoEvalRE := regexp.MustCompile(`(\S+) line (\d+)(?: > eval line \d+)* > eval`)
-	chromeEvalRE := regexp.MustCompile(`\((\S*)(?::(\d+))(?::(\d+))\)`)
 
 	lines := strings.Split(stack, "\n")
 	stackFrames := []StackFrame{}
@@ -168,9 +188,6 @@ func (tk *TraceKit) ComputeStackTraceFromStacktraceProp(name, message, stacktrac
 		return nil
 	}
 
-	opera10RE := regexp.MustCompile(`line (\d+).*script (?:in )?(\S+)(?:: in function (\S+))?$`)
-	opera11RE := regexp.MustCompile(`line (\d+), column (\d+)\s*(?:in (?:<anonymous function: ([^>]+)>|([^\)]+))\((.*)\))? in (.*):\s*$`)
-
 	lines := strings.Split(stacktrace, "\n")
 	stackFrames := []StackFrame{}
 
@@ -225,10 +242,6 @@ func (tk *TraceKit) ComputeStackTraceFromOperaMultiLineMessage(name, message str
 	if len(lines) < 4 {
 		return nil
 	}
-
-	lineRE1 := regexp.MustCompile(`^\s*Line (\d+) of linked script ((?:file|https?|blob)\S+)(?:: in function (\S+))?\s*$`)
-	lineRE2 := regexp.MustCompile(`^\s*Line (\d+) of inline#(\d+) script in ((?:file|https?|blob)\S+)(?:: in function (\S+))?\s*$`)
-	lineRE3 := regexp.MustCompile(`^\s*Line (\d+) of function script\s*$`)
 
 	stackFrames := []StackFrame{}
 
