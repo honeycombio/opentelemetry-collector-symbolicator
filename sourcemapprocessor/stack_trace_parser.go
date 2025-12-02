@@ -1,3 +1,7 @@
+// This code was originally adapted from TraceKit, a JavaScript error tracing and
+// stack trace parsing library.
+// TraceKit is MIT-licensed and available at: https://github.com/csnover/TraceKit
+
 package sourcemapprocessor
 
 import (
