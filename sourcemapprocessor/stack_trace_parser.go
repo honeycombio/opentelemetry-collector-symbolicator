@@ -56,16 +56,8 @@ type StackTrace struct {
 	StackFrames []StackFrame
 }
 
-// TraceKit provides methods for parsing JavaScript stack traces.
-type TraceKit struct{}
-
-// NewTraceKit creates a new TraceKit instance.
-func NewTraceKit() *TraceKit {
-	return &TraceKit{}
-}
-
 // ComputeStackTraceFromStackProp parses stack traces from the stack property (Chrome/Gecko).
-func (tk *TraceKit) ComputeStackTraceFromStackProp(name, message, stack string) *StackTrace {
+func ComputeStackTraceFromStackProp(name, message, stack string) *StackTrace {
 	if stack == "" {
 		return nil
 	}
@@ -183,7 +175,7 @@ func (tk *TraceKit) ComputeStackTraceFromStackProp(name, message, stack string) 
 }
 
 // ComputeStackTraceFromStacktraceProp parses stack traces from stacktrace property (Opera 10+).
-func (tk *TraceKit) ComputeStackTraceFromStacktraceProp(name, message, stacktrace string) *StackTrace {
+func ComputeStackTraceFromStacktraceProp(name, message, stacktrace string) *StackTrace {
 	if stacktrace == "" {
 		return nil
 	}
@@ -237,7 +229,7 @@ func (tk *TraceKit) ComputeStackTraceFromStacktraceProp(name, message, stacktrac
 }
 
 // ComputeStackTraceFromOperaMultiLineMessage parses Opera 9 and earlier stack traces.
-func (tk *TraceKit) ComputeStackTraceFromOperaMultiLineMessage(name, message string) *StackTrace {
+func ComputeStackTraceFromOperaMultiLineMessage(name, message string) *StackTrace {
 	lines := strings.Split(message, "\n")
 	if len(lines) < 4 {
 		return nil
@@ -292,24 +284,24 @@ func (tk *TraceKit) ComputeStackTraceFromOperaMultiLineMessage(name, message str
 
 // ComputeStackTrace parses a JavaScript error stack trace.
 // It tries multiple parsing strategies based on the stack trace format.
-func (tk *TraceKit) ComputeStackTrace(name, message, stack string) *StackTrace {
+func ComputeStackTrace(name, message, stack string) *StackTrace {
 	var result *StackTrace
 
 	// Try stacktrace property first (Opera 10+)
 	if stack != "" {
-		result = tk.ComputeStackTraceFromStacktraceProp(name, message, stack)
+		result = ComputeStackTraceFromStacktraceProp(name, message, stack)
 		if result != nil {
 			return result
 		}
 
 		// Try stack property (Chrome/Gecko)
-		result = tk.ComputeStackTraceFromStackProp(name, message, stack)
+		result = ComputeStackTraceFromStackProp(name, message, stack)
 		if result != nil {
 			return result
 		}
 
 		// Try Opera multiline message format
-		result = tk.ComputeStackTraceFromOperaMultiLineMessage(name, message)
+		result = ComputeStackTraceFromOperaMultiLineMessage(name, message)
 		if result != nil {
 			return result
 		}

@@ -165,8 +165,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 			)
 		}
 
-		tk := NewTraceKit()
-		parsedStackTrace = tk.ComputeStackTrace(exceptionType.Str(), exceptionMessage.Str(), rawStackTrace.Str())
+		parsedStackTrace = ComputeStackTrace(exceptionType.Str(), exceptionMessage.Str(), rawStackTrace.Str())
 
 		// Check if parsing failed
 		if parsedStackTrace.Mode == "failed" {
