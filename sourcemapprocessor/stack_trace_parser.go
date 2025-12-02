@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	UnknownFunction = "?"
+	unknownFunction = "?"
 )
 
 // Compiled regular expressions for parsing stack traces from various browsers.
@@ -40,33 +40,33 @@ var (
 	lineRE3 = regexp.MustCompile(`^\s*Line (\d+) of function script\s*$`)
 )
 
-// StackFrame represents a single frame in a stack trace.
-type StackFrame struct {
+// stackFrame represents a single frame in a stack trace.
+type stackFrame struct {
 	URL    string
 	Func   string
 	Line   *int
 	Column *int
 }
 
-// StackTrace represents a complete JavaScript stack trace.
-type StackTrace struct {
+// stackTrace represents a complete JavaScript stack trace.
+type stackTrace struct {
 	Name        string
 	Message     string
 	Mode        string // 'stack', 'stacktrace', 'multiline', or 'failed'
-	StackFrames []StackFrame
+	stackFrames []stackFrame
 }
 
-// ComputeStackTraceFromStackProp parses stack traces from the stack property (Chrome/Gecko).
-func ComputeStackTraceFromStackProp(name, message, stack string) *StackTrace {
+// computeStackTraceFromStackProp parses stack traces from the stack property (Chrome/Gecko).
+func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 	if stack == "" {
 		return nil
 	}
 
 	lines := strings.Split(stack, "\n")
-	stackFrames := []StackFrame{}
+	stackFrames := []stackFrame{}
 
 	for _, line := range lines {
-		var element *StackFrame
+		var element *stackFrame
 
 		// Try Chrome format
 		if matches := chromeRE.FindStringSubmatch(line); matches != nil {
@@ -89,7 +89,7 @@ func ComputeStackTraceFromStackProp(name, message, stack string) *StackTrace {
 				url = ""
 			}
 
-			element = &StackFrame{
+			element = &stackFrame{
 				URL:  url,
 				Func: matches[1],
 			}
@@ -104,12 +104,12 @@ func ComputeStackTraceFromStackProp(name, message, stack string) *StackTrace {
 			}
 
 			if element.Func == "" {
-				element.Func = UnknownFunction
+				element.Func = unknownFunction
 			}
 		} else if matches := winJSRE.FindStringSubmatch(line); matches != nil {
 			// Try WinJS format
 			lineInt := parseInt(matches[3])
-			element = &StackFrame{
+			element = &stackFrame{
 				URL:    matches[2],
 				Func:   matches[1],
 				Line:   &lineInt,
@@ -120,7 +120,7 @@ func ComputeStackTraceFromStackProp(name, message, stack string) *StackTrace {
 				element.Column = &colInt
 			}
 			if element.Func == "" {
-				element.Func = UnknownFunction
+				element.Func = unknownFunction
 			}
 		} else if matches := geckoRE.FindStringSubmatch(line); matches != nil {
 			// Try Gecko format
@@ -136,7 +136,7 @@ func ComputeStackTraceFromStackProp(name, message, stack string) *StackTrace {
 				}
 			}
 
-			element = &StackFrame{
+			element = &stackFrame{
 				URL:  matches[3],
 				Func: matches[1],
 			}
@@ -151,7 +151,7 @@ func ComputeStackTraceFromStackProp(name, message, stack string) *StackTrace {
 			}
 
 			if element.Func == "" {
-				element.Func = UnknownFunction
+				element.Func = unknownFunction
 			}
 		} else {
 			continue
@@ -166,29 +166,29 @@ func ComputeStackTraceFromStackProp(name, message, stack string) *StackTrace {
 		return nil
 	}
 
-	return &StackTrace{
+	return &stackTrace{
 		Name:        name,
 		Message:     message,
 		Mode:        "stack",
-		StackFrames: stackFrames,
+		stackFrames: stackFrames,
 	}
 }
 
-// ComputeStackTraceFromStacktraceProp parses stack traces from stacktrace property (Opera 10+).
-func ComputeStackTraceFromStacktraceProp(name, message, stacktrace string) *StackTrace {
+// computeStackTraceFromStacktraceProp parses stack traces from stacktrace property (Opera 10+).
+func computeStackTraceFromStacktraceProp(name, message, stacktrace string) *stackTrace {
 	if stacktrace == "" {
 		return nil
 	}
 
 	lines := strings.Split(stacktrace, "\n")
-	stackFrames := []StackFrame{}
+	stackFrames := []stackFrame{}
 
 	for i := 0; i < len(lines); i += 2 {
-		var element *StackFrame
+		var element *stackFrame
 
 		if matches := opera10RE.FindStringSubmatch(lines[i]); matches != nil {
 			lineInt := parseInt(matches[1])
-			element = &StackFrame{
+			element = &stackFrame{
 				URL:    matches[2],
 				Func:   matches[3],
 				Line:   &lineInt,
@@ -203,7 +203,7 @@ func ComputeStackTraceFromStacktraceProp(name, message, stacktrace string) *Stac
 				func_ = func2
 			}
 
-			element = &StackFrame{
+			element = &stackFrame{
 				URL:    matches[6],
 				Func:   func_,
 				Line:   &lineInt,
@@ -220,29 +220,29 @@ func ComputeStackTraceFromStacktraceProp(name, message, stacktrace string) *Stac
 		return nil
 	}
 
-	return &StackTrace{
+	return &stackTrace{
 		Name:        name,
 		Message:     message,
 		Mode:        "stacktrace",
-		StackFrames: stackFrames,
+		stackFrames: stackFrames,
 	}
 }
 
-// ComputeStackTraceFromOperaMultiLineMessage parses Opera 9 and earlier stack traces.
-func ComputeStackTraceFromOperaMultiLineMessage(name, message string) *StackTrace {
+// computeStackTraceFromOperaMultiLineMessage parses Opera 9 and earlier stack traces.
+func computeStackTraceFromOperaMultiLineMessage(name, message string) *stackTrace {
 	lines := strings.Split(message, "\n")
 	if len(lines) < 4 {
 		return nil
 	}
 
-	stackFrames := []StackFrame{}
+	stackFrames := []stackFrame{}
 
 	for line := 2; line < len(lines); line += 2 {
-		var item *StackFrame
+		var item *stackFrame
 
 		if matches := lineRE1.FindStringSubmatch(lines[line]); matches != nil {
 			lineInt := parseInt(matches[1])
-			item = &StackFrame{
+			item = &stackFrame{
 				URL:    matches[2],
 				Func:   matches[3],
 				Line:   &lineInt,
@@ -250,14 +250,14 @@ func ComputeStackTraceFromOperaMultiLineMessage(name, message string) *StackTrac
 			}
 		} else if matches := lineRE2.FindStringSubmatch(lines[line]); matches != nil {
 			lineInt := parseInt(matches[1])
-			item = &StackFrame{
+			item = &stackFrame{
 				URL:    matches[3],
 				Func:   matches[4],
 				Line:   &lineInt,
 				Column: nil,
 			}
 		} else if matches := lineRE3.FindStringSubmatch(lines[line]); matches != nil {
-			item = &StackFrame{
+			item = &stackFrame{
 				URL:    "",
 				Func:   "",
 				Line:   nil,
@@ -274,45 +274,45 @@ func ComputeStackTraceFromOperaMultiLineMessage(name, message string) *StackTrac
 		return nil
 	}
 
-	return &StackTrace{
+	return &stackTrace{
 		Name:        name,
 		Message:     lines[0],
 		Mode:        "multiline",
-		StackFrames: stackFrames,
+		stackFrames: stackFrames,
 	}
 }
 
-// ComputeStackTrace parses a JavaScript error stack trace.
+// computeStackTrace parses a JavaScript error stack trace.
 // It tries multiple parsing strategies based on the stack trace format.
-func ComputeStackTrace(name, message, stack string) *StackTrace {
-	var result *StackTrace
+func computeStackTrace(name, message, stack string) *stackTrace {
+	var result *stackTrace
 
 	// Try stacktrace property first (Opera 10+)
 	if stack != "" {
-		result = ComputeStackTraceFromStacktraceProp(name, message, stack)
+		result = computeStackTraceFromStacktraceProp(name, message, stack)
 		if result != nil {
 			return result
 		}
 
 		// Try stack property (Chrome/Gecko)
-		result = ComputeStackTraceFromStackProp(name, message, stack)
+		result = computeStackTraceFromStackProp(name, message, stack)
 		if result != nil {
 			return result
 		}
 
 		// Try Opera multiline message format
-		result = ComputeStackTraceFromOperaMultiLineMessage(name, message)
+		result = computeStackTraceFromOperaMultiLineMessage(name, message)
 		if result != nil {
 			return result
 		}
 	}
 
 	// Fallback if parsing failed
-	return &StackTrace{
+	return &stackTrace{
 		Name:        name,
 		Message:     message,
 		Mode:        "failed",
-		StackFrames: []StackFrame{},
+		stackFrames: []stackFrame{},
 	}
 }
 

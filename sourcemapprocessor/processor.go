@@ -156,7 +156,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	rawStackTrace, hasRawStackTrace := attributes.Get(sp.cfg.StackTraceAttributeKey)
 
 	// If any of the structured attributes are missing, attempt to parse the raw stack trace
-	var parsedStackTrace *StackTrace
+	var parsedStackTrace *stackTrace
 	if !hasLines || !hasColumns || !hasFunctions || !hasUrls {
 		if !hasRawStackTrace {
 			return fmt.Errorf("%w: missing structured stack trace attributes and %s attribute is missing",
@@ -165,7 +165,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 			)
 		}
 
-		parsedStackTrace = ComputeStackTrace(exceptionType.Str(), exceptionMessage.Str(), rawStackTrace.Str())
+		parsedStackTrace = computeStackTrace(exceptionType.Str(), exceptionMessage.Str(), rawStackTrace.Str())
 
 		// Check if parsing failed
 		if parsedStackTrace.Mode == "failed" {
@@ -205,7 +205,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 
 	// Set up iteration based on whether we have a parsed stack trace or structured attributes
 	if parsedStackTrace != nil {
-		iterCount = len(parsedStackTrace.StackFrames)
+		iterCount = len(parsedStackTrace.stackFrames)
 
 		if sp.cfg.PreserveStackTrace {
 			attributes.PutStr(sp.cfg.OriginalStackTraceAttributeKey, rawStackTrace.Str())
@@ -243,7 +243,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		// Get frame data based on route
 		if parsedStackTrace != nil {
 			// Extract from parsed frame
-			frame := parsedStackTrace.StackFrames[i]
+			frame := parsedStackTrace.stackFrames[i]
 			url = frame.URL
 			function = frame.Func
 			if frame.Line != nil {

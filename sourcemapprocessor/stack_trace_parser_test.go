@@ -24,7 +24,7 @@ func TestTraceKit(t *testing.T) {
 		stack           string
 		expectedName    string
 		expectedMessage string
-		expectedFrames  []StackFrame
+		expectedFrames  []stackFrame
 		expectedMode    string
 	}{
 		{
@@ -37,7 +37,7 @@ func TestTraceKit(t *testing.T) {
 				"    at funcB (fileB.js:20:25)", // stack[1]
 			expectedName:    "Error",
 			expectedMessage: "Something went wrong",
-			expectedFrames: []StackFrame{
+			expectedFrames: []stackFrame{
 				{URL: "fileA.js", Func: "funcA", Line: &line10, Column: &col15},
 				{URL: "fileB.js", Func: "funcB", Line: &line20, Column: &col25},
 			},
@@ -53,7 +53,7 @@ func TestTraceKit(t *testing.T) {
 				"    at funcB (fileB.js:20:25)", // stack[2]
 			expectedName:    "",
 			expectedMessage: "",
-			expectedFrames: []StackFrame{
+			expectedFrames: []stackFrame{
 				{URL: "fileA.js", Func: "funcA", Line: &line10, Column: &col15},
 				{URL: "fileB.js", Func: "funcB", Line: &line20, Column: &col25},
 			},
@@ -71,7 +71,7 @@ func TestTraceKit(t *testing.T) {
 				"   at funcB (fileB.js:20:25)", // stack[3]
 			expectedName:    "Error",
 			expectedMessage: "Test error",
-			expectedFrames: []StackFrame{
+			expectedFrames: []stackFrame{
 				{URL: "", Func: "Array.map", Line: nil, Column: nil},
 				{URL: "fileA.js", Func: "funcA", Line: &line10, Column: &col15},
 				{URL: "", Func: "Array.forEach", Line: nil, Column: nil},
@@ -91,12 +91,12 @@ func TestTraceKit(t *testing.T) {
 				"    at namedFunc2 (http://example.com/js/script.js:20:5)\n" + // stack[3]
 				"    at http://example.com/js/test.js:67:5\n" + // stack[4]
 				"    at namedFunc4 (http://example.com/js/script.js:100001:10002)", // stack[5]
-			expectedFrames: []StackFrame{
+			expectedFrames: []stackFrame{
 				{URL: "http://example.com/js/test.js", Func: "new <anonymous>", Line: intPtr(63), Column: intPtr(1)},
 				{URL: "http://example.com/js/script.js", Func: "namedFunc0", Line: intPtr(10), Column: intPtr(2)},
-				{URL: "http://example.com/js/test.js", Func: UnknownFunction, Line: intPtr(65), Column: intPtr(10)},
+				{URL: "http://example.com/js/test.js", Func: unknownFunction, Line: intPtr(65), Column: intPtr(10)},
 				{URL: "http://example.com/js/script.js", Func: "namedFunc2", Line: intPtr(20), Column: intPtr(5)},
-				{URL: "http://example.com/js/test.js", Func: UnknownFunction, Line: intPtr(67), Column: intPtr(5)},
+				{URL: "http://example.com/js/test.js", Func: unknownFunction, Line: intPtr(67), Column: intPtr(5)},
 				{URL: "http://example.com/js/script.js", Func: "namedFunc4", Line: intPtr(100001), Column: intPtr(10002)},
 			},
 			expectedName:    "Error",
@@ -107,28 +107,28 @@ func TestTraceKit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ComputeStackTrace(tt.exceptionName, tt.exceptionMsg, tt.stack)
+			result := computeStackTrace(tt.exceptionName, tt.exceptionMsg, tt.stack)
 
 			require.NotNil(t, result)
 			assert.Equal(t, tt.expectedName, result.Name)
 			assert.Equal(t, tt.expectedMessage, result.Message)
 			assert.Equal(t, tt.expectedMode, result.Mode)
-			assert.Equal(t, len(tt.expectedFrames), len(result.StackFrames))
+			assert.Equal(t, len(tt.expectedFrames), len(result.stackFrames))
 
 			for i, expectedFrame := range tt.expectedFrames {
-				assert.Equal(t, expectedFrame.URL, result.StackFrames[i].URL)
-				assert.Equal(t, expectedFrame.Func, result.StackFrames[i].Func)
+				assert.Equal(t, expectedFrame.URL, result.stackFrames[i].URL)
+				assert.Equal(t, expectedFrame.Func, result.stackFrames[i].Func)
 				if expectedFrame.Line != nil {
-					require.NotNil(t, result.StackFrames[i].Line)
-					assert.Equal(t, *expectedFrame.Line, *result.StackFrames[i].Line)
+					require.NotNil(t, result.stackFrames[i].Line)
+					assert.Equal(t, *expectedFrame.Line, *result.stackFrames[i].Line)
 				} else {
-					assert.Nil(t, result.StackFrames[i].Line)
+					assert.Nil(t, result.stackFrames[i].Line)
 				}
 				if expectedFrame.Column != nil {
-					require.NotNil(t, result.StackFrames[i].Column)
-					assert.Equal(t, *expectedFrame.Column, *result.StackFrames[i].Column)
+					require.NotNil(t, result.stackFrames[i].Column)
+					assert.Equal(t, *expectedFrame.Column, *result.stackFrames[i].Column)
 				} else {
-					assert.Nil(t, result.StackFrames[i].Column)
+					assert.Nil(t, result.stackFrames[i].Column)
 				}
 			}
 		})
