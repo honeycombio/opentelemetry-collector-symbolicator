@@ -38,8 +38,8 @@ func TestTraceKit(t *testing.T) {
 			expectedName:    "Error",
 			expectedMessage: "Something went wrong",
 			expectedFrames: []stackFrame{
-				{URL: "fileA.js", Func: "funcA", Line: &line10, Column: &col15},
-				{URL: "fileB.js", Func: "funcB", Line: &line20, Column: &col25},
+				{url: "fileA.js", funcName: "funcA", line: &line10, column: &col15},
+				{url: "fileB.js", funcName: "funcB", line: &line20, column: &col25},
 			},
 			expectedMode: "stack",
 		},
@@ -54,8 +54,8 @@ func TestTraceKit(t *testing.T) {
 			expectedName:    "",
 			expectedMessage: "",
 			expectedFrames: []stackFrame{
-				{URL: "fileA.js", Func: "funcA", Line: &line10, Column: &col15},
-				{URL: "fileB.js", Func: "funcB", Line: &line20, Column: &col25},
+				{url: "fileA.js", funcName: "funcA", line: &line10, column: &col15},
+				{url: "fileB.js", funcName: "funcB", line: &line20, column: &col25},
 			},
 			expectedMode: "stack",
 		},
@@ -72,10 +72,10 @@ func TestTraceKit(t *testing.T) {
 			expectedName:    "Error",
 			expectedMessage: "Test error",
 			expectedFrames: []stackFrame{
-				{URL: "", Func: "Array.map", Line: nil, Column: nil},
-				{URL: "fileA.js", Func: "funcA", Line: &line10, Column: &col15},
-				{URL: "", Func: "Array.forEach", Line: nil, Column: nil},
-				{URL: "fileB.js", Func: "funcB", Line: &line20, Column: &col25},
+				{url: "", funcName: "Array.map", line: nil, column: nil},
+				{url: "fileA.js", funcName: "funcA", line: &line10, column: &col15},
+				{url: "", funcName: "Array.forEach", line: nil, column: nil},
+				{url: "fileB.js", funcName: "funcB", line: &line20, column: &col25},
 			},
 			expectedMode: "stack",
 		},
@@ -92,12 +92,12 @@ func TestTraceKit(t *testing.T) {
 				"    at http://example.com/js/test.js:67:5\n" + // stack[4]
 				"    at namedFunc4 (http://example.com/js/script.js:100001:10002)", // stack[5]
 			expectedFrames: []stackFrame{
-				{URL: "http://example.com/js/test.js", Func: "new <anonymous>", Line: intPtr(63), Column: intPtr(1)},
-				{URL: "http://example.com/js/script.js", Func: "namedFunc0", Line: intPtr(10), Column: intPtr(2)},
-				{URL: "http://example.com/js/test.js", Func: unknownFunction, Line: intPtr(65), Column: intPtr(10)},
-				{URL: "http://example.com/js/script.js", Func: "namedFunc2", Line: intPtr(20), Column: intPtr(5)},
-				{URL: "http://example.com/js/test.js", Func: unknownFunction, Line: intPtr(67), Column: intPtr(5)},
-				{URL: "http://example.com/js/script.js", Func: "namedFunc4", Line: intPtr(100001), Column: intPtr(10002)},
+				{url: "http://example.com/js/test.js", funcName: "new <anonymous>", line: intPtr(63), column: intPtr(1)},
+				{url: "http://example.com/js/script.js", funcName: "namedFunc0", line: intPtr(10), column: intPtr(2)},
+				{url: "http://example.com/js/test.js", funcName: unknownFunction, line: intPtr(65), column: intPtr(10)},
+				{url: "http://example.com/js/script.js", funcName: "namedFunc2", line: intPtr(20), column: intPtr(5)},
+				{url: "http://example.com/js/test.js", funcName: unknownFunction, line: intPtr(67), column: intPtr(5)},
+				{url: "http://example.com/js/script.js", funcName: "namedFunc4", line: intPtr(100001), column: intPtr(10002)},
 			},
 			expectedName:    "Error",
 			expectedMessage: "",
@@ -110,25 +110,25 @@ func TestTraceKit(t *testing.T) {
 			result := computeStackTrace(tt.exceptionName, tt.exceptionMsg, tt.stack)
 
 			require.NotNil(t, result)
-			assert.Equal(t, tt.expectedName, result.Name)
-			assert.Equal(t, tt.expectedMessage, result.Message)
-			assert.Equal(t, tt.expectedMode, result.Mode)
+			assert.Equal(t, tt.expectedName, result.name)
+			assert.Equal(t, tt.expectedMessage, result.message)
+			assert.Equal(t, tt.expectedMode, result.mode)
 			assert.Equal(t, len(tt.expectedFrames), len(result.stackFrames))
 
 			for i, expectedFrame := range tt.expectedFrames {
-				assert.Equal(t, expectedFrame.URL, result.stackFrames[i].URL)
-				assert.Equal(t, expectedFrame.Func, result.stackFrames[i].Func)
-				if expectedFrame.Line != nil {
-					require.NotNil(t, result.stackFrames[i].Line)
-					assert.Equal(t, *expectedFrame.Line, *result.stackFrames[i].Line)
+				assert.Equal(t, expectedFrame.url, result.stackFrames[i].url)
+				assert.Equal(t, expectedFrame.funcName, result.stackFrames[i].funcName)
+				if expectedFrame.line != nil {
+					require.NotNil(t, result.stackFrames[i].line)
+					assert.Equal(t, *expectedFrame.line, *result.stackFrames[i].line)
 				} else {
-					assert.Nil(t, result.stackFrames[i].Line)
+					assert.Nil(t, result.stackFrames[i].line)
 				}
-				if expectedFrame.Column != nil {
-					require.NotNil(t, result.stackFrames[i].Column)
-					assert.Equal(t, *expectedFrame.Column, *result.stackFrames[i].Column)
+				if expectedFrame.column != nil {
+					require.NotNil(t, result.stackFrames[i].column)
+					assert.Equal(t, *expectedFrame.column, *result.stackFrames[i].column)
 				} else {
-					assert.Nil(t, result.stackFrames[i].Column)
+					assert.Nil(t, result.stackFrames[i].column)
 				}
 			}
 		})

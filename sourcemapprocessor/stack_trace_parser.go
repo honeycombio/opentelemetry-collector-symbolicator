@@ -42,17 +42,17 @@ var (
 
 // stackFrame represents a single frame in a stack trace.
 type stackFrame struct {
-	URL    string
-	Func   string
-	Line   *int
-	Column *int
+	url      string
+	funcName string
+	line     *int
+	column   *int
 }
 
 // stackTrace represents a complete JavaScript stack trace.
 type stackTrace struct {
-	Name        string
-	Message     string
-	Mode        string // 'stack', 'stacktrace', 'multiline', or 'failed'
+	name        string
+	message     string
+	mode        string // 'stack', 'stacktrace', 'multiline', or 'failed'
 	stackFrames []stackFrame
 }
 
@@ -90,37 +90,37 @@ func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 			}
 
 			element = &stackFrame{
-				URL:  url,
-				Func: matches[1],
+				url:  url,
+				funcName: matches[1],
 			}
 
 			if lineNo != "" {
 				lineInt := parseInt(lineNo)
-				element.Line = &lineInt
+				element.line = &lineInt
 			}
 			if col != "" {
 				colInt := parseInt(col)
-				element.Column = &colInt
+				element.column = &colInt
 			}
 
-			if element.Func == "" {
-				element.Func = unknownFunction
+			if element.funcName == "" {
+				element.funcName = unknownFunction
 			}
 		} else if matches := winJSRE.FindStringSubmatch(line); matches != nil {
 			// Try WinJS format
 			lineInt := parseInt(matches[3])
 			element = &stackFrame{
-				URL:    matches[2],
-				Func:   matches[1],
-				Line:   &lineInt,
-				Column: nil,
+				url:    matches[2],
+				funcName:   matches[1],
+				line:   &lineInt,
+				column: nil,
 			}
 			if matches[4] != "" {
 				colInt := parseInt(matches[4])
-				element.Column = &colInt
+				element.column = &colInt
 			}
-			if element.Func == "" {
-				element.Func = unknownFunction
+			if element.funcName == "" {
+				element.funcName = unknownFunction
 			}
 		} else if matches := geckoRE.FindStringSubmatch(line); matches != nil {
 			// Try Gecko format
@@ -137,21 +137,21 @@ func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 			}
 
 			element = &stackFrame{
-				URL:  matches[3],
-				Func: matches[1],
+				url:  matches[3],
+				funcName: matches[1],
 			}
 
 			if lineNo != "" {
 				lineInt := parseInt(lineNo)
-				element.Line = &lineInt
+				element.line = &lineInt
 			}
 			if col != "" {
 				colInt := parseInt(col)
-				element.Column = &colInt
+				element.column = &colInt
 			}
 
-			if element.Func == "" {
-				element.Func = unknownFunction
+			if element.funcName == "" {
+				element.funcName = unknownFunction
 			}
 		} else {
 			continue
@@ -167,9 +167,9 @@ func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 	}
 
 	return &stackTrace{
-		Name:        name,
-		Message:     message,
-		Mode:        "stack",
+		name:        name,
+		message:     message,
+		mode:        "stack",
 		stackFrames: stackFrames,
 	}
 }
@@ -189,10 +189,10 @@ func computeStackTraceFromStacktraceProp(name, message, stacktrace string) *stac
 		if matches := opera10RE.FindStringSubmatch(lines[i]); matches != nil {
 			lineInt := parseInt(matches[1])
 			element = &stackFrame{
-				URL:    matches[2],
-				Func:   matches[3],
-				Line:   &lineInt,
-				Column: nil,
+				url:    matches[2],
+				funcName:   matches[3],
+				line:   &lineInt,
+				column: nil,
 			}
 		} else if matches := opera11RE.FindStringSubmatch(lines[i]); matches != nil {
 			lineInt := parseInt(matches[1])
@@ -204,10 +204,10 @@ func computeStackTraceFromStacktraceProp(name, message, stacktrace string) *stac
 			}
 
 			element = &stackFrame{
-				URL:    matches[6],
-				Func:   func_,
-				Line:   &lineInt,
-				Column: &colInt,
+				url:    matches[6],
+				funcName:   func_,
+				line:   &lineInt,
+				column: &colInt,
 			}
 		}
 
@@ -221,9 +221,9 @@ func computeStackTraceFromStacktraceProp(name, message, stacktrace string) *stac
 	}
 
 	return &stackTrace{
-		Name:        name,
-		Message:     message,
-		Mode:        "stacktrace",
+		name:        name,
+		message:     message,
+		mode:        "stacktrace",
 		stackFrames: stackFrames,
 	}
 }
@@ -243,25 +243,25 @@ func computeStackTraceFromOperaMultiLineMessage(name, message string) *stackTrac
 		if matches := lineRE1.FindStringSubmatch(lines[line]); matches != nil {
 			lineInt := parseInt(matches[1])
 			item = &stackFrame{
-				URL:    matches[2],
-				Func:   matches[3],
-				Line:   &lineInt,
-				Column: nil,
+				url:    matches[2],
+				funcName:   matches[3],
+				line:   &lineInt,
+				column: nil,
 			}
 		} else if matches := lineRE2.FindStringSubmatch(lines[line]); matches != nil {
 			lineInt := parseInt(matches[1])
 			item = &stackFrame{
-				URL:    matches[3],
-				Func:   matches[4],
-				Line:   &lineInt,
-				Column: nil,
+				url:    matches[3],
+				funcName:   matches[4],
+				line:   &lineInt,
+				column: nil,
 			}
 		} else if matches := lineRE3.FindStringSubmatch(lines[line]); matches != nil {
 			item = &stackFrame{
-				URL:    "",
-				Func:   "",
-				Line:   nil,
-				Column: nil,
+				url:    "",
+				funcName:   "",
+				line:   nil,
+				column: nil,
 			}
 		}
 
@@ -275,9 +275,9 @@ func computeStackTraceFromOperaMultiLineMessage(name, message string) *stackTrac
 	}
 
 	return &stackTrace{
-		Name:        name,
-		Message:     lines[0],
-		Mode:        "multiline",
+		name:        name,
+		message:     lines[0],
+		mode:        "multiline",
 		stackFrames: stackFrames,
 	}
 }
@@ -309,9 +309,9 @@ func computeStackTrace(name, message, stack string) *stackTrace {
 
 	// Fallback if parsing failed
 	return &stackTrace{
-		Name:        name,
-		Message:     message,
-		Mode:        "failed",
+		name:        name,
+		message:     message,
+		mode:        "failed",
 		stackFrames: []stackFrame{},
 	}
 }

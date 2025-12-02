@@ -168,14 +168,14 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		parsedStackTrace = computeStackTrace(exceptionType.Str(), exceptionMessage.Str(), rawStackTrace.Str())
 
 		// Check if parsing failed
-		if parsedStackTrace.Mode == "failed" {
+		if parsedStackTrace.mode == "failed" {
 			return fmt.Errorf("failed to parse raw stack trace from %s", sp.cfg.StackTraceAttributeKey)
 		}
 
-		attributes.PutStr(sp.cfg.ExceptionTypeAttributeKey, parsedStackTrace.Name)
+		attributes.PutStr(sp.cfg.ExceptionTypeAttributeKey, parsedStackTrace.name)
 		exceptionType, hasExceptionType = attributes.Get(sp.cfg.ExceptionTypeAttributeKey)
 
-		attributes.PutStr(sp.cfg.ExceptionMessageAttributeKey, parsedStackTrace.Message)
+		attributes.PutStr(sp.cfg.ExceptionMessageAttributeKey, parsedStackTrace.message)
 		exceptionMessage, hasExceptionMessage = attributes.Get(sp.cfg.ExceptionMessageAttributeKey)
 
 		attributes.PutStr(sp.cfg.SymbolicatorParsingMethodAttributeKey, "processor_parsed")
@@ -244,15 +244,15 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		if parsedStackTrace != nil {
 			// Extract from parsed frame
 			frame := parsedStackTrace.stackFrames[i]
-			url = frame.URL
-			function = frame.Func
-			if frame.Line != nil {
-				line = int64(*frame.Line)
+			url = frame.url
+			function = frame.funcName
+			if frame.line != nil {
+				line = int64(*frame.line)
 			} else {
 				line = -1
 			}
-			if frame.Column != nil {
-				column = int64(*frame.Column)
+			if frame.column != nil {
+				column = int64(*frame.column)
 			} else {
 				column = -1
 			}
