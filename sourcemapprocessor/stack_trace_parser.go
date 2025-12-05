@@ -380,12 +380,12 @@ func computeStackTrace(name, message, stack string) *stackTrace {
 		if result != nil {
 			return result
 		}
+	}
 
-		// Try Opera 9 message property
-		result = computeStackTraceFromOpera9Message(name, message)
-		if result != nil {
-			return result
-		}
+	// Try Opera 9 message property
+	result = computeStackTraceFromOpera9Message(name, message)
+	if result != nil {
+		return result
 	}
 
 	// Fallback if parsing failed

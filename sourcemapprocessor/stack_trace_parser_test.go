@@ -411,6 +411,24 @@ func TestStackTraceParser(t *testing.T) {
 
 		// Opera Tests
 		{
+			name:          "Opera 9 error",
+			exceptionName: "TypeError",
+			exceptionMsg: "Statement on line 44: Type mismatch\n" +
+				"Backtrace:\n" +
+				"  Line 44 of linked script http://path/to/file.js\n" +
+				"    this.undef();\n" +
+				"  Line 31 of linked script http://path/to/file.js\n" +
+				"    ex = ex || this.createException();",
+			stack:           "",
+			expectedName:    "TypeError",
+			expectedMessage: "Statement on line 44: Type mismatch",
+			expectedFrames: []stackFrame{
+				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(44), column: nil},
+				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(31), column: nil},
+			},
+			expectedMode: "multiline",
+		},
+		{
 			name:          "Opera 25 error",
 			exceptionName: "TypeError",
 			exceptionMsg:  "Cannot read property 'undef' of null",
