@@ -5,6 +5,8 @@
 package sourcemapprocessor
 
 import (
+	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -411,6 +413,39 @@ func TestStackTraceParser(t *testing.T) {
 
 		// Opera Tests
 		{
+			name:          "Opera 9.64 error with function names",
+			exceptionName: "Error",
+			exceptionMsg: "Statement on line 42: Type mismatch (usually non-object value supplied where object required)\n" +
+				"Backtrace:\n" +
+				"  Line 42 of linked script http://path/to/file.js\n" +
+				"                this.undef();\n" +
+				"  Line 27 of linked script http://path/to/file.js\n" +
+				"            ex = ex || this.createException();\n" +
+				"  Line 18 of linked script http://path/to/file.js: In function printStackTrace\n" +
+				"        var p = new printStackTrace.implementation(), result = p.run(ex);\n" +
+				"  Line 4 of inline#1 script in http://path/to/file.js: In function bar\n" +
+				"             printTrace(printStackTrace());\n" +
+				"  Line 7 of inline#1 script in http://path/to/file.js: In function bar\n" +
+				"           bar(n - 1);\n" +
+				"  Line 11 of inline#1 script in http://path/to/file.js: In function foo\n" +
+				"           bar(2);\n" +
+				"  Line 15 of inline#1 script in http://path/to/file.js\n" +
+				"         foo();",
+			stack:           "",
+			expectedName:    "Error",
+			expectedMessage: "Statement on line 42: Type mismatch (usually non-object value supplied where object required)",
+			expectedFrames: []stackFrame{
+				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(42), column: nil},
+				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(27), column: nil},
+				{url: "http://path/to/file.js", funcName: "printStackTrace", line: intPtr(18), column: nil},
+				{url: "http://path/to/file.js", funcName: "bar", line: intPtr(4), column: nil},
+				{url: "http://path/to/file.js", funcName: "bar", line: intPtr(7), column: nil},
+				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(11), column: nil},
+				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(15), column: nil},
+			},
+			expectedMode: "multiline",
+		},
+		{
 			name:          "Opera 9 error",
 			exceptionName: "TypeError",
 			exceptionMsg: "Statement on line 44: Type mismatch\n" +
@@ -658,6 +693,124 @@ func TestStackTraceParser(t *testing.T) {
 			expectedMessage: "Error message",
 			expectedFrames:  []stackFrame{},
 			expectedMode:    "failed",
+		},
+		{
+			name:          "Chrome with query string URL",
+			exceptionName: "Error",
+			exceptionMsg:  "Test error",
+			stack: "Error: Test error\n" +
+				"    at foo (http://example.com/file.js?v=123:10:5)\n" +
+				"    at bar (http://example.com/file.js?v=123&debug=true:20:10)",
+			expectedName:    "Error",
+			expectedMessage: "Test error",
+			expectedFrames: []stackFrame{
+				{url: "http://example.com/file.js?v=123", funcName: "foo", line: intPtr(10), column: intPtr(5)},
+				{url: "http://example.com/file.js?v=123&debug=true", funcName: "bar", line: intPtr(20), column: intPtr(10)},
+			},
+			expectedMode: "stack",
+		},
+		{
+			name:          "Chrome with fragment URL",
+			exceptionName: "Error",
+			exceptionMsg:  "Test error",
+			stack: "Error: Test error\n" +
+				"    at foo (http://example.com/file.js#section:10:5)\n" +
+				"    at bar (http://example.com/file.js#top:20:10)",
+			expectedName:    "Error",
+			expectedMessage: "Test error",
+			expectedFrames: []stackFrame{
+				{url: "http://example.com/file.js#section", funcName: "foo", line: intPtr(10), column: intPtr(5)},
+				{url: "http://example.com/file.js#top", funcName: "bar", line: intPtr(20), column: intPtr(10)},
+			},
+			expectedMode: "stack",
+		},
+		{
+			name:          "Chrome extension error",
+			exceptionName: "Error",
+			exceptionMsg:  "Extension error",
+			stack: "Error: Extension error\n" +
+				"    at foo (chrome-extension://abc123def456/script.js:10:5)\n" +
+				"    at bar (chrome-extension://abc123def456/background.js:20:10)",
+			expectedName:    "Error",
+			expectedMessage: "Extension error",
+			expectedFrames: []stackFrame{
+				{url: "chrome-extension://abc123def456/script.js", funcName: "foo", line: intPtr(10), column: intPtr(5)},
+				{url: "chrome-extension://abc123def456/background.js", funcName: "bar", line: intPtr(20), column: intPtr(10)},
+			},
+			expectedMode: "stack",
+		},
+		{
+			name:          "Incomplete URL due to missing closing paren",
+			exceptionName: "Error",
+			exceptionMsg:  "Test error",
+			stack: "Error: Test error\n" +
+				"    at func (http://example.com/file.js:10:5\n" +
+				"    at func2 (http://example.com/file2.js:20:1)",
+			expectedName:    "Error",
+			expectedMessage: "Test error",
+			expectedFrames: []stackFrame{
+				{url: "http://example.com/file.js", funcName: "func", line: intPtr(10), column: intPtr(5)},
+				{url: "http://example.com/file2.js", funcName: "func2", line: intPtr(20), column: intPtr(1)},
+			},
+			expectedMode: "stack",
+		},
+		{
+			name:          "non-numeric line number",
+			exceptionName: "Error",
+			exceptionMsg:  "Test error",
+			stack: "Error: Test error\n" +
+				"    at func (http://example.com/file.js:abc:5)\n" +
+				"    at func2 (http://example.com/file2.js:20:1)",
+			expectedName:    "Error",
+			expectedMessage: "Test error",
+			expectedFrames: []stackFrame{
+				{url: "http://example.com/file.js:abc", funcName: "func", line: intPtr(5), column: nil},
+				{url: "http://example.com/file2.js", funcName: "func2", line: intPtr(20), column: intPtr(1)},
+			},
+			expectedMode: "stack",
+		},
+		{
+			name:          "non-numeric column number",
+			exceptionName: "Error",
+			exceptionMsg:  "Test error",
+			stack: "Error: Test error\n" +
+				"    at func (http://example.com/file.js:10:xyz)\n" +
+				"    at func2 (http://example.com/file2.js:20:1)",
+			expectedName:    "Error",
+			expectedMessage: "Test error",
+			expectedFrames: []stackFrame{
+				{url: "http://example.com/file.js:10:xyz", funcName: "func", line: nil, column: nil},
+				{url: "http://example.com/file2.js", funcName: "func2", line: intPtr(20), column: intPtr(1)},
+			},
+			expectedMode: "stack",
+		},
+		{
+			name:          "Line and column numbers at zero",
+			exceptionName: "Error",
+			exceptionMsg:  "Test error",
+			stack: "Error: Test error\n" +
+				"    at func (http://example.com/file.js:0:1)\n" +
+				"    at func2 (http://example.com/file.js:1:0)",
+			expectedName:    "Error",
+			expectedMessage: "Test error",
+			expectedFrames: []stackFrame{
+				{url: "http://example.com/file.js", funcName: "func", line: intPtr(0), column: intPtr(1)},
+				{url: "http://example.com/file.js", funcName: "func2", line: intPtr(1), column: intPtr(0)},
+			},
+			expectedMode: "stack",
+		},
+		{
+			name:          "Line and column at max uint32",
+			exceptionName: "Error",
+			exceptionMsg:  "Test error",
+			stack: fmt.Sprintf("Error: Test error\n"+
+				"    at func (http://example.com/file.js:%d:%d)", math.MaxUint32, math.MaxUint32),
+			expectedName:    "Error",
+			expectedMessage: "Test error",
+			expectedFrames: []stackFrame{
+				{url: "http://example.com/file.js", funcName: "func", line: intPtr(int(math.MaxUint32)), column: intPtr(int(math.MaxUint32))},
+			},
+			expectedMode: "stack",
 		},
 	}
 
