@@ -84,6 +84,29 @@ The following configuration options can also be provided to change the attribute
 | `timeout`               | Max duration to wait to symbolicate a stack trace in seconds.                                                     | `5`           |
 | `source_map_cache_size` | The maximum number of source maps to cache. Reduce this if you are running into memory issues with the collector. | `128`         |
 
+#### Language-Based Routing
+
+The source map processor supports language-based routing to ensure it only processes signals from JavaScript/TypeScript applications. This prevents the processor from running on signals from other languages (like Java or Swift), improving performance and avoiding unnecessary processing.
+
+| Config Key               | Description                                                                                                                                                    | Default Value             | Example Values                   |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------- |
+| `language_attribute_key` | The attribute key that contains the programming language or SDK language of the telemetry signal.                                                              | `telemetry.sdk.language`  | `telemetry.sdk.language`         |
+| `allowed_languages`      | A list of language values that this processor will handle. If the signal's language attribute matches any value in this list, the processor will run. If empty (default), the processor will process all signals regardless of language. **Important:** When `allowed_languages` is configured, signals without a language attribute will be skipped. | `[]` (empty, processes all) | `["javascript", "typescript"]`   |
+
+**Example configuration:**
+
+```yaml
+processors:
+  source_map_symbolicator:
+    language_attribute_key: "telemetry.sdk.language"
+    allowed_languages: ["javascript", "typescript", "nodejs", "browser"]
+```
+
+**Behavior:**
+- **Empty `allowed_languages` (default)**: Processes all signals, regardless of language attribute
+- **With `allowed_languages` configured**: Only processes signals where the language attribute matches one of the allowed values (case-insensitive)
+- **Missing language attribute**: Skips processing when `allowed_languages` is configured
+
 ## dSYM Symbolication
 ### Basic Configuration
 
@@ -194,6 +217,29 @@ The following configuration options can also be provided to change the attribute
 | `timeout`         | Max duration to wait to symbolicate a stack trace in seconds.                                               | `5`           |
 | `dsym_cache_size` | The maximum number of dSYMs to cache. Reduce this if you are running into memory issues with the collector. | `128`         |
 
+#### Language-Based Routing
+
+The dSYM processor supports language-based routing to ensure it only processes signals from iOS/macOS applications. This prevents the processor from running on signals from other platforms (like Android or JavaScript), improving performance and avoiding unnecessary processing.
+
+| Config Key               | Description                                                                                                                                                    | Default Value             | Example Values                   |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------- |
+| `language_attribute_key` | The attribute key that contains the programming language or SDK language of the telemetry signal.                                                              | `telemetry.sdk.language`  | `telemetry.sdk.language`         |
+| `allowed_languages`      | A list of language values that this processor will handle. If the signal's language attribute matches any value in this list, the processor will run. If empty (default), the processor will process all signals regardless of language. **Important:** When `allowed_languages` is configured, signals without a language attribute will be skipped. | `[]` (empty, processes all) | `["swift", "objc"]`              |
+
+**Example configuration:**
+
+```yaml
+processors:
+  dsym_symbolicator:
+    language_attribute_key: "telemetry.sdk.language"
+    allowed_languages: ["swift", "objc", "ios", "macos"]
+```
+
+**Behavior:**
+- **Empty `allowed_languages` (default)**: Processes all signals, regardless of language attribute
+- **With `allowed_languages` configured**: Only processes signals where the language attribute matches one of the allowed values (case-insensitive)
+- **Missing language attribute**: Skips processing when `allowed_languages` is configured
+
 ## Proguard Symbolication
 ### Basic Configuration
 
@@ -261,6 +307,29 @@ The following configuration options can also be provided to change the attribute
 | --------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------- |
 | `timeout`             | Max duration to wait to symbolicate a stack trace in seconds.                                                        | `5`           |
 | `proguard_cache_size` | The maximum number of proguard files to cache. Reduce this if you are running into memory issues with the collector. | `128`         |
+
+#### Language-Based Routing
+
+The Proguard processor supports language-based routing to ensure it only processes signals from Android/Java/Kotlin applications. This prevents the processor from running on signals from other platforms (like iOS or JavaScript), improving performance and avoiding unnecessary processing.
+
+| Config Key               | Description                                                                                                                                                    | Default Value             | Example Values                   |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------- |
+| `language_attribute_key` | The attribute key that contains the programming language or SDK language of the telemetry signal.                                                              | `telemetry.sdk.language`  | `telemetry.sdk.language`         |
+| `allowed_languages`      | A list of language values that this processor will handle. If the signal's language attribute matches any value in this list, the processor will run. If empty (default), the processor will process all signals regardless of language. **Important:** When `allowed_languages` is configured, signals without a language attribute will be skipped. | `[]` (empty, processes all) | `["java", "kotlin"]`             |
+
+**Example configuration:**
+
+```yaml
+processors:
+  proguard_symbolicator:
+    language_attribute_key: "telemetry.sdk.language"
+    allowed_languages: ["java", "kotlin", "android"]
+```
+
+**Behavior:**
+- **Empty `allowed_languages` (default)**: Processes all signals, regardless of language attribute
+- **With `allowed_languages` configured**: Only processes signals where the language attribute matches one of the allowed values (case-insensitive)
+- **Missing language attribute**: Skips processing when `allowed_languages` is configured
 
 ## Internal Telemetry
 
