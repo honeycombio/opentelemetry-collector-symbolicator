@@ -100,7 +100,6 @@ The source map processor supports language-based routing to ensure it only proce
 ```yaml
 processors:
   source_map_symbolicator:
-    language_attribute_key: "telemetry.sdk.language"
     allowed_languages: ["javascript", "webjs"]
 ```
 
@@ -233,7 +232,6 @@ The dSYM processor supports language-based routing to ensure it only processes s
 ```yaml
 processors:
   dsym_symbolicator:
-    language_attribute_key: "telemetry.sdk.language"
     allowed_languages: ["swift", "ios"]
 ```
 
@@ -324,7 +322,6 @@ The Proguard processor supports language-based routing to ensure it only process
 ```yaml
 processors:
   proguard_symbolicator:
-    language_attribute_key: "telemetry.sdk.language"
     allowed_languages: ["java", "android"]
 ```
 
