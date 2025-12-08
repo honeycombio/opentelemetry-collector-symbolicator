@@ -63,6 +63,7 @@ The following configuration options can also be provided to change the attribute
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | `symbolicator_failure_attribute_key`         | Signals if the the symbolicator fails to fully symbolicate the stack trace                        | `exception.symbolicator.failed`                      |
 | `symbolicator_error_attribute_key`           | Contains the error message if the the symbolicator fails to fully symbolicate the stack trace     | `exception.symbolicator.error`                       |
+| `symbolicator_parsing_method_attribute_key` | Stores the stack trace parsing method used by the processor                                       | `exception.symbolicator.parsing_method`            |
 | `columns_attribute_key`                      | Which attribute should the columns of the stack trace be sourced from                             | `exception.structured_stacktrace.columns`            |
 | `functions_attribute_key`                    | Which attribute should the functions of the stack trace be sourced from                           | `exception.structured_stacktrace.functions`          |
 | `lines_attribute_key`                        | Which attribute should the lines of the stack trace be sourced from                               | `exception.structured_stacktrace.lines`              |

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - feat: add optional language check to processors | @jairo-mendoza
+- feat(sourcemap-processor): Implement collector-side parsing (#132) | @jairo-mendoza
 - refactor: improve parity between processors' configs (#131) | @jairo-mendoza
 
 ## v0.0.14 [beta] - 2025/11/19

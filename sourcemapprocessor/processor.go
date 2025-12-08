@@ -73,12 +73,7 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 
 		for j := 0; j < ss.Spans().Len(); j++ {
 			span := ss.Spans().At(j)
-
-			err := sp.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
-
-			if err != nil {
-				sp.logger.Debug("Error processing span", zap.Error(err))
-			}
+			sp.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
 		}
 	}
 }
@@ -104,12 +99,7 @@ func (sp *symbolicatorProcessor) processResourceLogs(ctx context.Context, rl plo
 
 		for j := 0; j < sl.LogRecords().Len(); j++ {
 			logRecord := sl.LogRecords().At(j)
-
-			err := sp.processAttributes(ctx, logRecord.Attributes(), rl.Resource().Attributes())
-
-			if err != nil {
-				sp.logger.Debug("Error processing log record", zap.Error(err))
-			}
+			sp.processAttributes(ctx, logRecord.Attributes(), rl.Resource().Attributes())
 		}
 	}
 }
@@ -121,10 +111,10 @@ func formatStackFrame(sf *mappedStackFrame) string {
 }
 
 // processAttributes takes the attributes of a span and returns an error if symbolication failed.
-func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) error {
+func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) {
 	// Skip all processing if StackTraceAttributeKey is not present
 	if _, ok := attributes.Get(sp.cfg.StackTraceAttributeKey); !ok {
-		return nil
+		return
 	}
 
 	// Check language filtering if configured
@@ -161,10 +151,9 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 
 	if err != nil {
 		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, true)
-		return err
+		attributes.PutStr(sp.cfg.SymbolicatorErrorAttributeKey, err.Error())
 	} else {
 		attributes.PutBool(sp.cfg.SymbolicatorFailureAttributeKey, false)
-		return nil
 	}
 }
 
@@ -172,49 +161,45 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 // required stacktrace information. If they do, it symbolicates the stack
 // trace and adds it to the attributes.
 func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pcommon.Map, resourceAttributes pcommon.Map) error {
-	var ok bool
-	var symbolicationError error
 	var lines, columns, functions, urls pcommon.Slice
+	var hasLines, hasColumns, hasFunctions, hasUrls bool
 
-	if columns, ok = getSlice(sp.cfg.ColumnsAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.ColumnsAttributeKey)
-	}
-	if functions, ok = getSlice(sp.cfg.FunctionsAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.FunctionsAttributeKey)
-	}
-	if lines, ok = getSlice(sp.cfg.LinesAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.LinesAttributeKey)
-	}
-	if urls, ok = getSlice(sp.cfg.UrlsAttributeKey, attributes); !ok {
-		return fmt.Errorf("%w: %s", errMissingAttribute, sp.cfg.UrlsAttributeKey)
-	}
+	var exceptionType, hasExceptionType = attributes.Get(sp.cfg.ExceptionTypeAttributeKey)
+	var exceptionMessage, hasExceptionMessage = attributes.Get(sp.cfg.ExceptionMessageAttributeKey)
 
-	// Ensure all slices are the same length
-	if columns.Len() != functions.Len() || columns.Len() != lines.Len() || columns.Len() != urls.Len() {
-		return fmt.Errorf("%w: (%s %d) (%s %d) (%s %d) (%s %d)", errMismatchedLength,
-			sp.cfg.ColumnsAttributeKey, columns.Len(),
-			sp.cfg.FunctionsAttributeKey, functions.Len(),
-			sp.cfg.LinesAttributeKey, lines.Len(),
-			sp.cfg.UrlsAttributeKey, urls.Len(),
-		)
-	}
+	// Attempt to get structured stack trace attributes first
+	lines, hasLines = getSlice(sp.cfg.LinesAttributeKey, attributes)
+	columns, hasColumns = getSlice(sp.cfg.ColumnsAttributeKey, attributes)
+	functions, hasFunctions = getSlice(sp.cfg.FunctionsAttributeKey, attributes)
+	urls, hasUrls = getSlice(sp.cfg.UrlsAttributeKey, attributes)
+	rawStackTrace, hasRawStackTrace := attributes.Get(sp.cfg.StackTraceAttributeKey)
 
-	// Preserve original stack trace
-	if sp.cfg.PreserveStackTrace {
-		var origColumns = attributes.PutEmptySlice(sp.cfg.OriginalColumnsAttributeKey)
-		columns.CopyTo(origColumns)
+	// If any of the structured attributes are missing, attempt to parse the raw stack trace
+	var parsedStackTrace *stackTrace
+	if !hasLines || !hasColumns || !hasFunctions || !hasUrls {
+		if !hasRawStackTrace {
+			return fmt.Errorf("%w: missing structured stack trace attributes and %s attribute is missing",
+				errMissingAttribute,
+				sp.cfg.StackTraceAttributeKey,
+			)
+		}
 
-		var origFunctions = attributes.PutEmptySlice(sp.cfg.OriginalFunctionsAttributeKey)
-		functions.CopyTo(origFunctions)
+		var err error
+		parsedStackTrace, err = computeStackTrace(exceptionType.Str(), exceptionMessage.Str(), rawStackTrace.Str())
+		if err != nil {
+			return fmt.Errorf("failed to parse raw stack trace from %s: %w", sp.cfg.StackTraceAttributeKey, err)
+		}
 
-		var origLines = attributes.PutEmptySlice(sp.cfg.OriginalLinesAttributeKey)
-		lines.CopyTo(origLines)
+		// Overwrite exception type and message with parsed values
+		attributes.PutStr(sp.cfg.ExceptionTypeAttributeKey, parsedStackTrace.name)
+		exceptionType, hasExceptionType = attributes.Get(sp.cfg.ExceptionTypeAttributeKey)
 
-		var origUrls = attributes.PutEmptySlice(sp.cfg.OriginalUrlsAttributeKey)
-		urls.CopyTo(origUrls)
+		attributes.PutStr(sp.cfg.ExceptionMessageAttributeKey, parsedStackTrace.message)
+		exceptionMessage, hasExceptionMessage = attributes.Get(sp.cfg.ExceptionMessageAttributeKey)
 
-		var origStackTraceStr, _ = attributes.Get(sp.cfg.StackTraceAttributeKey)
-		attributes.PutStr(sp.cfg.OriginalStackTraceAttributeKey, origStackTraceStr.Str())
+		attributes.PutStr(sp.cfg.SymbolicatorParsingMethodAttributeKey, "processor_parsed")
+	} else {
+		attributes.PutStr(sp.cfg.SymbolicatorParsingMethodAttributeKey, "structured_stacktrace_attributes")
 	}
 
 	buildUUID := ""
@@ -222,27 +207,81 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		buildUUID = buildUUIDValue.Str()
 	}
 
-	// Update with symbolicated stack trace
 	var stack []string
-	var mappedColumns = attributes.PutEmptySlice(sp.cfg.ColumnsAttributeKey)
-	var mappedFunctions = attributes.PutEmptySlice(sp.cfg.FunctionsAttributeKey)
-	var mappedLines = attributes.PutEmptySlice(sp.cfg.LinesAttributeKey)
-	var mappedUrls = attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
+	var symbolicationFailed bool
 
-	var stackType, _ = attributes.Get(sp.cfg.ExceptionTypeAttributeKey)
-	var stackMessage, _ = attributes.Get(sp.cfg.ExceptionMessageAttributeKey)
-
-	stack = append(stack, fmt.Sprintf("%s: %s", stackType.Str(), stackMessage.Str()))
+	// Reconstruct the stack trace with symbolicated frames
+	if hasExceptionType && hasExceptionMessage {
+		stack = append(stack, fmt.Sprintf("%s: %s", exceptionType.Str(), exceptionMessage.Str()))
+	}
 
 	// Cache FetchErrors to avoid redundant fetches for missing resources.
 	fetchErrorCache := make(map[string]error)
 
-	var hasSymbolicationFailed bool
-	for i := 0; i < columns.Len(); i++ {
-		url := urls.At(i).Str()
-		line := lines.At(i).Int()
-		column := columns.At(i).Int()
-		function := functions.At(i).Str()
+	// Set up iteration and output slices based on route
+	var mappedColumns, mappedFunctions, mappedLines, mappedUrls pcommon.Slice
+	var iterCount int
+
+	// Set up iteration based on whether we have a parsed stack trace or structured attributes
+	if parsedStackTrace != nil {
+		iterCount = len(parsedStackTrace.stackFrames)
+
+		if sp.cfg.PreserveStackTrace {
+			attributes.PutStr(sp.cfg.OriginalStackTraceAttributeKey, rawStackTrace.Str())
+		}
+	} else {
+		iterCount = columns.Len()
+		mappedColumns = attributes.PutEmptySlice(sp.cfg.ColumnsAttributeKey)
+		mappedFunctions = attributes.PutEmptySlice(sp.cfg.FunctionsAttributeKey)
+		mappedLines = attributes.PutEmptySlice(sp.cfg.LinesAttributeKey)
+		mappedUrls = attributes.PutEmptySlice(sp.cfg.UrlsAttributeKey)
+
+		// Ensure all slices are the same length
+		if columns.Len() != functions.Len() || columns.Len() != lines.Len() || columns.Len() != urls.Len() {
+			return fmt.Errorf("%w: (%s %d) (%s %d) (%s %d) (%s %d)", errMismatchedLength,
+				sp.cfg.ColumnsAttributeKey, columns.Len(),
+				sp.cfg.FunctionsAttributeKey, functions.Len(),
+				sp.cfg.LinesAttributeKey, lines.Len(),
+				sp.cfg.UrlsAttributeKey, urls.Len(),
+			)
+		}
+
+		if sp.cfg.PreserveStackTrace {
+			columns.CopyTo(attributes.PutEmptySlice(sp.cfg.OriginalColumnsAttributeKey))
+			functions.CopyTo(attributes.PutEmptySlice(sp.cfg.OriginalFunctionsAttributeKey))
+			lines.CopyTo(attributes.PutEmptySlice(sp.cfg.OriginalLinesAttributeKey))
+			urls.CopyTo(attributes.PutEmptySlice(sp.cfg.OriginalUrlsAttributeKey))
+			attributes.PutStr(sp.cfg.OriginalStackTraceAttributeKey, rawStackTrace.Str())
+		}
+	}
+
+	for i := 0; i < iterCount; i++ {
+		var url, function string
+		var line, column int64
+
+		// Get frame data based on route
+		if parsedStackTrace != nil {
+			// Extract from parsed frame
+			frame := parsedStackTrace.stackFrames[i]
+			url = frame.url
+			function = frame.funcName
+			if frame.line != nil {
+				line = int64(*frame.line)
+			} else {
+				line = -1
+			}
+			if frame.column != nil {
+				column = int64(*frame.column)
+			} else {
+				column = -1
+			}
+		} else {
+			// Extract from structured attributes
+			url = urls.At(i).Str()
+			line = lines.At(i).Int()
+			column = columns.At(i).Int()
+			function = functions.At(i).Str()
+		}
 
 		cacheKey := buildCacheKey(url, buildUUID)
 
@@ -267,31 +306,35 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		}
 
 		if err != nil {
-			hasSymbolicationFailed = true
-			symbolicationError = err
-			stack = append(stack, fmt.Sprintf("Failed to symbolicate: %v", err))
-			mappedColumns.AppendEmpty().SetInt(-1)
-			mappedFunctions.AppendEmpty().SetStr("")
-			mappedLines.AppendEmpty().SetInt(-1)
-			mappedUrls.AppendEmpty().SetStr("")
+			symbolicationFailed = true
+			stack = append(stack, fmt.Sprintf("\tFailed to symbolicate %s at %s:%d:%d: %v", function, url, line, column, err))
+
+			// Only populate output slices for structured route
+			if parsedStackTrace == nil {
+				mappedColumns.AppendEmpty().SetInt(-1)
+				mappedFunctions.AppendEmpty().SetStr("")
+				mappedLines.AppendEmpty().SetInt(-1)
+				mappedUrls.AppendEmpty().SetStr("")
+			}
 
 			sp.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, sp.attributes)
 		} else {
 			s := formatStackFrame(mappedStackFrame)
 			stack = append(stack, s)
-			mappedColumns.AppendEmpty().SetInt(mappedStackFrame.Col)
-			mappedFunctions.AppendEmpty().SetStr(mappedStackFrame.FunctionName)
-			mappedLines.AppendEmpty().SetInt(mappedStackFrame.Line)
-			mappedUrls.AppendEmpty().SetStr(mappedStackFrame.URL)
+
+			// Only populate output slices for structured route
+			if parsedStackTrace == nil {
+				mappedColumns.AppendEmpty().SetInt(mappedStackFrame.Col)
+				mappedFunctions.AppendEmpty().SetStr(mappedStackFrame.FunctionName)
+				mappedLines.AppendEmpty().SetInt(mappedStackFrame.Line)
+				mappedUrls.AppendEmpty().SetStr(mappedStackFrame.URL)
+			}
 		}
 	}
 
-	if symbolicationError != nil {
-		attributes.PutStr(sp.cfg.SymbolicatorErrorAttributeKey, symbolicationError.Error())
-	}
 	attributes.PutStr(sp.cfg.StackTraceAttributeKey, strings.Join(stack, "\n"))
 
-	if hasSymbolicationFailed {
+	if symbolicationFailed {
 		return errPartialSymbolication
 	} else {
 		return nil
