@@ -91,8 +91,7 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rl pl
 					if !isLanguageAllowed(language, sp.cfg.AllowedLanguages) {
 						continue
 					}
-				} else {
-					// Language attribute missing and filtering is enabled - skip processing
+				} else { // Language attribute not found, skip processing
 					continue
 				}
 			}
