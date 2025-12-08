@@ -14,6 +14,10 @@ type Config struct {
 	// message if the symbolicator fails to fully symbolicate a stack trace.
 	SymbolicatorErrorAttributeKey string `mapstructure:"symbolicator_error_attribute_key"`
 
+	// SymbolicatorParsingMethodAttributeKey is the attribute key that contains the
+	// method used to parse the stack trace (processor_parsed or structured_stacktrace_attributes).
+	SymbolicatorParsingMethodAttributeKey string `mapstructure:"symbolicator_parsing_method_attribute_key"`
+
 	// ColumnsAttributeKey is the attribute key that contains the column numbers
 	// of the stack trace.
 	ColumnsAttributeKey string `mapstructure:"columns_attribute_key"`
