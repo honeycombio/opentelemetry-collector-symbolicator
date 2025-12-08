@@ -43,8 +43,10 @@ func createDefaultConfig() component.Config {
 		LocalSourceMapConfiguration: &LocalSourceMapConfiguration{
 			Path: ".",
 		},
-		Timeout:            5 * time.Second,
-		SourceMapCacheSize: 128,
+		Timeout:              5 * time.Second,
+		SourceMapCacheSize:   128,
+		LanguageAttributeKey: "telemetry.sdk.language",
+		AllowedLanguages:     []string{}, // Empty by default, processes all signals
 	}
 }
 
