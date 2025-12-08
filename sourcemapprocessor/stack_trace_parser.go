@@ -41,6 +41,26 @@ var (
 	lineRE3 = regexp.MustCompile(`(?i)^\s*Line (\d+) of function script\s*$`)
 )
 
+// parseMode indicates which parsing strategy successfully extracted the stack trace.
+type parseMode string
+
+const (
+	// parseModeStack indicates the stack was parsed using the standard format
+	// from modern browsers (Chrome V8, Firefox Gecko, Safari WebKit, Edge).
+	parseModeStack parseMode = "stack"
+
+	// parseModeStacktrace indicates the stack was parsed using the Opera 10-12 format
+	// which has a distinct structure with "line N, column M" patterns.
+	parseModeStacktrace parseMode = "stacktrace"
+
+	// parseModeMultiline indicates the stack was parsed using Opera 9's multiline format
+	// where frames are embedded within the error message text.
+	parseModeMultiline parseMode = "multiline"
+
+	// parseModeFailed indicates all parsing strategies failed and no frames were extracted.
+	parseModeFailed parseMode = "failed"
+)
+
 // stackFrame represents a single frame in a stack trace.
 type stackFrame struct {
 	url      string
@@ -53,7 +73,7 @@ type stackFrame struct {
 type stackTrace struct {
 	name        string
 	message     string
-	mode        string // 'stack', 'stacktrace', 'multiline', or 'failed'
+	mode        parseMode
 	stackFrames []stackFrame
 }
 
@@ -168,7 +188,7 @@ func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 	return &stackTrace{
 		name:        name,
 		message:     message,
-		mode:        "stack",
+		mode:        parseModeStack,
 		stackFrames: stackFrames,
 	}
 }
@@ -229,7 +249,7 @@ func computeStackTraceFromOpera11Stacktrace(name, message, stacktrace string) *s
 	return &stackTrace{
 		name:        name,
 		message:     message,
-		mode:        "stacktrace",
+		mode:        parseModeStacktrace,
 		stackFrames: stackFrames,
 	}
 }
@@ -291,7 +311,7 @@ func computeStackTraceFromOpera9Message(name, message string) *stackTrace {
 	return &stackTrace{
 		name:        name,
 		message:     lines[0],
-		mode:        "multiline",
+		mode:        parseModeMultiline,
 		stackFrames: stackFrames,
 	}
 }
@@ -353,7 +373,7 @@ func computeStackTraceFromOpera10Stacktrace(name, message, stacktrace string) *s
 	return &stackTrace{
 		name:        name,
 		message:     message,
-		mode:        "stacktrace",
+		mode:        parseModeStacktrace,
 		stackFrames: stackFrames,
 	}
 }
@@ -393,7 +413,7 @@ func computeStackTrace(name, message, stack string) *stackTrace {
 	return &stackTrace{
 		name:        name,
 		message:     message,
-		mode:        "failed",
+		mode:        parseModeFailed,
 		stackFrames: []stackFrame{},
 	}
 }

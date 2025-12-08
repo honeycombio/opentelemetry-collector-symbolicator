@@ -26,7 +26,7 @@ func TestStackTraceParser(t *testing.T) {
 		expectedName    string
 		expectedMessage string
 		expectedFrames  []stackFrame
-		expectedMode    string
+		expectedMode    parseMode
 	}{
 		// Safari Tests
 		{
@@ -45,7 +45,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "onclick", line: intPtr(82), column: nil},
 				{url: "[native code]", funcName: unknownFunction, line: nil, column: nil},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Safari 7 error",
@@ -61,7 +61,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(52), column: intPtr(15)},
 				{url: "http://path/to/file.js", funcName: "bar", line: intPtr(108), column: intPtr(107)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Safari 8 error",
@@ -77,7 +77,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(52), column: intPtr(15)},
 				{url: "http://path/to/file.js", funcName: "bar", line: intPtr(108), column: intPtr(23)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Safari 8 eval error",
@@ -94,7 +94,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(58), column: intPtr(21)},
 				{url: "http://path/to/file.js", funcName: "bar", line: intPtr(109), column: intPtr(91)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 
 		// Firefox Tests
@@ -120,7 +120,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://127.0.0.1:8000/js/file.js", funcName: "foo", line: intPtr(20), column: nil},
 				{url: "http://127.0.0.1:8000/js/file.js", funcName: unknownFunction, line: intPtr(24), column: nil},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Firefox 7 error",
@@ -144,7 +144,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "file:///G:/js/file.js", funcName: "foo", line: intPtr(20), column: nil},
 				{url: "file:///G:/js/file.js", funcName: unknownFunction, line: intPtr(24), column: nil},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Firefox 14 error",
@@ -160,7 +160,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "dumpException3", line: intPtr(52), column: nil},
 				{url: "http://path/to/file.js", funcName: "onclick", line: intPtr(1), column: nil},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Firefox 31 error",
@@ -176,7 +176,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "bar", line: intPtr(1), column: intPtr(1)},
 				{url: "http://path/to/file.js", funcName: ".plugin/e.fn[c]/<", line: intPtr(1), column: intPtr(1)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Firefox 43 eval error",
@@ -196,7 +196,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://localhost:8080/file.js", funcName: "speak", line: intPtr(26), column: intPtr(17)},
 				{url: "http://localhost:8080/file.js", funcName: unknownFunction, line: intPtr(33), column: intPtr(9)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Firefox 44 NS Exception",
@@ -214,7 +214,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "file:///path/to/file.js", funcName: "bar", line: intPtr(20), column: intPtr(3)},
 				{url: "file:///path/to/index.html", funcName: unknownFunction, line: intPtr(23), column: intPtr(1)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Firefox 50 resource URL",
@@ -230,7 +230,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "resource://path/data/content/vendor.bundle.js", funcName: "dispatchEvent", line: intPtr(18), column: intPtr(23028)},
 				{url: "resource://path/data/content/bundle.js", funcName: "wrapped", line: intPtr(7270), column: intPtr(25)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 
 		// Chrome Tests
@@ -251,7 +251,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(20), column: intPtr(5)},
 				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(24), column: intPtr(4)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Chrome 36 error with port numbers",
@@ -268,7 +268,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://localhost:8080/file.js", funcName: "HTMLButtonElement.onclick", line: intPtr(107), column: intPtr(146)},
 				{url: "http://localhost:8080/file.js", funcName: "I.e.fn.(anonymous function) [as index]", line: intPtr(10), column: intPtr(3651)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Chrome error with webpack URLs",
@@ -287,7 +287,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "webpack:///./~/react-transform-catch-errors/lib/index.js?", funcName: "TESTTESTTEST.tryRender", line: intPtr(34), column: intPtr(31)},
 				{url: "webpack:///./~/react-proxy/modules/createPrototypeProxy.js?", funcName: "TESTTESTTEST.proxiedMethod", line: intPtr(44), column: intPtr(30)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Chrome 48 nested eval",
@@ -308,7 +308,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://localhost:8080/file.js", funcName: "Object.speak", line: intPtr(21), column: intPtr(17)},
 				{url: "http://localhost:8080/file.js", funcName: unknownFunction, line: intPtr(31), column: intPtr(13)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Chrome 48 blob URLs",
@@ -333,7 +333,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "blob:http%3A//localhost%3A8080/abfc40e9-4742-44ed-9dcd-af8f99a29379", funcName: "n.fire", line: intPtr(7), column: intPtr(3019)},
 				{url: "blob:http%3A//localhost%3A8080/abfc40e9-4742-44ed-9dcd-af8f99a29379", funcName: "n.handle", line: intPtr(7), column: intPtr(2863)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:            "Chrome error with no location (native)",
@@ -345,7 +345,7 @@ func TestStackTraceParser(t *testing.T) {
 			expectedFrames: []stackFrame{
 				{url: "", funcName: "Array.forEach", line: nil, column: nil},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 
 		// Internet Explorer Tests
@@ -357,7 +357,7 @@ func TestStackTraceParser(t *testing.T) {
 			expectedName:    "TypeError",
 			expectedMessage: "Unable to get property 'undef' of undefined or null reference",
 			expectedFrames:  []stackFrame{},
-			expectedMode:    "failed",
+			expectedMode:    parseModeFailed,
 		},
 		{
 			name:          "IE 10 error",
@@ -374,7 +374,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(46), column: intPtr(9)},
 				{url: "http://path/to/file.js", funcName: "bar", line: intPtr(82), column: intPtr(1)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "IE 11 error",
@@ -391,7 +391,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(45), column: intPtr(13)},
 				{url: "http://path/to/file.js", funcName: "bar", line: intPtr(108), column: intPtr(1)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "IE 11 eval error",
@@ -408,7 +408,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(58), column: intPtr(17)},
 				{url: "http://path/to/file.js", funcName: "bar", line: intPtr(109), column: intPtr(1)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 
 		// Opera Tests
@@ -443,7 +443,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(11), column: nil},
 				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(15), column: nil},
 			},
-			expectedMode: "multiline",
+			expectedMode: parseModeMultiline,
 		},
 		{
 			name:          "Opera 9 error",
@@ -461,7 +461,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(44), column: nil},
 				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(31), column: nil},
 			},
-			expectedMode: "multiline",
+			expectedMode: parseModeMultiline,
 		},
 		{
 			name:          "Opera 25 error",
@@ -478,7 +478,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(52), column: intPtr(15)},
 				{url: "http://path/to/file.js", funcName: "bar", line: intPtr(108), column: intPtr(168)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Opera 11 error",
@@ -509,7 +509,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(11), column: intPtr(4)},
 				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(15), column: intPtr(3)},
 			},
-			expectedMode: "stacktrace",
+			expectedMode: parseModeStacktrace,
 		},
 		{
 			name:          "Opera 12 error",
@@ -528,7 +528,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://localhost:8000/ExceptionLab.html", funcName: "dumpException3", line: intPtr(46), column: intPtr(8)},
 				{url: "http://localhost:8000/ExceptionLab.html", funcName: "<anonymous function>", line: intPtr(1), column: intPtr(0)},
 			},
-			expectedMode: "stacktrace",
+			expectedMode: parseModeStacktrace,
 		},
 		{
 			name:          "Opera 10 error",
@@ -559,7 +559,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(11), column: nil},
 				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(15), column: nil},
 			},
-			expectedMode: "stacktrace",
+			expectedMode: parseModeStacktrace,
 		},
 
 		// PhantomJS Tests
@@ -578,7 +578,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://path/to/file.js", funcName: "foo", line: intPtr(4283), column: nil},
 				{url: "http://path/to/file.js", funcName: unknownFunction, line: intPtr(4287), column: nil},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 
 		// React Native Tests
@@ -607,7 +607,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "/home/username/sample-workspace/sampleapp.collect.react/node_modules/react-native/Libraries/Renderer/src/renderers/shared/stack/reconciler/ReactMultiChild.js", funcName: "children", line: intPtr(264), column: intPtr(10)},
 				{url: "/home/username/sample-workspace/sampleapp.collect.react/node_modules/react-native/Libraries/Renderer/src/renderers/native/ReactNativeBaseComponent.js", funcName: "this", line: intPtr(74), column: intPtr(41)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Android React Native Production error",
@@ -628,7 +628,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "[native code]", funcName: unknownFunction, line: nil, column: nil},
 				{url: "index.android.bundle", funcName: "_performSideEffectsForTransition", line: intPtr(252), column: intPtr(8508)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 
 		// Edge Cases
@@ -672,7 +672,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "", funcName: "Array.forEach", line: nil, column: nil},
 				{url: "fileB.js", funcName: "funcB", line: intPtr(20), column: intPtr(25)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:            "Empty stack trace",
@@ -682,7 +682,7 @@ func TestStackTraceParser(t *testing.T) {
 			expectedName:    "Error",
 			expectedMessage: "Error message",
 			expectedFrames:  []stackFrame{},
-			expectedMode:    "failed",
+			expectedMode:    parseModeFailed,
 		},
 		{
 			name:            "Unparseable stack trace",
@@ -692,7 +692,7 @@ func TestStackTraceParser(t *testing.T) {
 			expectedName:    "Error",
 			expectedMessage: "Error message",
 			expectedFrames:  []stackFrame{},
-			expectedMode:    "failed",
+			expectedMode:    parseModeFailed,
 		},
 		{
 			name:          "Chrome with query string URL",
@@ -707,7 +707,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://example.com/file.js?v=123", funcName: "foo", line: intPtr(10), column: intPtr(5)},
 				{url: "http://example.com/file.js?v=123&debug=true", funcName: "bar", line: intPtr(20), column: intPtr(10)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Chrome with fragment URL",
@@ -722,7 +722,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://example.com/file.js#section", funcName: "foo", line: intPtr(10), column: intPtr(5)},
 				{url: "http://example.com/file.js#top", funcName: "bar", line: intPtr(20), column: intPtr(10)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Chrome extension error",
@@ -737,7 +737,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "chrome-extension://abc123def456/script.js", funcName: "foo", line: intPtr(10), column: intPtr(5)},
 				{url: "chrome-extension://abc123def456/background.js", funcName: "bar", line: intPtr(20), column: intPtr(10)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Incomplete URL due to missing closing paren",
@@ -752,7 +752,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://example.com/file.js", funcName: "func", line: intPtr(10), column: intPtr(5)},
 				{url: "http://example.com/file2.js", funcName: "func2", line: intPtr(20), column: intPtr(1)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "non-numeric line number",
@@ -767,7 +767,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://example.com/file.js:abc", funcName: "func", line: intPtr(5), column: nil},
 				{url: "http://example.com/file2.js", funcName: "func2", line: intPtr(20), column: intPtr(1)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "non-numeric column number",
@@ -782,7 +782,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://example.com/file.js:10:xyz", funcName: "func", line: nil, column: nil},
 				{url: "http://example.com/file2.js", funcName: "func2", line: intPtr(20), column: intPtr(1)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Line and column numbers at zero",
@@ -797,7 +797,7 @@ func TestStackTraceParser(t *testing.T) {
 				{url: "http://example.com/file.js", funcName: "func", line: intPtr(0), column: intPtr(1)},
 				{url: "http://example.com/file.js", funcName: "func2", line: intPtr(1), column: intPtr(0)},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 		{
 			name:          "Line and column at max uint32",
@@ -810,7 +810,7 @@ func TestStackTraceParser(t *testing.T) {
 			expectedFrames: []stackFrame{
 				{url: "http://example.com/file.js", funcName: "func", line: intPtr(int(math.MaxUint32)), column: intPtr(int(math.MaxUint32))},
 			},
-			expectedMode: "stack",
+			expectedMode: parseModeStack,
 		},
 	}
 
