@@ -99,7 +99,7 @@ The source map processor supports language-based routing to ensure it only proce
 processors:
   source_map_symbolicator:
     language_attribute_key: "telemetry.sdk.language"
-    allowed_languages: ["javascript", "typescript", "nodejs", "browser"]
+    allowed_languages: ["javascript", "webjs"]
 ```
 
 **Behavior:**
@@ -224,7 +224,7 @@ The dSYM processor supports language-based routing to ensure it only processes s
 | Config Key               | Description                                                                                                                                                    | Default Value             | Example Values                   |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------- |
 | `language_attribute_key` | The attribute key that contains the programming language or SDK language of the telemetry signal.                                                              | `telemetry.sdk.language`  | `telemetry.sdk.language`         |
-| `allowed_languages`      | A list of language values that this processor will handle. If the signal's language attribute matches any value in this list, the processor will run. If empty (default), the processor will process all signals regardless of language. **Important:** When `allowed_languages` is configured, signals without a language attribute will be skipped. | `[]` (empty, processes all) | `["swift", "objc"]`              |
+| `allowed_languages`      | A list of language values that this processor will handle. If the signal's language attribute matches any value in this list, the processor will run. If empty (default), the processor will process all signals regardless of language. **Important:** When `allowed_languages` is configured, signals without a language attribute will be skipped. | `[]` (empty, processes all) | `["swift", "ios"]`              |
 
 **Example configuration:**
 
@@ -232,7 +232,7 @@ The dSYM processor supports language-based routing to ensure it only processes s
 processors:
   dsym_symbolicator:
     language_attribute_key: "telemetry.sdk.language"
-    allowed_languages: ["swift", "objc", "ios", "macos"]
+    allowed_languages: ["swift", "ios"]
 ```
 
 **Behavior:**
@@ -323,7 +323,7 @@ The Proguard processor supports language-based routing to ensure it only process
 processors:
   proguard_symbolicator:
     language_attribute_key: "telemetry.sdk.language"
-    allowed_languages: ["java", "kotlin", "android"]
+    allowed_languages: ["java", "android"]
 ```
 
 **Behavior:**
