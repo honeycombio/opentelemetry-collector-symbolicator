@@ -46,8 +46,10 @@ func createDefaultConfig() component.Config {
 		LocalProguardConfiguration: &LocalStoreConfiguration{
 			Path: ".",
 		},
-		Timeout:           5 * time.Second,
-		ProguardCacheSize: 128,
+		Timeout:              5 * time.Second,
+		ProguardCacheSize:    128,
+		LanguageAttributeKey: "telemetry.sdk.language",
+		AllowedLanguages:     []string{}, // Empty by default, processes all signals
 	}
 }
 
