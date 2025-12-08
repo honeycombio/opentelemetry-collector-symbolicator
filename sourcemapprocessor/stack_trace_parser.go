@@ -115,12 +115,10 @@ func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 				funcName: matches[1],
 			}
 
-			if lineNo != "" {
-				lineInt := parseInt(lineNo)
+			if lineInt, err := strconv.Atoi(lineNo); err == nil {
 				element.line = &lineInt
 			}
-			if col != "" {
-				colInt := parseInt(col)
+			if colInt, err := strconv.Atoi(col); err == nil {
 				element.column = &colInt
 			}
 
@@ -129,15 +127,14 @@ func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 			}
 		} else if matches := winJSRE.FindStringSubmatch(line); matches != nil {
 			// Try WinJS format
-			lineInt := parseInt(matches[3])
 			element = &stackFrame{
 				url:      matches[2],
 				funcName: matches[1],
-				line:     &lineInt,
-				column:   nil,
 			}
-			if matches[4] != "" {
-				colInt := parseInt(matches[4])
+			if lineInt, err := strconv.Atoi(matches[3]); err == nil {
+				element.line = &lineInt
+			}
+			if colInt, err := strconv.Atoi(matches[4]); err == nil {
 				element.column = &colInt
 			}
 			if element.funcName == "" {
@@ -162,12 +159,10 @@ func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 				funcName: matches[1],
 			}
 
-			if lineNo != "" {
-				lineInt := parseInt(lineNo)
+			if lineInt, err := strconv.Atoi(lineNo); err == nil {
 				element.line = &lineInt
 			}
-			if col != "" {
-				colInt := parseInt(col)
+			if colInt, err := strconv.Atoi(col); err == nil {
 				element.column = &colInt
 			}
 
@@ -206,7 +201,6 @@ func computeStackTraceFromOpera11Stacktrace(name, message, stacktrace string) *s
 		var element *stackFrame
 
 		if matches := opera11StacktraceRE.FindStringSubmatch(lines[i]); matches != nil {
-			lineInt := parseInt(matches[1])
 			funcName := matches[3]
 			if funcName == "" {
 				funcName = unknownFunction
@@ -214,12 +208,11 @@ func computeStackTraceFromOpera11Stacktrace(name, message, stacktrace string) *s
 			element = &stackFrame{
 				url:      matches[2],
 				funcName: funcName,
-				line:     &lineInt,
-				column:   nil,
+			}
+			if lineInt, err := strconv.Atoi(matches[1]); err == nil {
+				element.line = &lineInt
 			}
 		} else if matches := opera11StacktraceWithColumnRE.FindStringSubmatch(lines[i]); matches != nil {
-			lineInt := parseInt(matches[1])
-			colInt := parseInt(matches[2])
 			func1, func2 := matches[3], matches[4]
 			func_ := func1
 			if func_ == "" {
@@ -232,8 +225,12 @@ func computeStackTraceFromOpera11Stacktrace(name, message, stacktrace string) *s
 			element = &stackFrame{
 				url:      matches[6],
 				funcName: func_,
-				line:     &lineInt,
-				column:   &colInt,
+			}
+			if lineInt, err := strconv.Atoi(matches[1]); err == nil {
+				element.line = &lineInt
+			}
+			if colInt, err := strconv.Atoi(matches[2]); err == nil {
+				element.column = &colInt
 			}
 		}
 
@@ -267,7 +264,6 @@ func computeStackTraceFromOpera9Message(name, message string) *stackTrace {
 		var item *stackFrame
 
 		if matches := lineRE1.FindStringSubmatch(lines[line]); matches != nil {
-			lineInt := parseInt(matches[1])
 			funcName := matches[3]
 			if funcName == "" {
 				funcName = unknownFunction
@@ -275,11 +271,11 @@ func computeStackTraceFromOpera9Message(name, message string) *stackTrace {
 			item = &stackFrame{
 				url:      matches[2],
 				funcName: funcName,
-				line:     &lineInt,
-				column:   nil,
+			}
+			if lineInt, err := strconv.Atoi(matches[1]); err == nil {
+				item.line = &lineInt
 			}
 		} else if matches := lineRE2.FindStringSubmatch(lines[line]); matches != nil {
-			lineInt := parseInt(matches[1])
 			funcName := matches[4]
 			if funcName == "" {
 				funcName = unknownFunction
@@ -287,8 +283,9 @@ func computeStackTraceFromOpera9Message(name, message string) *stackTrace {
 			item = &stackFrame{
 				url:      matches[3],
 				funcName: funcName,
-				line:     &lineInt,
-				column:   nil,
+			}
+			if lineInt, err := strconv.Atoi(matches[1]); err == nil {
+				item.line = &lineInt
 			}
 		} else if matches := lineRE3.FindStringSubmatch(lines[line]); matches != nil {
 			item = &stackFrame{
@@ -329,7 +326,6 @@ func computeStackTraceFromOpera10Stacktrace(name, message, stacktrace string) *s
 		var item *stackFrame
 
 		if matches := lineRE1.FindStringSubmatch(lines[line]); matches != nil {
-			lineInt := parseInt(matches[1])
 			funcName := matches[3]
 			if funcName == "" {
 				funcName = unknownFunction
@@ -337,11 +333,11 @@ func computeStackTraceFromOpera10Stacktrace(name, message, stacktrace string) *s
 			item = &stackFrame{
 				url:      matches[2],
 				funcName: funcName,
-				line:     &lineInt,
-				column:   nil,
+			}
+			if lineInt, err := strconv.Atoi(matches[1]); err == nil {
+				item.line = &lineInt
 			}
 		} else if matches := lineRE2.FindStringSubmatch(lines[line]); matches != nil {
-			lineInt := parseInt(matches[1])
 			funcName := matches[4]
 			if funcName == "" {
 				funcName = unknownFunction
@@ -349,8 +345,9 @@ func computeStackTraceFromOpera10Stacktrace(name, message, stacktrace string) *s
 			item = &stackFrame{
 				url:      matches[3],
 				funcName: funcName,
-				line:     &lineInt,
-				column:   nil,
+			}
+			if lineInt, err := strconv.Atoi(matches[1]); err == nil {
+				item.line = &lineInt
 			}
 		} else if matches := lineRE3.FindStringSubmatch(lines[line]); matches != nil {
 			item = &stackFrame{
@@ -416,10 +413,4 @@ func computeStackTrace(name, message, stack string) *stackTrace {
 		mode:        parseModeFailed,
 		stackFrames: []stackFrame{},
 	}
-}
-
-// Helper function to parse integer strings
-func parseInt(s string) int {
-	val, _ := strconv.Atoi(s)
-	return val
 }
