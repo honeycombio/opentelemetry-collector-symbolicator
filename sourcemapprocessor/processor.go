@@ -165,11 +165,10 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 			)
 		}
 
-		parsedStackTrace = computeStackTrace(exceptionType.Str(), exceptionMessage.Str(), rawStackTrace.Str())
-
-		// Check if parsing failed
-		if parsedStackTrace.mode == "failed" {
-			return fmt.Errorf("failed to parse raw stack trace from %s", sp.cfg.StackTraceAttributeKey)
+		var err error
+		parsedStackTrace, err = computeStackTrace(exceptionType.Str(), exceptionMessage.Str(), rawStackTrace.Str())
+		if err != nil {
+			return fmt.Errorf("failed to parse raw stack trace from %s: %w", sp.cfg.StackTraceAttributeKey, err)
 		}
 
 		attributes.PutStr(sp.cfg.SymbolicatorParsingMethodAttributeKey, "processor_parsed")

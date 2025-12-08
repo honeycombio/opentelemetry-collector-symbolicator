@@ -23,6 +23,7 @@ func TestStackTraceParser(t *testing.T) {
 		exceptionName   string
 		exceptionMsg    string
 		stack           string
+		expectError     bool
 		expectedName    string
 		expectedMessage string
 		expectedFrames  []stackFrame
@@ -350,14 +351,11 @@ func TestStackTraceParser(t *testing.T) {
 
 		// Internet Explorer Tests
 		{
-			name:            "IE 9 error (no stack)",
-			exceptionName:   "TypeError",
-			exceptionMsg:    "Unable to get property 'undef' of undefined or null reference",
-			stack:           "",
-			expectedName:    "TypeError",
-			expectedMessage: "Unable to get property 'undef' of undefined or null reference",
-			expectedFrames:  []stackFrame{},
-			expectedMode:    parseModeFailed,
+			name:          "IE 9 error (no stack)",
+			exceptionName: "TypeError",
+			exceptionMsg:  "Unable to get property 'undef' of undefined or null reference",
+			stack:         "",
+			expectError:   true,
 		},
 		{
 			name:          "IE 10 error",
@@ -675,24 +673,18 @@ func TestStackTraceParser(t *testing.T) {
 			expectedMode: parseModeStack,
 		},
 		{
-			name:            "Empty stack trace",
-			exceptionName:   "Error",
-			exceptionMsg:    "Error message",
-			stack:           "",
-			expectedName:    "Error",
-			expectedMessage: "Error message",
-			expectedFrames:  []stackFrame{},
-			expectedMode:    parseModeFailed,
+			name:          "Empty stack trace",
+			exceptionName: "Error",
+			exceptionMsg:  "Error message",
+			stack:         "",
+			expectError:   true,
 		},
 		{
-			name:            "Unparseable stack trace",
-			exceptionName:   "Error",
-			exceptionMsg:    "Error message",
-			stack:           "This is not a valid stack trace format\nSome random text\nMore random text",
-			expectedName:    "Error",
-			expectedMessage: "Error message",
-			expectedFrames:  []stackFrame{},
-			expectedMode:    parseModeFailed,
+			name:          "Unparseable stack trace",
+			exceptionName: "Error",
+			exceptionMsg:  "Error message",
+			stack:         "This is not a valid stack trace format\nSome random text\nMore random text",
+			expectError:   true,
 		},
 		{
 			name:          "Chrome with query string URL",
@@ -816,8 +808,15 @@ func TestStackTraceParser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := computeStackTrace(tt.exceptionName, tt.exceptionMsg, tt.stack)
+			result, err := computeStackTrace(tt.exceptionName, tt.exceptionMsg, tt.stack)
 
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+				return
+			}
+
+			require.NoError(t, err)
 			require.NotNil(t, result)
 			assert.Equal(t, tt.expectedName, result.name)
 			assert.Equal(t, tt.expectedMessage, result.message)

@@ -5,6 +5,7 @@
 package sourcemapprocessor
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -56,9 +57,6 @@ const (
 	// parseModeMultiline indicates the stack was parsed using Opera 9's multiline format
 	// where frames are embedded within the error message text.
 	parseModeMultiline parseMode = "multiline"
-
-	// parseModeFailed indicates all parsing strategies failed and no frames were extracted.
-	parseModeFailed parseMode = "failed"
 )
 
 // stackFrame represents a single frame in a stack trace.
@@ -377,40 +375,36 @@ func computeStackTraceFromOpera10Stacktrace(name, message, stacktrace string) *s
 
 // computeStackTrace parses a JavaScript error stack trace.
 // It tries multiple parsing strategies based on the stack trace format.
-func computeStackTrace(name, message, stack string) *stackTrace {
+// Returns an error if all parsing strategies fail.
+func computeStackTrace(name, message, stack string) (*stackTrace, error) {
 	var result *stackTrace
 
 	if stack != "" {
 		// Try Opera 11+ stacktrace property
 		result = computeStackTraceFromOpera11Stacktrace(name, message, stack)
 		if result != nil {
-			return result
+			return result, nil
 		}
 
 		// Try stack property (Chrome/Gecko)
 		result = computeStackTraceFromStackProp(name, message, stack)
 		if result != nil {
-			return result
+			return result, nil
 		}
 
 		// Try Opera 10 stacktrace property (uses Opera 9 format)
 		result = computeStackTraceFromOpera10Stacktrace(name, message, stack)
 		if result != nil {
-			return result
+			return result, nil
 		}
 	}
 
 	// Try Opera 9 message property
 	result = computeStackTraceFromOpera9Message(name, message)
 	if result != nil {
-		return result
+		return result, nil
 	}
 
 	// Fallback if parsing failed
-	return &stackTrace{
-		name:        name,
-		message:     message,
-		mode:        parseModeFailed,
-		stackFrames: []stackFrame{},
-	}
+	return nil, fmt.Errorf("failed to parse stack trace")
 }
