@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	processorhelper "go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -939,4 +940,111 @@ func TestDeduplication(t *testing.T) {
 		assert.True(t, ok)
 		assert.Contains(t, stackAttr.Str(), "failed to parse source map")
 	})
+}
+
+func TestLanguageFiltering(t *testing.T) {
+	tests := []struct {
+		name             string
+		allowedLanguages []string
+		signalLanguage   string
+		hasLanguageAttr  bool
+		shouldProcess    bool
+	}{
+		{
+			name:             "empty allowed languages processes all signals",
+			allowedLanguages: []string{},
+			signalLanguage:   "javascript",
+			hasLanguageAttr:  true,
+			shouldProcess:    true,
+		},
+		{
+			name:             "matching language processes signal",
+			allowedLanguages: []string{"javascript", "typescript"},
+			signalLanguage:   "javascript",
+			hasLanguageAttr:  true,
+			shouldProcess:    true,
+		},
+		{
+			name:             "non-matching language skips signal",
+			allowedLanguages: []string{"javascript", "typescript"},
+			signalLanguage:   "java",
+			hasLanguageAttr:  true,
+			shouldProcess:    false,
+		},
+		{
+			name:             "missing language attribute skips signal when filtering enabled",
+			allowedLanguages: []string{"javascript", "typescript"},
+			signalLanguage:   "",
+			hasLanguageAttr:  false,
+			shouldProcess:    false,
+		},
+		{
+			name:             "case insensitive matching",
+			allowedLanguages: []string{"JavaScript", "TypeScript"},
+			signalLanguage:   "JAVASCRIPT",
+			hasLanguageAttr:  true,
+			shouldProcess:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cfg := &Config{
+				StackTraceAttributeKey:          "exception.stacktrace",
+				SymbolicatorFailureAttributeKey: "exception.symbolicator.failed",
+				LanguageAttributeKey:            "telemetry.sdk.language",
+				AllowedLanguages:                tt.allowedLanguages,
+			}
+
+			symbolicator := &testSymbolicator{
+				callCount: 0,
+			}
+
+			tb, tbErr := metadata.NewTelemetryBuilder(component.TelemetrySettings{
+				Logger:        zaptest.NewLogger(t),
+				MeterProvider: noop.NewMeterProvider(),
+			})
+			assert.NoError(t, tbErr)
+			defer tb.Shutdown()
+
+			attributes := attribute.NewSet(
+				attribute.String("processor_type", "sourcemap"),
+			)
+
+			processor := newSymbolicatorProcessor(ctx, cfg, processorhelper.Settings{
+				TelemetrySettings: component.TelemetrySettings{
+					Logger: zaptest.NewLogger(t),
+				},
+			}, symbolicator, tb, attributes)
+
+			logs := plog.NewLogs()
+			rl := logs.ResourceLogs().AppendEmpty()
+			sl := rl.ScopeLogs().AppendEmpty()
+			lr := sl.LogRecords().AppendEmpty()
+
+			attrs := lr.Attributes()
+			attrs.PutStr("exception.stacktrace", "Error at line 42")
+
+			if tt.hasLanguageAttr {
+				attrs.PutStr("telemetry.sdk.language", tt.signalLanguage)
+			}
+
+			result, err := processor.processLogs(ctx, logs)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+
+			processedAttrs := result.ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0).Attributes()
+
+			_, hasProcessorType := processedAttrs.Get("honeycomb.processor_type")
+
+			if tt.shouldProcess {
+				assert.True(t, hasProcessorType)
+			} else {
+				assert.False(t, hasProcessorType)
+				assert.Equal(t, 0, symbolicator.callCount)
+			}
+		})
+	}
 }
