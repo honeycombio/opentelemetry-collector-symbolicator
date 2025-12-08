@@ -91,7 +91,9 @@ The source map processor supports language-based routing to ensure it only proce
 | Config Key               | Description                                                                                                                                                    | Default Value             | Example Values                   |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------- |
 | `language_attribute_key` | The attribute key that contains the programming language or SDK language of the telemetry signal.                                                              | `telemetry.sdk.language`  | `telemetry.sdk.language`         |
-| `allowed_languages`      | A list of language values that this processor will handle. If the signal's language attribute matches any value in this list, the processor will run. If empty (default), the processor will process all signals regardless of language. **Important:** When `allowed_languages` is configured, signals without a language attribute will be skipped. | `[]` (empty, processes all) | `["javascript", "typescript"]`   |
+| `allowed_languages`      | A list of language values that this processor will handle. If the signal's language attribute matches any value in this list, the processor will run. If empty (default), the processor will process all signals regardless of language. **Important:** When `allowed_languages` is configured, signals without a language attribute will be skipped. | `[]` (empty, processes all) | `["javascript", "webjs", "hermesjs"]`   |
+
+**Note:** If using Honeycomb's React Native SDK, you'll want to enable `hermesjs` as a value. See the [SDK's default attribute values](https://github.com/honeycombio/honeycomb-opentelemetry-react-native/tree/main?tab=readme-ov-file#default-attributes)
 
 **Example configuration:**
 
