@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	// unknownFunction is used when the function name cannot be determined or is missing.
 	unknownFunction = "?"
 )
 
