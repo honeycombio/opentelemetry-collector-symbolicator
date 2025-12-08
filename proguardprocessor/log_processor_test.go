@@ -1218,3 +1218,104 @@ func TestDeduplication_MultipleUUIDs(t *testing.T) {
 	assert.Equal(t, 1, symbolicator.callCount,
 		"Expected 1 call for 5 frames with same UUID (error cached)")
 }
+
+func TestLanguageFiltering(t *testing.T) {
+	tests := []struct {
+		name             string
+		allowedLanguages []string
+		signalLanguage   string
+		hasLanguageAttr  bool
+		shouldProcess    bool
+	}{
+		{
+			name:             "empty allowed languages processes all signals",
+			allowedLanguages: []string{},
+			hasLanguageAttr:  true,
+			shouldProcess:    true,
+		},
+		{
+			name:             "matching language processes signal",
+			allowedLanguages: []string{"java", "kotlin"},
+			signalLanguage:   "java",
+			hasLanguageAttr:  true,
+			shouldProcess:    true,
+		},
+		{
+			name:             "non-matching language skips signal",
+			allowedLanguages: []string{"java", "kotlin"},
+			signalLanguage:   "javascript",
+			hasLanguageAttr:  true,
+			shouldProcess:    false,
+		},
+		{
+			name:             "missing language attribute skips signal when filtering enabled",
+			allowedLanguages: []string{"java", "kotlin"},
+			signalLanguage:   "",
+			hasLanguageAttr:  false,
+			shouldProcess:    false,
+		},
+		{
+			name:             "case insensitive matching",
+			allowedLanguages: []string{"Java", "Kotlin"},
+			signalLanguage:   "JAVA",
+			hasLanguageAttr:  true,
+			shouldProcess:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cfg := &Config{
+				StackTraceAttributeKey:          "exception.stacktrace",
+				SymbolicatorFailureAttributeKey: "exception.symbolicator.failed",
+				ProguardUUIDAttributeKey:        "uuid",
+				LanguageAttributeKey:            "telemetry.sdk.language",
+				AllowedLanguages:                tt.allowedLanguages,
+			}
+
+			settings := processor.Settings{
+				TelemetrySettings: component.TelemetrySettings{
+					Logger: zaptest.NewLogger(t),
+				},
+			}
+
+			store := &mockLogProcessorStore{}
+			symbolicator := &mockLogProcessorSymbolicator{}
+			tb, attributes := createMockTelemetry(t)
+
+			processor, err := newProguardLogsProcessor(ctx, cfg, store, settings, symbolicator, tb, attributes)
+			assert.NoError(t, err)
+
+			logs := plog.NewLogs()
+			rl := logs.ResourceLogs().AppendEmpty()
+			sl := rl.ScopeLogs().AppendEmpty()
+			lr := sl.LogRecords().AppendEmpty()
+
+			attrs := lr.Attributes()
+			attrs.PutStr("exception.stacktrace", "java.lang.RuntimeException: Test\n\tat com.example.Class.method(Class.java:42)")
+			attrs.PutStr("uuid", "test-uuid")
+
+			if tt.hasLanguageAttr {
+				attrs.PutStr("telemetry.sdk.language", tt.signalLanguage)
+			}
+
+			symbolicator.clear()
+			result, err := processor.ProcessLogs(ctx, logs)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+
+			processedAttrs := result.ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0).Attributes()
+
+			_, hasProcessorType := processedAttrs.Get("honeycomb.processor_type")
+
+			if tt.shouldProcess {
+				assert.True(t, hasProcessorType)
+			} else {
+				assert.False(t, hasProcessorType)
+				assert.Equal(t, 0, symbolicator.callCount)
+			}
+		})
+	}
+}
