@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: add optional language check to processors
 - refactor: improve parity between processors' configs (#131) | @jairo-mendoza
 - feat(proguard-processor): Add stack trace preservation to collector-parsed route and add original source files preservation to structured route (#130) | @jairo-mendoza
 
