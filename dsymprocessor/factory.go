@@ -38,8 +38,10 @@ func createDefaultConfig() component.Config {
 		LocalDSYMConfiguration: &LocalDSYMConfiguration{
 			Path: ".",
 		},
-		Timeout:       5 * time.Second,
-		DSYMCacheSize: 128,
+		Timeout:              5 * time.Second,
+		DSYMCacheSize:        128,
+		LanguageAttributeKey: "telemetry.sdk.language",
+		AllowedLanguages:     []string{}, // Empty by default, processes all signals
 	}
 }
 

@@ -61,6 +61,16 @@ type Config struct {
 
 	// CacheSize is the maximum number of dSYMs to cache.
 	DSYMCacheSize int `mapstructure:"dsym_cache_size"`
+
+	// LanguageAttributeKey is the attribute key that contains the programming language
+	// or SDK language of the telemetry signal (e.g., "telemetry.sdk.language").
+	// This is used to determine if this processor should handle the signal.
+	LanguageAttributeKey string `mapstructure:"language_attribute_key"`
+
+	// AllowedLanguages is a list of language values that this processor will handle.
+	// If the signal's language attribute matches any value in this list, the processor will run.
+	// If empty (default), the processor will process all signals regardless of language.
+	AllowedLanguages []string `mapstructure:"allowed_languages"`
 }
 
 type LocalDSYMConfiguration struct {
