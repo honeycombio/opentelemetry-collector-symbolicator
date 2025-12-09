@@ -129,10 +129,10 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 		if ok {
 			language := languageValue.Str()
 			if !isLanguageAllowed(language, sp.cfg.AllowedLanguages) {
-				return nil
+				return
 			}
 		} else { // Language attribute not found, skip processing
-			return nil
+			return
 		}
 	}
 
