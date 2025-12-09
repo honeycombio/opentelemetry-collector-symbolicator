@@ -284,11 +284,11 @@ lines: [3582, 2001]
 source_files: ["Test.java", "Test.java"]
 ```
 
-This format is used by handled exceptions that are captured by the SDK.
+This format is used by handled exceptions that are captured by [Honeycomb's Android SDK](https://github.com/honeycombio/honeycomb-opentelemetry-android?tab=readme-ov-file#manual-error-logging).
 
 #### 2. Collector-Side Stack Trace Parsing (Fallback)
 
-If structured stack trace attributes are not present, the processor will attempt to parse the raw stack trace string from the `exception.stacktrace` attribute. This collector-side parser supports standard Java/Kotlin stack trace formats and is particularly useful for **unhandled exceptions** that don't have structured attributes attached.
+If structured stack trace attributes are not present, the processor will attempt to parse the raw stack trace string from the `exception.stacktrace` attribute (or your configured `stack_trace_attribute_key`). This collector-side parser supports standard Java/Kotlin stack trace formats and is particularly useful for **unhandled exceptions** that don't have structured attributes attached.
 
 The parser can handle various stack trace formats including:
 - Standard Java stack traces: `at com.example.Class.method(File.java:123)`
