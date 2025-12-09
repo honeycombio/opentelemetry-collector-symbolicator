@@ -75,10 +75,30 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rl pl
 		for j := 0; j < sl.LogRecords().Len(); j++ {
 			log := sl.LogRecords().At(j)
 			attributes := log.Attributes()
+			resourceAttrs := rl.Resource().Attributes()
+
+			// Check language filtering if configured
+			if len(sp.cfg.AllowedLanguages) > 0 {
+				// Get language attribute from log attributes or resource attributes
+				languageValue, ok := attributes.Get(sp.cfg.LanguageAttributeKey)
+				if !ok {
+					languageValue, ok = resourceAttrs.Get(sp.cfg.LanguageAttributeKey)
+				}
+
+				// If language attribute exists, check if it matches allowed languages
+				if ok {
+					language := languageValue.Str()
+					if !isLanguageAllowed(language, sp.cfg.AllowedLanguages) {
+						continue
+					}
+				} else { // Language attribute not found, skip processing
+					continue
+				}
+			}
 
 			// if we have a stack trace, try symbolicating it
 			if _, ok := attributes.Get(sp.cfg.StackTraceAttributeKey); ok {
-				sp.processStackTraceAttributes(ctx, attributes, rl.Resource().Attributes())
+				sp.processStackTraceAttributes(ctx, attributes, resourceAttrs)
 				continue
 			}
 
@@ -414,4 +434,16 @@ func getFirstAvailableString(attributes pcommon.Map, keys []string, fallbackValu
 		}
 	}
 	return fallbackValue
+}
+
+// isLanguageAllowed checks if the given language matches any of the allowed languages.
+// Comparison is case insensitive.
+func isLanguageAllowed(language string, allowedLanguages []string) bool {
+	language = strings.ToLower(language)
+	for _, allowed := range allowedLanguages {
+		if strings.ToLower(allowed) == language {
+			return true
+		}
+	}
+	return false
 }

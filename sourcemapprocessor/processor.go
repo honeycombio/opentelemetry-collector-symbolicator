@@ -117,6 +117,25 @@ func (sp *symbolicatorProcessor) processAttributes(ctx context.Context, attribut
 		return
 	}
 
+	// Check language filtering if configured
+	if len(sp.cfg.AllowedLanguages) > 0 {
+		// Get language attribute from log/span attributes or resource attributes
+		languageValue, ok := attributes.Get(sp.cfg.LanguageAttributeKey)
+		if !ok {
+			languageValue, ok = resourceAttributes.Get(sp.cfg.LanguageAttributeKey)
+		}
+
+		// If language attribute exists, check if it matches allowed languages
+		if ok {
+			language := languageValue.Str()
+			if !isLanguageAllowed(language, sp.cfg.AllowedLanguages) {
+				return
+			}
+		} else { // Language attribute not found, skip processing
+			return
+		}
+	}
+
 	// Start timing symbolication only when we actually perform it
 	// End timing deferred to after processing is done
 	startTime := time.Now()
@@ -330,4 +349,16 @@ func getSlice(key string, m pcommon.Map) (pcommon.Slice, bool) {
 	}
 
 	return v.Slice(), true
+}
+
+// isLanguageAllowed checks if the given language matches any of the allowed languages.
+// Comparison is case insensitive.
+func isLanguageAllowed(language string, allowedLanguages []string) bool {
+	language = strings.ToLower(language)
+	for _, allowed := range allowedLanguages {
+		if strings.ToLower(allowed) == language {
+			return true
+		}
+	}
+	return false
 }
