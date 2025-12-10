@@ -220,10 +220,124 @@ func TestProcessMetricKit(t *testing.T) {
 			symbolicated, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
 			assert.True(t, found)
 
-			expected := `dyld(189FE480-5D5B-3B89-9289-58BC88624420) +68312
-    Chateaux Bufeaux			0x18854 main (MyFile.swift:1) + 1
+			expected := `SwiftUI(6527276E-A3D1-30FB-BA68-ACA33324D618) +933484
     SwiftUI(6527276E-A3D1-30FB-BA68-ACA33324D618) +933200
-    SwiftUI(6527276E-A3D1-30FB-BA68-ACA33324D618) +933484`
+    Chateaux Bufeaux			0x18854 main (MyFile.swift:1) + 1
+    dyld(189FE480-5D5B-3B89-9289-58BC88624420) +68312`
+
+			assert.Equal(t, expected, symbolicated.Str())
+
+			// Verify processor type and version attributes are included
+			processorTypeAttr, ok := log.Attributes().Get("honeycomb.processor_type")
+			assert.True(t, ok)
+			assert.Equal(t, typeStr.String(), processorTypeAttr.Str())
+
+			processorVersionAttr, ok := log.Attributes().Get("honeycomb.processor_version")
+			assert.True(t, ok)
+			assert.Equal(t, processorVersion, processorVersionAttr.Str())
+
+			// no failures
+			hasFailure, hasFailureAttr := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+			assert.True(t, hasFailureAttr)
+			assert.False(t, hasFailure.Bool())
+			_, hasFailureMessage := log.Attributes().Get(cfg.SymbolicatorErrorAttributeKey)
+			assert.False(t, hasFailureMessage)
+
+			// original json is preserved based on key
+			metrickitJson, found := log.Attributes().Get(cfg.MetricKitStackTraceAttributeKey)
+			if preserveStack {
+				assert.True(t, found)
+				assert.Equal(t, jsonstr, metrickitJson.Str())
+			} else {
+				assert.False(t, found)
+			}
+
+			exceptionType, found := log.Attributes().Get(cfg.OutputMetricKitExceptionTypeAttributeKey)
+			assert.True(t, found)
+			assert.Equal(t, "Unknown Error", exceptionType.Str())
+
+			exceptionMessage, found := log.Attributes().Get(cfg.OutputMetricKitExceptionMessageAttributeKey)
+			assert.True(t, found)
+			assert.Equal(t, "Unknown Error", exceptionMessage.Str())
+		})
+	}
+}
+
+func TestProcessOTelMetricKit(t *testing.T) {
+	ctx := context.Background()
+	cfg := createDefaultConfig().(*Config)
+	s := &testSymbolicator{}
+
+	tb, attributes, cleanup := createTestTelemetry(t)
+	defer cleanup()
+
+	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}, s, tb, attributes)
+
+	jsonstr := `{
+		"callStacks": [
+			{
+				"threadAttributed": true,
+				"callStackFrames": [
+					{
+						"binaryUUID": "6527276E-A3D1-30FB-BA68-ACA33324D618",
+						"offsetAddress": 933484,
+						"sampleCount": 1,
+						"binaryName": "SwiftUI",
+						"address": 6968069740
+					},
+					{
+						"binaryUUID": "6527276E-A3D1-30FB-BA68-ACA33324D618",
+						"offsetAddress": 933200,
+						"sampleCount": 1,
+						"binaryName": "SwiftUI",
+						"address": 6968069456
+					},
+					{
+						"binaryUUID": "6A8CB813-45F6-3652-AD33-778FD1EAB196",
+						"offsetAddress": 100436,
+						"sampleCount": 1,
+						"binaryName": "Chateaux Bufeaux",
+						"address": 4365699156
+					},
+					{
+						"binaryUUID": "189FE480-5D5B-3B89-9289-58BC88624420",
+						"offsetAddress": 68312,
+						"sampleCount": 1,
+						"binaryName": "dyld",
+						"address": 7540112088
+					}
+				]
+			}
+		]
+	}`
+
+	s.clear()
+
+	for _, preserveStack := range []bool{true, false} {
+		t.Run(fmt.Sprintf("processAttributes with preserveStack = %s", strconv.FormatBool(preserveStack)), func(t *testing.T) {
+			cfg.PreserveStackTrace = preserveStack
+
+			logs := plog.NewLogs()
+			resourceLog := logs.ResourceLogs().AppendEmpty()
+			scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+
+			log := scopeLog.LogRecords().AppendEmpty()
+			log.SetEventName("metrickit.diagnostic.crash")
+			log.Attributes().PutEmpty(cfg.MetricKitStackTraceAttributeKey).SetStr(jsonstr)
+
+			processor.processMetricKitAttributes(ctx, log.Attributes())
+
+			symbolicated, found := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
+			assert.True(t, found)
+
+			expected := `SwiftUI(6527276E-A3D1-30FB-BA68-ACA33324D618) +933484
+    SwiftUI(6527276E-A3D1-30FB-BA68-ACA33324D618) +933200
+    Chateaux Bufeaux			0x18854 main (MyFile.swift:1) + 1
+    dyld(189FE480-5D5B-3B89-9289-58BC88624420) +68312`
 
 			assert.Equal(t, expected, symbolicated.Str())
 
@@ -806,4 +920,3 @@ func TestLanguageFiltering(t *testing.T) {
 		})
 	}
 }
-
