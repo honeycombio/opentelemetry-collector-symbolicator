@@ -202,6 +202,20 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		attributes.PutStr(sp.cfg.SymbolicatorParsingMethodAttributeKey, "structured_stacktrace_attributes")
 	}
 
+	// PARITY CHECKING: If enabled and we have both routes available, run both and compare
+	// Structured attributes are required for TraceKit route
+	// Raw stack trace is required for Collector-side route
+	// NOTE: This block will be removed in the future once parity is validated
+	if sp.cfg.EnableParityChecking && hasRawStackTrace && hasLines && hasColumns && hasFunctions && hasUrls {
+		// Parse raw stacktrace (Collector-side route) and measure duration
+		parsingStartTime := time.Now()
+		collectorParsed, _ := computeStackTrace(exceptionType.Str(), exceptionMessage.Str(), rawStackTrace.Str())
+		parsingDuration := time.Since(parsingStartTime)
+
+		// Add parity check attributes directly (no intermediate extraction!)
+		addParityCheckAttributes(attributes, lines, columns, functions, urls, collectorParsed, parsingDuration)
+	}
+
 	buildUUID := ""
 	if buildUUIDValue, ok := resourceAttributes.Get(sp.cfg.BuildUUIDAttributeKey); ok {
 		buildUUID = buildUUIDValue.Str()
