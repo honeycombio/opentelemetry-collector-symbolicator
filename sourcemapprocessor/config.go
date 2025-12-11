@@ -101,6 +101,7 @@ type Config struct {
 	// through both the structured route (TraceKit) and the collector-side parsing route
 	// (Sourcemap Processor) and the results are compared. Parity attributes are added
 	// to the current span/log.
+	// NOTE: This is for internal testing purposes only and will be removed in the future.
 	EnableParityChecking bool `mapstructure:"enable_parity_checking"`
 }
 

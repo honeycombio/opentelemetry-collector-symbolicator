@@ -113,5 +113,5 @@ func addParityCheckAttributes(
 	// Set summary attributes
 	attributes.PutStr("parity.status", string(status))
 	attributes.PutInt("parity.totalMismatches", int64(totalMismatches))
-	attributes.PutDouble("parity.duration", duration.Seconds())
+	attributes.PutDouble("parity.processorParsingDuration", duration.Seconds())
 }
