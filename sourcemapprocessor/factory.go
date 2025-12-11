@@ -48,6 +48,7 @@ func createDefaultConfig() component.Config {
 		SourceMapCacheSize:   128,
 		LanguageAttributeKey: "telemetry.sdk.language",
 		AllowedLanguages:     []string{}, // Empty by default, processes all signals
+		EnableParityChecking: false,      // Disabled by default
 	}
 }
 

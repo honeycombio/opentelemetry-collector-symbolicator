@@ -96,6 +96,12 @@ type Config struct {
 	// If the signal's language attribute matches any value in this list, the processor will run.
 	// If empty (default), the processor will process all signals regardless of language.
 	AllowedLanguages []string `mapstructure:"allowed_languages"`
+
+	// EnableParityChecking enables parity checking mode where stacktraces are processed
+	// through both the structured route (TraceKit) and the collector-side parsing route
+	// (Sourcemap Processor) and the results are compared. Parity attributes are added
+	// to the current span/log.
+	EnableParityChecking bool `mapstructure:"enable_parity_checking"`
 }
 
 type LocalSourceMapConfiguration struct {
