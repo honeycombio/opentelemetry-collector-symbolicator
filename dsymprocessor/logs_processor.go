@@ -266,26 +266,45 @@ func isUUID(maybeUUID string) bool {
 }
 
 func formatMetricKitStackFrames(frame MetricKitCallStackFrame, frames []*mappedDSYMStackFrame) string {
+	var offset uint64 = 0
+	if frame.OffsetIntoBinaryTextSegment != nil {
+		offset = *frame.OffsetIntoBinaryTextSegment
+	} else if frame.OffsetAddress != nil {
+		offset = *frame.OffsetAddress
+	}
+
 	lines := make([]string, len(frames))
 	for i, loc := range frames {
-		lines[i] = fmt.Sprintf("%s\t\t\t0x%X %s (%s:%d) + %d", frame.BinaryName, frame.OffsetIntoBinaryTextSegment, loc.symbol, loc.path, loc.line, loc.symAddr)
+		lines[i] = fmt.Sprintf("%s\t\t\t0x%X %s (%s:%d) + %d", frame.BinaryName, offset, loc.symbol, loc.path, loc.line, loc.symAddr)
 	}
 
 	return strings.Join(lines, "\n")
 }
 
 type MetricKitCrashReport struct {
-	CallStacks []MetricKitCallStack
+	CallStacks []MetricKitCallStack `json:"callStacks"`
 }
+
 type MetricKitCallStack struct {
-	ThreadAttributed    bool
-	CallStackRootFrames []MetricKitCallStackFrame
+	ThreadAttributed bool `json:"threadAttributed"`
+
+	// the original Apple format for MetricKit stack traces
+	CallStackRootFrames *[]MetricKitCallStackFrame `json:"callStackRootFrames"`
+
+	// the flattened OpenTelemetry format for MetricKit stack traces
+	CallStackFrames *[]MetricKitCallStackFrame `json:"callStackFrames"`
 }
+
 type MetricKitCallStackFrame struct {
-	BinaryUUID                  string
-	OffsetIntoBinaryTextSegment uint64
-	SubFrames                   *[]MetricKitCallStackFrame
-	BinaryName                  string
+	BinaryName string `json:"binaryName"`
+	BinaryUUID string `json:"binaryUUID"`
+
+	// the original Apple format
+	OffsetIntoBinaryTextSegment *uint64                    `json:"offsetIntoBinaryTextSegment"`
+	SubFrames                   *[]MetricKitCallStackFrame `json:"subFrames"`
+
+	// the simplified OpenTelemetry format
+	OffsetAddress *uint64 `json:"offsetAddress"`
 }
 
 func (sp *symbolicatorProcessor) processMetricKitAttributes(ctx context.Context, attributes pcommon.Map) {
@@ -327,31 +346,45 @@ func (sp *symbolicatorProcessor) processMetricKitAttributesThrows(ctx context.Co
 		return err
 	}
 
-	// deepest nested frames are at the top of the stack
-	// gotta unwind the nesting in reverse
-	stacks := make([]string, len(report.CallStacks))
+	stacks := make([]string, 0, len(report.CallStacks))
 
 	// Cache FetchErrors to avoid redundant fetches for missing resources.
 	fetchErrorCache := make(map[string]error)
 
-	for idx, callStack := range report.CallStacks {
-		capacity := getStackDepth(callStack.CallStackRootFrames[0])
-		symbolicatedStack := make([]string, capacity)
-		frame := callStack.CallStackRootFrames[0]
-		for i := capacity - 1; i >= 0; i-- {
-			line, err := sp.symbolicateFrame(ctx, frame, fetchErrorCache)
-			if err != nil {
-				return err
+	for _, callStack := range report.CallStacks {
+		symbolicatedStack := make([]string, 0, 512)
+
+		// Try the old Apple format.
+		if callStack.CallStackRootFrames != nil && len(*callStack.CallStackRootFrames) > 0 {
+			frame := &(*callStack.CallStackRootFrames)[0]
+			for frame != nil {
+				line, err := sp.symbolicateFrame(ctx, *frame, fetchErrorCache)
+				if err != nil {
+					return err
+				}
+
+				symbolicatedStack = append(symbolicatedStack, line)
+
+				frames := frame.SubFrames
+				frame = nil
+				if frames != nil && len(*frames) > 0 {
+					frame = &(*frames)[0]
+				}
 			}
-			symbolicatedStack[i] = line
-			frames := frame.SubFrames
-			if frames == nil {
-				continue
-			}
-			frame = (*frames)[0]
 		}
 
-		stacks[idx] = strings.Join(symbolicatedStack, "\n    ")
+		// Try the new OTel format.
+		if callStack.CallStackFrames != nil {
+			for _, frame := range *callStack.CallStackFrames {
+				line, err := sp.symbolicateFrame(ctx, frame, fetchErrorCache)
+				if err != nil {
+					return err
+				}
+				symbolicatedStack = append(symbolicatedStack, line)
+			}
+		}
+
+		stacks = append(stacks, strings.Join(symbolicatedStack, "\n    "))
 	}
 
 	attributes.PutStr(sp.cfg.OutputMetricKitStackTraceAttributeKey, strings.Join(stacks, "\n\n\n"))
@@ -397,7 +430,15 @@ func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame Met
 		return "", cachedError
 	}
 
-	locations, err := sp.symbolicator.symbolicateFrame(ctx, frame.BinaryUUID, frame.BinaryName, frame.OffsetIntoBinaryTextSegment)
+	var offset uint64 = 0
+	if frame.OffsetAddress != nil {
+		offset = *frame.OffsetAddress
+	}
+	if frame.OffsetIntoBinaryTextSegment != nil {
+		offset = *frame.OffsetIntoBinaryTextSegment
+	}
+
+	locations, err := sp.symbolicator.symbolicateFrame(ctx, frame.BinaryUUID, frame.BinaryName, offset)
 	sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
 
 	// Only cache FetchErrors (404, timeout, etc.) - not parse errors
@@ -409,7 +450,7 @@ func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame Met
 	}
 
 	if errors.Is(err, errFailedToFindDSYM) {
-		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, frame.OffsetIntoBinaryTextSegment), nil
+		return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, offset), nil
 	}
 	if err != nil {
 		sp.telemetryBuilder.ProcessorTotalFailedFrames.Add(ctx, 1, sp.attributes)
@@ -417,13 +458,6 @@ func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame Met
 	}
 
 	return formatMetricKitStackFrames(frame, locations), nil
-}
-
-func getStackDepth(root MetricKitCallStackFrame) int {
-	if root.SubFrames == nil || len(*root.SubFrames) == 0 {
-		return 1
-	}
-	return 1 + getStackDepth((*root.SubFrames)[0])
 }
 
 func getFirstAvailableString(attributes pcommon.Map, keys []string, fallbackValue string) string {

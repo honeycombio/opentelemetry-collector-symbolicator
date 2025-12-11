@@ -28,23 +28,24 @@ func TestDSYMSymbolicator(t *testing.T) {
 	assert.NoError(t, err)
 	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb, attributes)
 
+	offset := uint64(100436)
 	baseFrame := MetricKitCallStackFrame{
 		BinaryUUID:                  "6A8CB813-45F6-3652-AD33-778FD1EAB196",
-		OffsetIntoBinaryTextSegment: 100436,
+		OffsetIntoBinaryTextSegment: &offset,
 		BinaryName:                  "chateaux-bufeaux",
 	}
-	sf, err := sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "Chateaux Bufeaux", baseFrame.OffsetIntoBinaryTextSegment)
+	sf, err := sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "Chateaux Bufeaux", *baseFrame.OffsetIntoBinaryTextSegment)
 	line := formatMetricKitStackFrames(baseFrame, sf)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "chateaux-bufeaux			0x18854 main (/Users/mustafa/hny/chateaux-bufeaux-ios/Chateaux Bufeaux/Chateaux_BufeauxApp.swift:0) + 100372", line)
 
 	// UUID doesn't exist
-	_, err = sym.symbolicateFrame(ctx, "2DBDCA05-2BAA-3BFE-9EF3-15A157D84058", "Chateaux Bufeaux", baseFrame.OffsetIntoBinaryTextSegment)
+	_, err = sym.symbolicateFrame(ctx, "2DBDCA05-2BAA-3BFE-9EF3-15A157D84058", "Chateaux Bufeaux", *baseFrame.OffsetIntoBinaryTextSegment)
 	assert.Error(t, err)
 
 	// binary doesn't exist in the dSYM
-	_, err = sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "other binary", baseFrame.OffsetIntoBinaryTextSegment)
+	_, err = sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "other binary", *baseFrame.OffsetIntoBinaryTextSegment)
 	assert.Error(t, err)
 
 	// // nothing at that offset
@@ -72,12 +73,13 @@ func TestDSYMSymbolicatorCache(t *testing.T) {
 	assert.Equal(t, 0, sym.cache.Len())
 
 	// First symbolication should add to cache
+	offset := uint64(100436)
 	baseFrame := MetricKitCallStackFrame{
 		BinaryUUID:                  "6A8CB813-45F6-3652-AD33-778FD1EAB196",
-		OffsetIntoBinaryTextSegment: 100436,
+		OffsetIntoBinaryTextSegment: &offset,
 		BinaryName:                  "chateaux-bufeaux",
 	}
-	sf, err := sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "Chateaux Bufeaux", baseFrame.OffsetIntoBinaryTextSegment)
+	sf, err := sym.symbolicateFrame(ctx, baseFrame.BinaryUUID, "Chateaux Bufeaux", *baseFrame.OffsetIntoBinaryTextSegment)
 	line := formatMetricKitStackFrames(baseFrame, sf)
 
 	assert.NoError(t, err)
