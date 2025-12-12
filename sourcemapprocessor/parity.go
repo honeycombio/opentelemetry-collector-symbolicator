@@ -58,17 +58,27 @@ func addParityCheckAttributes(
 
 	if parsedStackTrace != nil {
 		for _, frame := range parsedStackTrace.stackFrames {
-			processorUrls.AppendEmpty().SetStr(frame.url)
-			processorFunctions.AppendEmpty().SetStr(frame.funcName)
+			if frame.url != "" {
+				processorUrls.AppendEmpty().SetStr(frame.url)
+			} else {
+				processorUrls.AppendEmpty()
+			}
+
+			if frame.funcName != "" {
+				processorFunctions.AppendEmpty().SetStr(frame.funcName)
+			} else {
+				processorFunctions.AppendEmpty()
+			}
+			
 			if frame.line != nil {
 				processorLines.AppendEmpty().SetInt(int64(*frame.line))
 			} else {
-				processorLines.AppendEmpty().SetInt(-1)
+				processorLines.AppendEmpty()
 			}
 			if frame.column != nil {
 				processorColumns.AppendEmpty().SetInt(int64(*frame.column))
 			} else {
-				processorColumns.AppendEmpty().SetInt(-1)
+				processorColumns.AppendEmpty()
 			}
 		}
 	}
