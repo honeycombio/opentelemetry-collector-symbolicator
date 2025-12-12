@@ -302,12 +302,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		// Skip symbolication for native frames
 		// Examples: "at call (native)", "[native code]"
 		if url == "" || url == "[native code]" {
-			// Add frame as-is without symbolication
-			if line >= 0 && column >= 0 {
-				stack = append(stack, fmt.Sprintf("    at %s (native:%d:%d)", function, line, column))
-			} else {
-				stack = append(stack, fmt.Sprintf("    at %s (native)", function))
-			}
+			stack = append(stack, fmt.Sprintf("    at %s (native)", function))
 
 			// Only populate output slices for structured route
 			if parsedStackTrace == nil {
