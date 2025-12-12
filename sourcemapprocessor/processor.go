@@ -302,9 +302,29 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 			function = functions.At(i).Str()
 		}
 
-		cacheKey := buildCacheKey(url, buildUUID)
-
 		sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
+
+		// Skip symbolication for native frames
+		// Examples: "at call (native)", "[native code]"
+		if url == "" || url == "[native code]" {
+			// Add frame as-is without symbolication
+			if line >= 0 && column >= 0 {
+				stack = append(stack, fmt.Sprintf("    at %s (native:%d:%d)", function, line, column))
+			} else {
+				stack = append(stack, fmt.Sprintf("    at %s (native)", function))
+			}
+
+			// Only populate output slices for structured route
+			if parsedStackTrace == nil {
+				mappedColumns.AppendEmpty().SetInt(column)
+				mappedFunctions.AppendEmpty().SetStr(function)
+				mappedLines.AppendEmpty().SetInt(line)
+				mappedUrls.AppendEmpty().SetStr(url)
+			}
+			continue
+		}
+
+		cacheKey := buildCacheKey(url, buildUUID)
 
 		var mappedStackFrame *mappedStackFrame
 		var err error
