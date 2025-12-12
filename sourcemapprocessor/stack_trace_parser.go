@@ -125,7 +125,7 @@ func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 			}
 
 			if isNative {
-				url = ""
+				url = "(native)"
 			}
 
 			element = &stackFrame{
