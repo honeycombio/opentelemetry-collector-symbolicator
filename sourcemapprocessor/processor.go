@@ -174,8 +174,7 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	urls, hasUrls = getSlice(sp.cfg.UrlsAttributeKey, attributes)
 	rawStackTrace, hasRawStackTrace := attributes.Get(sp.cfg.StackTraceAttributeKey)
 
-	// If any of the structured attributes are missing, or if this is a React Native stacktrace,
-	// attempt to parse the raw stack trace
+	// If any of the structured attributes are missing, attempt to parse the raw stack trace
 	var parsedStackTrace *stackTrace
 	if !hasLines || !hasColumns || !hasFunctions || !hasUrls {
 		if !hasRawStackTrace {
