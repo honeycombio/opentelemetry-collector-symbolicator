@@ -264,9 +264,36 @@ through a number of [different storage mechanisms documented below](#storage-mec
 
 The processor supports two methods for receiving stack trace information:
 
-#### 1. Structured Stack Trace Attributes (Deprecated)
+#### 1. Collector-Side Stack Trace Parsing
 
-The processor expects the stacktrace information to be formatted into four separate attributes:
+If structured stack trace attributes are not present, the processor will attempt to parse the raw stack trace string from the `exception.stacktrace` attribute (or your configured `stack_trace_attribute_key`). This collector-side parser supports standard Java/Kotlin stack trace formats and is particularly useful for **unhandled exceptions** that don't have structured attributes attached.
+
+The parser can handle various stack trace formats including:
+
+- Standard Java stack traces: `at com.example.Class.method(File.java:123)`
+- Native methods: `at com.example.Class.method(Native Method)`
+- Unknown sources: `at com.example.Class.method(Unknown Source)`
+- Stack traces with missing line numbers: `at com.example.Class.method(File.java)`
+
+When using this method, the processor will:
+
+1. Parse the exception type and message from the first line
+2. Parse each stack frame to extract class, method, source file, and line number
+3. Set the `exception.symbolicator.parsing_method` attribute to `"processor_parsed"`
+4. Preserve any lines that couldn't be parsed as valid stack frames
+
+**Example raw stack trace:**
+
+```java
+java.lang.NullPointerException: Attempt to invoke virtual method on a null object reference
+    at com.example.app.MainActivity.onCreate(MainActivity.java:42)
+    at android.app.Activity.performCreate(Activity.java:8000)
+    at android.app.Instrumentation.callActivityOnCreate(Instrumentation.java:1309)
+```
+
+#### 2. Structured Stack Trace Attributes (Deprecated)
+
+Before introducing our own stack trace parser on the processor, the processor expected the stacktrace information to be formatted into four separate attributes:
 
 - classes
 - methods
@@ -285,30 +312,6 @@ source_files: ["Test.java", "Test.java"]
 ```
 
 This format is used by handled exceptions that are captured by [Honeycomb's Android SDK](https://github.com/honeycombio/honeycomb-opentelemetry-android?tab=readme-ov-file#manual-error-logging).
-
-#### 2. Collector-Side Stack Trace Parsing
-
-If structured stack trace attributes are not present, the processor will attempt to parse the raw stack trace string from the `exception.stacktrace` attribute (or your configured `stack_trace_attribute_key`). This collector-side parser supports standard Java/Kotlin stack trace formats and is particularly useful for **unhandled exceptions** that don't have structured attributes attached.
-
-The parser can handle various stack trace formats including:
-- Standard Java stack traces: `at com.example.Class.method(File.java:123)`
-- Native methods: `at com.example.Class.method(Native Method)`
-- Unknown sources: `at com.example.Class.method(Unknown Source)`
-- Stack traces with missing line numbers: `at com.example.Class.method(File.java)`
-
-When using this fallback method, the processor will:
-1. Parse the exception type and message from the first line
-2. Parse each stack frame to extract class, method, source file, and line number
-3. Set the `exception.symbolicator.parsing_method` attribute to `"processor_parsed"`
-4. Preserve any lines that couldn't be parsed as valid stack frames
-
-**Example raw stack trace:**
-```
-java.lang.NullPointerException: Attempt to invoke virtual method on a null object reference
-    at com.example.app.MainActivity.onCreate(MainActivity.java:42)
-    at android.app.Activity.performCreate(Activity.java:8000)
-    at android.app.Instrumentation.callActivityOnCreate(Instrumentation.java:1309)
-```
 
 ### Advanced Configuration
 
