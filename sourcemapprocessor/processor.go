@@ -174,14 +174,10 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 	urls, hasUrls = getSlice(sp.cfg.UrlsAttributeKey, attributes)
 	rawStackTrace, hasRawStackTrace := attributes.Get(sp.cfg.StackTraceAttributeKey)
 
-	// Check if raw stacktrace contains React Native "address at" pattern
-	// TraceKit can't parse these frames, so prefer collector-side parsing
-	isReactNative := hasRawStackTrace && strings.Contains(rawStackTrace.Str(), "address at ")
-
 	// If any of the structured attributes are missing, or if this is a React Native stacktrace,
 	// attempt to parse the raw stack trace
 	var parsedStackTrace *stackTrace
-	if !hasLines || !hasColumns || !hasFunctions || !hasUrls || isReactNative {
+	if !hasLines || !hasColumns || !hasFunctions || !hasUrls {
 		if !hasRawStackTrace {
 			return fmt.Errorf("%w: missing structured stack trace attributes and %s attribute is missing",
 				errMissingAttribute,
