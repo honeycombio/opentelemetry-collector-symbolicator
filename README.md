@@ -264,7 +264,7 @@ through a number of [different storage mechanisms documented below](#storage-mec
 
 The processor supports two methods for receiving stack trace information:
 
-#### 1. Structured Stack Trace Attributes (Preferred)
+#### 1. Structured Stack Trace Attributes (Deprecated)
 
 The processor expects the stacktrace information to be formatted into four separate attributes:
 
@@ -286,7 +286,7 @@ source_files: ["Test.java", "Test.java"]
 
 This format is used by handled exceptions that are captured by [Honeycomb's Android SDK](https://github.com/honeycombio/honeycomb-opentelemetry-android?tab=readme-ov-file#manual-error-logging).
 
-#### 2. Collector-Side Stack Trace Parsing (Fallback)
+#### 2. Collector-Side Stack Trace Parsing
 
 If structured stack trace attributes are not present, the processor will attempt to parse the raw stack trace string from the `exception.stacktrace` attribute (or your configured `stack_trace_attribute_key`). This collector-side parser supports standard Java/Kotlin stack trace formats and is particularly useful for **unhandled exceptions** that don't have structured attributes attached.
 
