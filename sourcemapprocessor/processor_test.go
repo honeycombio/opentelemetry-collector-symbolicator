@@ -699,6 +699,98 @@ func TestProcessLogs(t *testing.T) {
 				assert.Contains(t, stackTrace.Str(), "original_https://example.com/bundle.js:400:40")
 			},
 		},
+		{
+			Name: "native frames with empty URL are not symbolicated",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				logRecord.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				logRecord.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: test\n    at Array.forEach (native)\n    at funcA (http://example.com/bundle.js:10:5)\n    at Array.map (native)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Only the non-native frame should be symbolicated
+				assert.Len(t, s.SymbolicatedLines, 1)
+				assert.Equal(t, symbolicatedLine{Line: 10, Column: 5, Function: "funcA", URL: "http://example.com/bundle.js"}, s.SymbolicatedLines[0])
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				stackTrace, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				// Native frames should be preserved as-is
+				assert.Contains(t, stackTrace.Str(), "at Array.forEach (native)")
+				assert.Contains(t, stackTrace.Str(), "at Array.map (native)")
+				// Regular frame should be symbolicated
+				assert.Contains(t, stackTrace.Str(), "mapped_funcA_10_5")
+			},
+		},
+		{
+			Name: "native frames with [native code] URL are not symbolicated",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				// Safari/Firefox native frames have [native code] as URL
+				// Parser converts this to empty URL, so they're skipped
+				logRecord.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				logRecord.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: test\neval@[native code]\nfoo@http://example.com/bundle.js:10:5")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Only the non-native frame should be symbolicated
+				assert.Len(t, s.SymbolicatedLines, 1)
+				assert.Equal(t, symbolicatedLine{Line: 10, Column: 5, Function: "foo", URL: "http://example.com/bundle.js"}, s.SymbolicatedLines[0])
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				stackTrace, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				// Native frame should be preserved as-is
+				assert.Contains(t, stackTrace.Str(), "at eval (native)")
+				// Regular frame should be symbolicated
+				assert.Contains(t, stackTrace.Str(), "mapped_foo_10_5")
+			},
+		},
+		{
+			Name: "React Native stacktrace with native frames",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				// React Native format with "address at" and native frames
+				logRecord.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				logRecord.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey,
+					"Error: test\n"+
+						"    at anonymous (address at index.android.bundle:1:2347115)\n"+
+						"    at call (native)\n"+
+						"    at apply (native)\n"+
+						"    at _with (address at index.android.bundle:1:1414154)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Only the non-native frames should be symbolicated (2 frames)
+				assert.Len(t, s.SymbolicatedLines, 2)
+				assert.Equal(t, symbolicatedLine{Line: 1, Column: 2347115, Function: "anonymous", URL: "index.android.bundle"}, s.SymbolicatedLines[0])
+				assert.Equal(t, symbolicatedLine{Line: 1, Column: 1414154, Function: "_with", URL: "index.android.bundle"}, s.SymbolicatedLines[1])
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				stackTrace, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				// Native frames should be preserved
+				assert.Contains(t, stackTrace.Str(), "at call (native)")
+				assert.Contains(t, stackTrace.Str(), "at apply (native)")
+				// Regular frames should be symbolicated
+				assert.Contains(t, stackTrace.Str(), "mapped_anonymous_1_2347115")
+				assert.Contains(t, stackTrace.Str(), "mapped__with_1_1414154")
+
+				// Verify parsing method is processor_parsed (due to "address at")
+				parsingMethod, ok := logRecord.Attributes().Get(cfg.SymbolicatorParsingMethodAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "processor_parsed", parsingMethod.Str())
+			},
+		},
 	}
 
 	for _, tt := range tts {

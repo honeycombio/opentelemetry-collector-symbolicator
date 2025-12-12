@@ -18,6 +18,9 @@ const (
 
 // Compiled regular expressions for parsing stack traces from various browsers.
 var (
+	// React Native "address at" format (iOS and Android)
+	// Format: "at funcName (address at path/to/file.bundle:line:column)"
+	reactNativeRE = regexp.MustCompile(`(?i)^\s*at (.*?) ?\(address at (.+?)(?::(\d+))?(?::(\d+))?\)\s*$`)
 	// Chrome/V8 stack trace format
 	chromeRE = regexp.MustCompile(`(?i)^\s*at (.*?) ?\(((?:file|https?|blob|chrome-extension|native|eval|webpack|<anonymous>|\/).*?)(?::(\d+))?(?::(\d+))?\)?\s*$`)
 	// Gecko/Firefox stack trace format
@@ -87,8 +90,25 @@ func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 	for _, line := range lines {
 		var element *stackFrame
 
-		// Try Chrome format
-		if matches := chromeRE.FindStringSubmatch(line); matches != nil {
+		// Try React Native format first (more specific pattern)
+		if matches := reactNativeRE.FindStringSubmatch(line); matches != nil {
+			element = &stackFrame{
+				url:      matches[2],
+				funcName: matches[1],
+			}
+
+			if lineInt, err := strconv.Atoi(matches[3]); err == nil {
+				element.line = &lineInt
+			}
+			if colInt, err := strconv.Atoi(matches[4]); err == nil {
+				element.column = &colInt
+			}
+
+			if element.funcName == "" {
+				element.funcName = unknownFunction
+			}
+		} else if matches := chromeRE.FindStringSubmatch(line); matches != nil {
+			// Try Chrome format
 			isNative := strings.HasPrefix(matches[2], "native")
 			isEval := strings.HasPrefix(matches[2], "eval")
 
@@ -105,7 +125,7 @@ func computeStackTraceFromStackProp(name, message, stack string) *stackTrace {
 			}
 
 			if isNative {
-				url = ""
+				url = "(native)"
 			}
 
 			element = &stackFrame{

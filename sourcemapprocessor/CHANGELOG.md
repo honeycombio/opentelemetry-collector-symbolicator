@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: Add support for react native stacktraces & native frames (#137) | @jairo-mendoza
 - feat: Emit parity check telemetry (for internal testing) (#136) | @jairo-mendoza
 - feat: add optional language check to processors (#133) | @jairo-mendoza
 - feat(sourcemap-processor): Implement collector-side parsing (#132) | @jairo-mendoza
