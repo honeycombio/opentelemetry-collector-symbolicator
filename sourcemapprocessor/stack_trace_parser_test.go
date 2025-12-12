@@ -628,6 +628,33 @@ func TestStackTraceParser(t *testing.T) {
 			},
 			expectedMode: parseModeStack,
 		},
+		{
+			name:          "React Native error with 'address at' prefix",
+			exceptionName: "Error",
+			exceptionMsg:  "The Bufo shelter has denied your request due to excessive poking.",
+			stack: "Error: The Bufo shelter has denied your request due to excessive poking.\n" +
+				"    at anonymous (address at /Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle:1:2344117)\n" +
+				"    at anonymous (address at /Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle:1:2341114)\n" +
+				"    at anonymous (address at /Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle:1:2295518)\n" +
+				"    at call (native)\n" +
+				"    at apply (native)\n" +
+				"    at _with (address at /Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle:1:1414154)\n" +
+				"    at apply (native)\n" +
+				"    at _with (address at /Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle:1:1284269)",
+			expectedName:    "Error",
+			expectedMessage: "The Bufo shelter has denied your request due to excessive poking.",
+			expectedFrames: []stackFrame{
+				{url: "/Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle", funcName: "anonymous", line: intPtr(1), column: intPtr(2344117)},
+				{url: "/Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle", funcName: "anonymous", line: intPtr(1), column: intPtr(2341114)},
+				{url: "/Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle", funcName: "anonymous", line: intPtr(1), column: intPtr(2295518)},
+				{url: "", funcName: "call", line: nil, column: nil},
+				{url: "", funcName: "apply", line: nil, column: nil},
+				{url: "/Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle", funcName: "_with", line: intPtr(1), column: intPtr(1414154)},
+				{url: "", funcName: "apply", line: nil, column: nil},
+				{url: "/Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle", funcName: "_with", line: intPtr(1), column: intPtr(1284269)},
+			},
+			expectedMode: parseModeStack,
+		},
 
 		// Edge Cases
 		{
