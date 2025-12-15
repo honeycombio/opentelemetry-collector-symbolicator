@@ -66,7 +66,7 @@ func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Tr
 }
 
 // processResourceSpans takes resource spans and processes the attributes
-// found on the spans.
+// found on the spans and span events.
 func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs ptrace.ResourceSpans) {
 	for i := 0; i < rs.ScopeSpans().Len(); i++ {
 		ss := rs.ScopeSpans().At(i)
@@ -74,6 +74,12 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 		for j := 0; j < ss.Spans().Len(); j++ {
 			span := ss.Spans().At(j)
 			sp.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
+
+			// Process span events (e.g., exception events following OTel semantic conventions)
+			for k := 0; k < span.Events().Len(); k++ {
+				event := span.Events().At(k)
+				sp.processAttributes(ctx, event.Attributes(), rs.Resource().Attributes())
+			}
 		}
 	}
 }
