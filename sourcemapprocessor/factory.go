@@ -17,7 +17,7 @@ var (
 )
 
 const (
-	processorVersion = "0.0.14"
+	processorVersion = "1.0.0"
 )
 
 // createDefaultConfig creates the default configuration for the processor.
