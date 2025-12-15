@@ -480,7 +480,6 @@ func TestProcessTraces(t *testing.T) {
 				stackTrace, ok := event.Attributes().Get(cfg.StackTraceAttributeKey)
 				assert.True(t, ok)
 				assert.Contains(t, stackTrace.Str(), "Error: Event error!")
-				// line*2=20, col+10=25
 				assert.Contains(t, stackTrace.Str(), "mapped_eventFunction_10_15")
 				assert.Contains(t, stackTrace.Str(), "original_https://example.com/event.js:20:25")
 
@@ -531,10 +530,8 @@ func TestProcessTraces(t *testing.T) {
 				stackTrace, ok := event.Attributes().Get(cfg.StackTraceAttributeKey)
 				assert.True(t, ok)
 				assert.Contains(t, stackTrace.Str(), "TypeError: Cannot read property 'foo' of undefined")
-				// First frame: line*2=2, col+10=5010
 				assert.Contains(t, stackTrace.Str(), "mapped_processData_1_5000")
 				assert.Contains(t, stackTrace.Str(), "original_https://example.com/bundle.js:2:5010")
-				// Second frame: line*2=2, col+10=3010
 				assert.Contains(t, stackTrace.Str(), "mapped_handleClick_1_3000")
 				assert.Contains(t, stackTrace.Str(), "original_https://example.com/bundle.js:2:3010")
 
