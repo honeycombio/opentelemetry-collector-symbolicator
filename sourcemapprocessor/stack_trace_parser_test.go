@@ -326,7 +326,7 @@ func TestStackTraceParser(t *testing.T) {
 			expectedName:    "Error",
 			expectedMessage: "Error: test",
 			expectedFrames: []stackFrame{
-				{url: "", funcName: "Error", line: nil, column: nil},
+				{url: "(native)", funcName: "Error", line: nil, column: nil},
 				{url: "blob:http%3A//localhost%3A8080/abfc40e9-4742-44ed-9dcd-af8f99a29379", funcName: "s", line: intPtr(31), column: intPtr(29146)},
 				{url: "blob:http%3A//localhost%3A8080/abfc40e9-4742-44ed-9dcd-af8f99a29379", funcName: "Object.d [as add]", line: intPtr(31), column: intPtr(30039)},
 				{url: "blob:http%3A//localhost%3A8080/d4eefe0f-361a-4682-b217-76587d9f712a", funcName: unknownFunction, line: intPtr(15), column: intPtr(10978)},
@@ -344,7 +344,7 @@ func TestStackTraceParser(t *testing.T) {
 			expectedName:    "TypeError",
 			expectedMessage: "error",
 			expectedFrames: []stackFrame{
-				{url: "", funcName: "Array.forEach", line: nil, column: nil},
+				{url: "(native)", funcName: "Array.forEach", line: nil, column: nil},
 			},
 			expectedMode: parseModeStack,
 		},
@@ -628,6 +628,33 @@ func TestStackTraceParser(t *testing.T) {
 			},
 			expectedMode: parseModeStack,
 		},
+		{
+			name:          "React Native error with 'address at' prefix",
+			exceptionName: "Error",
+			exceptionMsg:  "The Bufo shelter has denied your request due to excessive poking.",
+			stack: "Error: The Bufo shelter has denied your request due to excessive poking.\n" +
+				"    at anonymous (address at /Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle:1:2344117)\n" +
+				"    at anonymous (address at /Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle:1:2341114)\n" +
+				"    at anonymous (address at /Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle:1:2295518)\n" +
+				"    at call (native)\n" +
+				"    at apply (native)\n" +
+				"    at _with (address at /Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle:1:1414154)\n" +
+				"    at apply (native)\n" +
+				"    at _with (address at /Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle:1:1284269)",
+			expectedName:    "Error",
+			expectedMessage: "The Bufo shelter has denied your request due to excessive poking.",
+			expectedFrames: []stackFrame{
+				{url: "/Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle", funcName: "anonymous", line: intPtr(1), column: intPtr(2344117)},
+				{url: "/Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle", funcName: "anonymous", line: intPtr(1), column: intPtr(2341114)},
+				{url: "/Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle", funcName: "anonymous", line: intPtr(1), column: intPtr(2295518)},
+				{url: "(native)", funcName: "call", line: nil, column: nil},
+				{url: "(native)", funcName: "apply", line: nil, column: nil},
+				{url: "/Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle", funcName: "_with", line: intPtr(1), column: intPtr(1414154)},
+				{url: "(native)", funcName: "apply", line: nil, column: nil},
+				{url: "/Users/username/Library/Developer/CoreSimulator/Devices/DEVICE-UUID/data/Containers/Bundle/Application/APP-UUID/Example.app/main.jsbundle", funcName: "_with", line: intPtr(1), column: intPtr(1284269)},
+			},
+			expectedMode: parseModeStack,
+		},
 
 		// Edge Cases
 		{
@@ -665,9 +692,9 @@ func TestStackTraceParser(t *testing.T) {
 			expectedName:    "Error",
 			expectedMessage: "Test error",
 			expectedFrames: []stackFrame{
-				{url: "", funcName: "Array.map", line: nil, column: nil},
+				{url: "(native)", funcName: "Array.map", line: nil, column: nil},
 				{url: "fileA.js", funcName: "funcA", line: intPtr(10), column: intPtr(15)},
-				{url: "", funcName: "Array.forEach", line: nil, column: nil},
+				{url: "(native)", funcName: "Array.forEach", line: nil, column: nil},
 				{url: "fileB.js", funcName: "funcB", line: intPtr(20), column: intPtr(25)},
 			},
 			expectedMode: parseModeStack,
