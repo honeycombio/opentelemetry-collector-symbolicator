@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- feat(sourcemap-processor): add support for span events (#139) | @jairo-mendoza
+
 ## v1.0.0 - 2025/12/15
 
 ### ✨ Features

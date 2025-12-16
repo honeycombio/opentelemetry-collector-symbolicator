@@ -434,6 +434,113 @@ func TestProcessTraces(t *testing.T) {
 				assert.Contains(t, stackTrace.Str(), "original_https://example.com/app.js:40:35")
 			},
 		},
+		{
+			Name: "span events with exception stacktrace are symbolicated",
+			ApplyAttributes: func(span ptrace.Span) {
+				// Add a regular span attribute (not an exception)
+				span.Attributes().PutStr("http.method", "GET")
+
+				// Add an exception event following OTel semantic conventions
+				event := span.Events().AppendEmpty()
+				event.SetName("exception")
+				event.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().AppendEmpty().SetInt(15)
+				event.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().AppendEmpty().SetInt(10)
+				event.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("eventFunction")
+				event.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("https://example.com/event.js")
+				event.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				event.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "Event error!")
+				event.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: Event error!\n    at eventFunction (https://example.com/event.js:10:15)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Should symbolicate the event's stacktrace
+				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
+					{Line: 10, Column: 15, Function: "eventFunction", URL: "https://example.com/event.js"},
+				})
+			},
+			AssertOutput: func(td ptrace.Traces) {
+				rs := td.ResourceSpans().At(0)
+				ils := rs.ScopeSpans().At(0)
+				span := ils.Spans().At(0)
+
+				// Verify span attributes are not modified (no exception on span itself)
+				attr, ok := span.Attributes().Get("http.method")
+				assert.True(t, ok)
+				assert.Equal(t, "GET", attr.Str())
+
+				// Verify span doesn't have processor attributes (exception was on event)
+				_, ok = span.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.False(t, ok)
+
+				// Verify event was symbolicated
+				assert.Equal(t, 1, span.Events().Len())
+				event := span.Events().At(0)
+				assert.Equal(t, "exception", event.Name())
+
+				// Verify event's stacktrace was symbolicated
+				stackTrace, ok := event.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				assert.Contains(t, stackTrace.Str(), "Error: Event error!")
+				assert.Contains(t, stackTrace.Str(), "mapped_eventFunction_10_15")
+				assert.Contains(t, stackTrace.Str(), "original_https://example.com/event.js:20:25")
+
+				// Verify processor attributes are on the event
+				processorType, ok := event.Attributes().Get("honeycomb.processor_type")
+				assert.True(t, ok)
+				assert.Equal(t, typeStr.String(), processorType.Str())
+			},
+		},
+		{
+			Name: "span events with raw stacktrace (no structured attributes) are parsed and symbolicated",
+			ApplyAttributes: func(span ptrace.Span) {
+				// Add a regular span attribute (not an exception)
+				span.Attributes().PutStr("http.method", "POST")
+
+				// Add an exception event with only raw stacktrace (no structured attributes)
+				event := span.Events().AppendEmpty()
+				event.SetName("exception")
+				event.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "TypeError")
+				event.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "Cannot read property 'foo' of undefined")
+				event.Attributes().PutStr(cfg.StackTraceAttributeKey,
+					"TypeError: Cannot read property 'foo' of undefined\n"+
+						"    at processData (https://example.com/bundle.js:1:5000)\n"+
+						"    at handleClick (https://example.com/bundle.js:1:3000)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Should symbolicate both frames from parsed raw stacktrace
+				assert.Len(t, s.SymbolicatedLines, 2)
+				assert.Equal(t, symbolicatedLine{Line: 1, Column: 5000, Function: "processData", URL: "https://example.com/bundle.js"}, s.SymbolicatedLines[0])
+				assert.Equal(t, symbolicatedLine{Line: 1, Column: 3000, Function: "handleClick", URL: "https://example.com/bundle.js"}, s.SymbolicatedLines[1])
+			},
+			AssertOutput: func(td ptrace.Traces) {
+				rs := td.ResourceSpans().At(0)
+				ils := rs.ScopeSpans().At(0)
+				span := ils.Spans().At(0)
+
+				// Verify span attributes are not modified
+				attr, ok := span.Attributes().Get("http.method")
+				assert.True(t, ok)
+				assert.Equal(t, "POST", attr.Str())
+
+				// Verify event was parsed and symbolicated
+				assert.Equal(t, 1, span.Events().Len())
+				event := span.Events().At(0)
+				assert.Equal(t, "exception", event.Name())
+
+				// Verify event's stacktrace was symbolicated
+				stackTrace, ok := event.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				assert.Contains(t, stackTrace.Str(), "TypeError: Cannot read property 'foo' of undefined")
+				assert.Contains(t, stackTrace.Str(), "mapped_processData_1_5000")
+				assert.Contains(t, stackTrace.Str(), "original_https://example.com/bundle.js:2:5010")
+				assert.Contains(t, stackTrace.Str(), "mapped_handleClick_1_3000")
+				assert.Contains(t, stackTrace.Str(), "original_https://example.com/bundle.js:2:3010")
+
+				// Verify parsing method is processor_parsed
+				parsingMethod, ok := event.Attributes().Get(cfg.SymbolicatorParsingMethodAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "processor_parsed", parsingMethod.Str())
+			},
+		},
 	}
 
 	for _, tt := range tts {
