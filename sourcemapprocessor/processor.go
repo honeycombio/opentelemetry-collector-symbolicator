@@ -305,6 +305,20 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 
 		sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
 
+		// Skip symbolication for anonymous frames
+		if url == "<anonymous>" {
+			stack = append(stack, fmt.Sprintf("    at %s (<anonymous>)", function))
+
+			// Only populate output slices for structured route
+			if parsedStackTrace == nil {
+				mappedColumns.AppendEmpty().SetInt(column)
+				mappedFunctions.AppendEmpty().SetStr(function)
+				mappedLines.AppendEmpty().SetInt(line)
+				mappedUrls.AppendEmpty().SetStr(url)
+			}
+			continue
+		}
+
 		// Skip symbolication for native frames
 		// Examples: "at call (native)", "[native code]"
 		if url == "(native)" || url == "[native code]" {

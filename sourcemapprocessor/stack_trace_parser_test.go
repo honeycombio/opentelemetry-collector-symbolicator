@@ -831,6 +831,23 @@ func TestStackTraceParser(t *testing.T) {
 			},
 			expectedMode: parseModeStack,
 		},
+		{
+			name:          "Chrome error with anonymous url",
+			exceptionName: "Error",
+			exceptionMsg:  "test error",
+			stack: "Error: test error\n" +
+				"    at JSON.parse (<anonymous>)\n" +
+				"    at foo (http://example.com/bundle.js:1:100)\n" +
+				"    at async http://example.com/bundle.js:1:200",
+			expectedName:    "Error",
+			expectedMessage: "test error",
+			expectedFrames: []stackFrame{
+				{url: "<anonymous>", funcName: "JSON.parse", line: nil, column: nil},
+				{url: "http://example.com/bundle.js", funcName: "foo", line: intPtr(1), column: intPtr(100)},
+				{url: "http://example.com/bundle.js", funcName: "async", line: intPtr(1), column: intPtr(200)},
+			},
+			expectedMode: parseModeStack,
+		},
 	}
 
 	for _, tt := range tests {

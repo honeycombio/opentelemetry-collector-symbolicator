@@ -898,6 +898,31 @@ func TestProcessLogs(t *testing.T) {
 				assert.Equal(t, "processor_parsed", parsingMethod.Str())
 			},
 		},
+		{
+			Name: "frames with anonymous urls are not symbolicated",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				logRecord.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				logRecord.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test error")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: test error\n    at JSON.parse (<anonymous>)\n    at foo (http://example.com/bundle.js:10:5)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Only the non-anonymous frame should be symbolicated
+				assert.Len(t, s.SymbolicatedLines, 1)
+				assert.Equal(t, symbolicatedLine{Line: 10, Column: 5, Function: "foo", URL: "http://example.com/bundle.js"}, s.SymbolicatedLines[0])
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				stackTrace, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				// Anonymous frame should be preserved with <anonymous>
+				assert.Contains(t, stackTrace.Str(), "at JSON.parse (<anonymous>)")
+				// Regular frame should be symbolicated
+				assert.Contains(t, stackTrace.Str(), "mapped_foo_10_5")
+			},
+		},
 	}
 
 	for _, tt := range tts {
