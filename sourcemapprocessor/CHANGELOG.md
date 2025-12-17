@@ -4,7 +4,7 @@
 
 ## v1.0.2 - 2025/12/17
 
-- fix(sourcemap-processor): add handling for anonymous urls #141
+- fix(sourcemap-processor): add handling for anonymous urls (#141) | @jairo-mendoza
 
 ## v1.0.1 - 2025/12/16
 
