@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v1.0.1 - 2026/01/12
+
+- maint: bump dependency to v1.45.0/v0.139.0 (#143) | @TylerHelmuth
+
 ## v1.0.0 - 2025/12/15
 
 ### ✨ Features

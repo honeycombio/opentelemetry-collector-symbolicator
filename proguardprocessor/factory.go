@@ -20,7 +20,7 @@ var (
 )
 
 const (
-	processorVersion = "1.0.0"
+	processorVersion = "1.0.1"
 )
 
 func createDefaultConfig() component.Config {
