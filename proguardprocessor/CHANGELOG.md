@@ -2,9 +2,25 @@
 
 ## Unreleased
 
+## v1.0.1 - 2026/01/12
+
+- maint: bump dependency to v1.45.0/v0.139.0 (#143) | @TylerHelmuth
+
+## v1.0.0 - 2025/12/15
+
+### ✨ Features
+
 - feat: add optional language check to processors (#133) | @jairo-mendoza
-- refactor: improve parity between processors' configs (#131) | @jairo-mendoza
 - feat(proguard-processor): Add stack trace preservation to collector-parsed route and add original source files preservation to structured route (#130) | @jairo-mendoza
+
+### 💡 Enhancements
+
+- refactor: improve parity between processors' configs (#131) | @jairo-mendoza
+
+### 🚨 Breaking Changes
+
+- renamed top-level config keys:
+  - `original_stack_trace_key` to `original_stack_trace_attribute_key`
 
 ## v0.0.7 [beta] - 2025/11/19
 

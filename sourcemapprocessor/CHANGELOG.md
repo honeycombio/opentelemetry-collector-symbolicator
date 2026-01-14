@@ -2,9 +2,40 @@
 
 ## Unreleased
 
+## v1.0.3 - 2026/01/12
+
+- maint: bump dependency to v1.45.0/v0.139.0 (#143) | @TylerHelmuth
+
+## v1.0.2 - 2025/12/17
+
+- fix(sourcemap-processor): add handling for anonymous urls (#141) | @jairo-mendoza
+
+## v1.0.1 - 2025/12/16
+
+### ✨ Features
+
+- feat(sourcemap-processor): add support for span events (#139) | @jairo-mendoza
+
+## v1.0.0 - 2025/12/15
+
+### ✨ Features
+
+- feat: Add support for react native stacktraces & native frames (#137) | @jairo-mendoza
+- feat: Emit parity check telemetry (for internal testing) (#136) | @jairo-mendoza
 - feat: add optional language check to processors (#133) | @jairo-mendoza
 - feat(sourcemap-processor): Implement collector-side parsing (#132) | @jairo-mendoza
+
+### 💡 Enhancements
+
 - refactor: improve parity between processors' configs (#131) | @jairo-mendoza
+
+### 🚨 Breaking Changes
+
+- renamed top-level config keys:
+  - `original_stack_trace_key` to `original_stack_trace_attribute_key`
+  - `symbolicator_failure_message_attribute_key` to `symbolicator_error_attribute_key`
+  - `stack_type_key` to `exception_type_attribute_key`
+  - `stack_message_key` to `exception_message_attribute_key`
 
 ## v0.0.14 [beta] - 2025/11/19
 

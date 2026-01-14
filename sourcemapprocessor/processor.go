@@ -66,7 +66,7 @@ func (sp *symbolicatorProcessor) processTraces(ctx context.Context, td ptrace.Tr
 }
 
 // processResourceSpans takes resource spans and processes the attributes
-// found on the spans.
+// found on the spans and span events.
 func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs ptrace.ResourceSpans) {
 	for i := 0; i < rs.ScopeSpans().Len(); i++ {
 		ss := rs.ScopeSpans().At(i)
@@ -74,6 +74,12 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rs pt
 		for j := 0; j < ss.Spans().Len(); j++ {
 			span := ss.Spans().At(j)
 			sp.processAttributes(ctx, span.Attributes(), rs.Resource().Attributes())
+
+			// Process span events (e.g., exception events following OTel semantic conventions)
+			for k := 0; k < span.Events().Len(); k++ {
+				event := span.Events().At(k)
+				sp.processAttributes(ctx, event.Attributes(), rs.Resource().Attributes())
+			}
 		}
 	}
 }
@@ -202,6 +208,20 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 		attributes.PutStr(sp.cfg.SymbolicatorParsingMethodAttributeKey, "structured_stacktrace_attributes")
 	}
 
+	// PARITY CHECKING: If enabled and we have both routes available, run both and compare
+	// Structured attributes are required for TraceKit route
+	// Raw stack trace is required for Collector-side route
+	// NOTE: This block will be removed in the future once parity is validated
+	if sp.cfg.EnableParityChecking && hasRawStackTrace && hasLines && hasColumns && hasFunctions && hasUrls {
+		// Parse raw stacktrace (Collector-side route) and measure duration
+		parsingStartTime := time.Now()
+		collectorParsed, _ := computeStackTrace(exceptionType.Str(), exceptionMessage.Str(), rawStackTrace.Str())
+		parsingDuration := time.Since(parsingStartTime)
+
+		// Add parity check attributes directly (no intermediate extraction!)
+		addParityCheckAttributes(attributes, lines, columns, functions, urls, collectorParsed, parsingDuration)
+	}
+
 	buildUUID := ""
 	if buildUUIDValue, ok := resourceAttributes.Get(sp.cfg.BuildUUIDAttributeKey); ok {
 		buildUUID = buildUUIDValue.Str()
@@ -283,9 +303,38 @@ func (sp *symbolicatorProcessor) processThrow(ctx context.Context, attributes pc
 			function = functions.At(i).Str()
 		}
 
-		cacheKey := buildCacheKey(url, buildUUID)
-
 		sp.telemetryBuilder.ProcessorTotalProcessedFrames.Add(ctx, 1, sp.attributes)
+
+		// Skip symbolication for anonymous frames
+		if url == "<anonymous>" {
+			stack = append(stack, fmt.Sprintf("    at %s (<anonymous>)", function))
+
+			// Only populate output slices for structured route
+			if parsedStackTrace == nil {
+				mappedColumns.AppendEmpty().SetInt(column)
+				mappedFunctions.AppendEmpty().SetStr(function)
+				mappedLines.AppendEmpty().SetInt(line)
+				mappedUrls.AppendEmpty().SetStr(url)
+			}
+			continue
+		}
+
+		// Skip symbolication for native frames
+		// Examples: "at call (native)", "[native code]"
+		if url == "(native)" || url == "[native code]" {
+			stack = append(stack, fmt.Sprintf("    at %s (native)", function))
+
+			// Only populate output slices for structured route
+			if parsedStackTrace == nil {
+				mappedColumns.AppendEmpty().SetInt(column)
+				mappedFunctions.AppendEmpty().SetStr(function)
+				mappedLines.AppendEmpty().SetInt(line)
+				mappedUrls.AppendEmpty().SetStr(url)
+			}
+			continue
+		}
+
+		cacheKey := buildCacheKey(url, buildUUID)
 
 		var mappedStackFrame *mappedStackFrame
 		var err error

@@ -17,7 +17,7 @@ var (
 )
 
 const (
-	processorVersion = "0.0.14"
+	processorVersion = "1.0.3"
 )
 
 // createDefaultConfig creates the default configuration for the processor.
@@ -48,6 +48,7 @@ func createDefaultConfig() component.Config {
 		SourceMapCacheSize:   128,
 		LanguageAttributeKey: "telemetry.sdk.language",
 		AllowedLanguages:     []string{}, // Empty by default, processes all signals
+		EnableParityChecking: false,      // Disabled by default
 	}
 }
 

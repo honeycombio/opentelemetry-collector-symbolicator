@@ -434,6 +434,113 @@ func TestProcessTraces(t *testing.T) {
 				assert.Contains(t, stackTrace.Str(), "original_https://example.com/app.js:40:35")
 			},
 		},
+		{
+			Name: "span events with exception stacktrace are symbolicated",
+			ApplyAttributes: func(span ptrace.Span) {
+				// Add a regular span attribute (not an exception)
+				span.Attributes().PutStr("http.method", "GET")
+
+				// Add an exception event following OTel semantic conventions
+				event := span.Events().AppendEmpty()
+				event.SetName("exception")
+				event.Attributes().PutEmpty(cfg.ColumnsAttributeKey).SetEmptySlice().AppendEmpty().SetInt(15)
+				event.Attributes().PutEmpty(cfg.LinesAttributeKey).SetEmptySlice().AppendEmpty().SetInt(10)
+				event.Attributes().PutEmpty(cfg.FunctionsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("eventFunction")
+				event.Attributes().PutEmpty(cfg.UrlsAttributeKey).SetEmptySlice().AppendEmpty().SetStr("https://example.com/event.js")
+				event.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				event.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "Event error!")
+				event.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: Event error!\n    at eventFunction (https://example.com/event.js:10:15)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Should symbolicate the event's stacktrace
+				assert.ElementsMatch(t, s.SymbolicatedLines, []symbolicatedLine{
+					{Line: 10, Column: 15, Function: "eventFunction", URL: "https://example.com/event.js"},
+				})
+			},
+			AssertOutput: func(td ptrace.Traces) {
+				rs := td.ResourceSpans().At(0)
+				ils := rs.ScopeSpans().At(0)
+				span := ils.Spans().At(0)
+
+				// Verify span attributes are not modified (no exception on span itself)
+				attr, ok := span.Attributes().Get("http.method")
+				assert.True(t, ok)
+				assert.Equal(t, "GET", attr.Str())
+
+				// Verify span doesn't have processor attributes (exception was on event)
+				_, ok = span.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.False(t, ok)
+
+				// Verify event was symbolicated
+				assert.Equal(t, 1, span.Events().Len())
+				event := span.Events().At(0)
+				assert.Equal(t, "exception", event.Name())
+
+				// Verify event's stacktrace was symbolicated
+				stackTrace, ok := event.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				assert.Contains(t, stackTrace.Str(), "Error: Event error!")
+				assert.Contains(t, stackTrace.Str(), "mapped_eventFunction_10_15")
+				assert.Contains(t, stackTrace.Str(), "original_https://example.com/event.js:20:25")
+
+				// Verify processor attributes are on the event
+				processorType, ok := event.Attributes().Get("honeycomb.processor_type")
+				assert.True(t, ok)
+				assert.Equal(t, typeStr.String(), processorType.Str())
+			},
+		},
+		{
+			Name: "span events with raw stacktrace (no structured attributes) are parsed and symbolicated",
+			ApplyAttributes: func(span ptrace.Span) {
+				// Add a regular span attribute (not an exception)
+				span.Attributes().PutStr("http.method", "POST")
+
+				// Add an exception event with only raw stacktrace (no structured attributes)
+				event := span.Events().AppendEmpty()
+				event.SetName("exception")
+				event.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "TypeError")
+				event.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "Cannot read property 'foo' of undefined")
+				event.Attributes().PutStr(cfg.StackTraceAttributeKey,
+					"TypeError: Cannot read property 'foo' of undefined\n"+
+						"    at processData (https://example.com/bundle.js:1:5000)\n"+
+						"    at handleClick (https://example.com/bundle.js:1:3000)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Should symbolicate both frames from parsed raw stacktrace
+				assert.Len(t, s.SymbolicatedLines, 2)
+				assert.Equal(t, symbolicatedLine{Line: 1, Column: 5000, Function: "processData", URL: "https://example.com/bundle.js"}, s.SymbolicatedLines[0])
+				assert.Equal(t, symbolicatedLine{Line: 1, Column: 3000, Function: "handleClick", URL: "https://example.com/bundle.js"}, s.SymbolicatedLines[1])
+			},
+			AssertOutput: func(td ptrace.Traces) {
+				rs := td.ResourceSpans().At(0)
+				ils := rs.ScopeSpans().At(0)
+				span := ils.Spans().At(0)
+
+				// Verify span attributes are not modified
+				attr, ok := span.Attributes().Get("http.method")
+				assert.True(t, ok)
+				assert.Equal(t, "POST", attr.Str())
+
+				// Verify event was parsed and symbolicated
+				assert.Equal(t, 1, span.Events().Len())
+				event := span.Events().At(0)
+				assert.Equal(t, "exception", event.Name())
+
+				// Verify event's stacktrace was symbolicated
+				stackTrace, ok := event.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				assert.Contains(t, stackTrace.Str(), "TypeError: Cannot read property 'foo' of undefined")
+				assert.Contains(t, stackTrace.Str(), "mapped_processData_1_5000")
+				assert.Contains(t, stackTrace.Str(), "original_https://example.com/bundle.js:2:5010")
+				assert.Contains(t, stackTrace.Str(), "mapped_handleClick_1_3000")
+				assert.Contains(t, stackTrace.Str(), "original_https://example.com/bundle.js:2:3010")
+
+				// Verify parsing method is processor_parsed
+				parsingMethod, ok := event.Attributes().Get(cfg.SymbolicatorParsingMethodAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "processor_parsed", parsingMethod.Str())
+			},
+		},
 	}
 
 	for _, tt := range tts {
@@ -697,6 +804,123 @@ func TestProcessLogs(t *testing.T) {
 				// Second frame symbolicated: line*2=400, col+10=40
 				assert.Contains(t, stackTrace.Str(), "mapped_main_200_30")
 				assert.Contains(t, stackTrace.Str(), "original_https://example.com/bundle.js:400:40")
+			},
+		},
+		{
+			Name: "native frames with empty URL are not symbolicated",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				logRecord.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				logRecord.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: test\n    at Array.forEach (native)\n    at funcA (http://example.com/bundle.js:10:5)\n    at Array.map (native)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Only the non-native frame should be symbolicated
+				assert.Len(t, s.SymbolicatedLines, 1)
+				assert.Equal(t, symbolicatedLine{Line: 10, Column: 5, Function: "funcA", URL: "http://example.com/bundle.js"}, s.SymbolicatedLines[0])
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				stackTrace, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				// Native frames should be preserved as-is
+				assert.Contains(t, stackTrace.Str(), "at Array.forEach (native)")
+				assert.Contains(t, stackTrace.Str(), "at Array.map (native)")
+				// Regular frame should be symbolicated
+				assert.Contains(t, stackTrace.Str(), "mapped_funcA_10_5")
+			},
+		},
+		{
+			Name: "native frames with [native code] URL are not symbolicated",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				// Safari/Firefox native frames have [native code] as URL
+				// Parser converts this to empty URL, so they're skipped
+				logRecord.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				logRecord.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: test\neval@[native code]\nfoo@http://example.com/bundle.js:10:5")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Only the non-native frame should be symbolicated
+				assert.Len(t, s.SymbolicatedLines, 1)
+				assert.Equal(t, symbolicatedLine{Line: 10, Column: 5, Function: "foo", URL: "http://example.com/bundle.js"}, s.SymbolicatedLines[0])
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				stackTrace, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				// Native frame should be preserved as-is
+				assert.Contains(t, stackTrace.Str(), "at eval (native)")
+				// Regular frame should be symbolicated
+				assert.Contains(t, stackTrace.Str(), "mapped_foo_10_5")
+			},
+		},
+		{
+			Name: "React Native stacktrace with native frames",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				// React Native format with "address at" and native frames
+				logRecord.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				logRecord.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey,
+					"Error: test\n"+
+						"    at anonymous (address at index.android.bundle:1:2347115)\n"+
+						"    at call (native)\n"+
+						"    at apply (native)\n"+
+						"    at _with (address at index.android.bundle:1:1414154)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Only the non-native frames should be symbolicated (2 frames)
+				assert.Len(t, s.SymbolicatedLines, 2)
+				assert.Equal(t, symbolicatedLine{Line: 1, Column: 2347115, Function: "anonymous", URL: "index.android.bundle"}, s.SymbolicatedLines[0])
+				assert.Equal(t, symbolicatedLine{Line: 1, Column: 1414154, Function: "_with", URL: "index.android.bundle"}, s.SymbolicatedLines[1])
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				stackTrace, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				// Native frames should be preserved
+				assert.Contains(t, stackTrace.Str(), "at call (native)")
+				assert.Contains(t, stackTrace.Str(), "at apply (native)")
+				// Regular frames should be symbolicated
+				assert.Contains(t, stackTrace.Str(), "mapped_anonymous_1_2347115")
+				assert.Contains(t, stackTrace.Str(), "mapped__with_1_1414154")
+
+				// Verify parsing method is processor_parsed (due to "address at")
+				parsingMethod, ok := logRecord.Attributes().Get(cfg.SymbolicatorParsingMethodAttributeKey)
+				assert.True(t, ok)
+				assert.Equal(t, "processor_parsed", parsingMethod.Str())
+			},
+		},
+		{
+			Name: "frames with anonymous urls are not symbolicated",
+			ApplyAttributes: func(logRecord plog.LogRecord) {
+				logRecord.Attributes().PutStr(cfg.ExceptionTypeAttributeKey, "Error")
+				logRecord.Attributes().PutStr(cfg.ExceptionMessageAttributeKey, "test error")
+				logRecord.Attributes().PutStr(cfg.StackTraceAttributeKey, "Error: test error\n    at JSON.parse (<anonymous>)\n    at foo (http://example.com/bundle.js:10:5)")
+			},
+			AssertSymbolicatorCalls: func(s *testSymbolicator) {
+				// Only the non-anonymous frame should be symbolicated
+				assert.Len(t, s.SymbolicatedLines, 1)
+				assert.Equal(t, symbolicatedLine{Line: 10, Column: 5, Function: "foo", URL: "http://example.com/bundle.js"}, s.SymbolicatedLines[0])
+			},
+			AssertOutput: func(logs plog.Logs) {
+				rl := logs.ResourceLogs().At(0)
+				sl := rl.ScopeLogs().At(0)
+				logRecord := sl.LogRecords().At(0)
+
+				stackTrace, ok := logRecord.Attributes().Get(cfg.StackTraceAttributeKey)
+				assert.True(t, ok)
+				// Anonymous frame should be preserved with <anonymous>
+				assert.Contains(t, stackTrace.Str(), "at JSON.parse (<anonymous>)")
+				// Regular frame should be symbolicated
+				assert.Contains(t, stackTrace.Str(), "mapped_foo_10_5")
 			},
 		},
 	}
