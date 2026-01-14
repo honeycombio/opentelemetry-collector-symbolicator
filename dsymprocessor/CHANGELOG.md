@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- feat: detect MetricKit stacktraces using eventName field for upstream OpenTelemetry compatibility | @beekhc
+- feat: detect MetricKit stacktraces using eventName field for upstream OpenTelemetry compatibility (#145) | @beekhc
 
 ## v1.0.1 - 2026/01/12
 
