@@ -180,11 +180,16 @@ and `exception.type` attributes are required by OTel semantic conventions, and m
 downstream error sinks will expect them to be present.
 
 #### MetricKit
-MetricKit logs must include the `metrickit.diagnostic.crash.exception.stacktrace_json` attribute,
-corresponding to [the `jsonRepresentation` of a MetricKit crash](https://developer.apple.com/documentation/metrickit/mxcallstacktree/jsonrepresentation()).
+MetricKit logs can be detected in two ways:
+
+1. **By eventName**: Logs with `exception.stacktrace` attribute and an `eventName` starting with `metrickit.diagnostic.` (e.g., `metrickit.diagnostic.crash`, `metrickit.diagnostic.hang`) will be processed as MetricKit JSON format. This approach works with the upstream OpenTelemetry MetricKit instrumentation.
+
+2. **By attribute key**: Logs with the `metrickit.diagnostic.crash.exception.stacktrace_json` attribute will be processed as MetricKit JSON format for backwards compatibility.
+
+The stacktrace must be in either [Apple's native MetricKit JSON format](https://developer.apple.com/documentation/metrickit/mxcallstacktree/jsonrepresentation()) or the [OpenTelemetry MetricKit stacktrace format](https://github.com/open-telemetry/opentelemetry-swift/blob/main/Sources/Instrumentation/MetricKit/StackTraceFormat.md).
 
 The processor will use `binaryUUID` and `binaryName` contained in that JSON report
-to look up a corresponding dSYM and find the relevant binary archive within that dSYM. 
+to look up a corresponding dSYM and find the relevant binary archive within that dSYM.
 It will then attempt to symbolicate as many frames of the crash report as it can.
 
 Any frames that refer to unknown binaries will be left as-is.

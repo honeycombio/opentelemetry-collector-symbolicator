@@ -98,11 +98,19 @@ func (sp *symbolicatorProcessor) processResourceSpans(ctx context.Context, rl pl
 
 			// if we have a stack trace, try symbolicating it
 			if _, ok := attributes.Get(sp.cfg.StackTraceAttributeKey); ok {
-				sp.processStackTraceAttributes(ctx, attributes, resourceAttrs)
+				// Check if this is a MetricKit diagnostic via eventName
+				eventName := log.EventName()
+				if strings.HasPrefix(eventName, "metrickit.diagnostic.") {
+					// MetricKit JSON format
+					sp.processMetricKitAttributes(ctx, attributes)
+				} else {
+					// Regular text format
+					sp.processStackTraceAttributes(ctx, attributes, resourceAttrs)
+				}
 				continue
 			}
 
-			// no stack trace, let's check if there's a metrickit attribute
+			// no stack trace, let's check if there's a metrickit attribute (for backwards compatibility)
 			if _, ok := attributes.Get(sp.cfg.MetricKitStackTraceAttributeKey); ok {
 				sp.processMetricKitAttributes(ctx, attributes)
 				continue
