@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: detect MetricKit stacktraces using eventName field for upstream OpenTelemetry compatibility | @beekhc
 - feat: add support for new OTel MetricKit stacktrace JSON format (#135) | @beekhc
 - feat: add optional language check to processors (#133) | @jairo-mendoza
 - refactor: improve parity between processors' configs (#131) | @jairo-mendoza
