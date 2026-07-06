@@ -41,7 +41,7 @@ func TestSymbolicator(t *testing.T) {
 	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile, "")
 	require.NoError(t, err)
 	line := formatStackFrame(sf)
-	assert.Equal(t, "    at bar(basic-mapping-original.js:8:1)", line)
+	assert.Equal(t, "    at bar(basic-mapping.js:8:1)", line)
 
 	// When there is no url.
 	sf, err = sym.symbolicate(ctx, 0, 34, "b", "", "")
@@ -53,7 +53,7 @@ func TestSymbolicator(t *testing.T) {
 	sf, err = sym.symbolicate(ctx, 0, 34, "b", uuidFile, uuid)
 	line = formatStackFrame(sf)
 	assert.NoError(t, err)
-	assert.Equal(t, "    at bar(uuid-mapping-original.js:8:1)", line)
+	assert.Equal(t, "    at bar(uuid-mapping.js:8:1)", line)
 
 	// When the file is missing.
 	_, err = sym.symbolicate(ctx, 0, 34, "b", noFile, "")
@@ -93,7 +93,7 @@ func TestSymbolicatorCache(t *testing.T) {
 	line := formatStackFrame(sf)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "    at bar(basic-mapping-original.js:8:1)", line)
+	assert.Equal(t, "    at bar(basic-mapping.js:8:1)", line)
 
 	// Cache should have one entry
 	assert.Equal(t, 1, sym.cache.Len())
