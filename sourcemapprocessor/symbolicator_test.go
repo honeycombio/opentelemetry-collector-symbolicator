@@ -8,12 +8,13 @@ import (
 
 	"github.com/honeycombio/opentelemetry-collector-symbolicator/sourcemapprocessor/internal/metadata"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap/zaptest"
 )
 
-var (
+const (
 	jsFile   = "https://www.honeycomb.io/assets/js/basic-mapping.js"
 	noFile   = "https://www.honeycomb.io/assets/js/does-not-exist.js"
 	uuid     = "e63db37d-9886-452a-8e56-2250dcc20102"
@@ -38,8 +39,8 @@ func TestSymbolicator(t *testing.T) {
 
 	// The basic case.
 	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile, "")
+	require.NoError(t, err)
 	line := formatStackFrame(sf)
-	assert.NoError(t, err)
 	assert.Equal(t, "    at bar(basic-mapping-original.js:8:1)", line)
 
 	// When there is no url.
@@ -80,7 +81,7 @@ func TestSymbolicatorCache(t *testing.T) {
 	)
 
 	fs, err := newFileStore(ctx, zaptest.NewLogger(t), &LocalSourceMapConfiguration{Path: "../test_assets"})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	sym, _ := newBasicSymbolicator(ctx, 5*time.Second, 128, fs, tb, attributes)
 
 	// Cache should be empty to start
@@ -88,6 +89,7 @@ func TestSymbolicatorCache(t *testing.T) {
 
 	// First symbolication should add to cache
 	sf, err := sym.symbolicate(ctx, 0, 34, "b", jsFile, "")
+	require.NoError(t, err)
 	line := formatStackFrame(sf)
 
 	assert.NoError(t, err)
@@ -153,7 +155,7 @@ func TestSymbolicatorCacheWithUUID(t *testing.T) {
 
 	// Symbolicate with UUID
 	sf1, err := sym.symbolicate(ctx, 0, 34, "b", uuidFile, uuid)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "bar", sf1.FunctionName)
 
 	// Cache should have one entry (url|uuid)
@@ -176,7 +178,7 @@ func TestSymbolicatorCacheWithUUID(t *testing.T) {
 	// Symbolicate same URL with NO UUID
 	// This should also create a separate cache entry
 	sf3, err := sym.symbolicate(ctx, 0, 34, "b", jsFile, "")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "bar", sf3.FunctionName)
 
 	// Cache should now have two entries: "uuid-mapping.js|<uuid>" and "jsFile"
