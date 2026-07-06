@@ -62,7 +62,7 @@ func (s *store) GetSourceMap(ctx context.Context, url string, uuid string) ([]by
 	}
 
 	// the sourceMappingURL match we want is the last one
-	mapName := string(matches[len(matches)-1][1]) # matches[last-match][the-first-capture]
+	mapName := string(matches[len(matches)-1][1]) // matches[last-match][the-first-capture]
 
 	// the map name is relative to the source file
 	path = filepath.Join(filepath.Dir(path), mapName)
