@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	mappingURLRegex                  = regexp.MustCompile(`\/\/[#@]\s(sourceMappingURL)=\s*(\S+)`)
+	mappingURLRegex                  = regexp.MustCompile(`//[#@]\s*sourceMappingURL\s*=\s*(\S+)`)
 	errFailedToFindSourceFile        = fmt.Errorf("failed to find source file")
 	errFailedToFindSourceMapLocation = fmt.Errorf("failed to find source map location")
 	errFailedToFindSourceMap         = fmt.Errorf("failed to find source map")
@@ -55,14 +55,14 @@ func (s *store) GetSourceMap(ctx context.Context, url string, uuid string) ([]by
 		return nil, nil, fmt.Errorf("%w: %s", errFailedToFindSourceFile, path)
 	}
 
-	matches := mappingURLRegex.FindSubmatch(source)
+	matches := mappingURLRegex.FindAllSubmatch(source, -1)
 
-	if len(matches) <= 0 {
+	if len(matches) == 0 {
 		return nil, nil, fmt.Errorf("%w: %s", errFailedToFindSourceMapLocation, path)
 	}
 
-	// the capture group we want is the last one
-	mapName := string(matches[len(matches)-1])
+	// the sourceMappingURL match we want is the last one
+	mapName := string(matches[len(matches)-1][1])
 
 	// the map name is relative to the source file
 	path = filepath.Join(filepath.Dir(path), mapName)
