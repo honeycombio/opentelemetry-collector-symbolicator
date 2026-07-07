@@ -1,9 +1,9 @@
 # Releasing
 
-- `Add steps to prepare release`
-- Update `processorVersion` in `sourcemapprocessor/factory.go` to the upcoming release
-- Update `processorVersion` in `proguardprocessor/factory.go` to the upcoming release
-- Update `processorVersion` in `dsymprocessor/factory.go` to the upcoming release
+- For whichever components are being released, update `processorVersion` in ...
+  - `sourcemapprocessor/factory.go`
+  - `proguardprocessor/factory.go`
+  - `dsymprocessor/factory.go`
 - Run `make generate-docs` (see `DEVELOPING.md` for why or if there is trouble)
 - Update relevant `CHANGELOG.md` files in each processor directory with the changes since the last release.
 - Commit changes, push, and open a release preparation pull request for review.
