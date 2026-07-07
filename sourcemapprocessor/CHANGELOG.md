@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- fix(sourcemap-processor): correct sourceMappingURL lookup when multiple are present (#149) | @robbkidd 
+## v1.0.4 - 2026/07/07
+
+- fix(sourcemap-processor): correct sourceMappingURL lookup when multiple are present (#149) | @robbkidd
 
 ## v1.0.3 - 2026/01/12
 
