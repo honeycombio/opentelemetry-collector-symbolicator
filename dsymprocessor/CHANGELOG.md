@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- fix: apply missing-dSYM fallback on cached fetch errors so repeated occurrences of the same binary UUID (e.g. system frameworks) don't fail symbolication of the whole record
+## v1.0.3 - 2026/09/18
+
+- fix: apply missing-dSYM fallback on cached fetch errors so repeated occurrences of the same binary UUID (e.g. system frameworks) don't fail symbolication of the whole record (#151) | @jclr
 
 ## v1.0.2 - 2026/01/14
 
