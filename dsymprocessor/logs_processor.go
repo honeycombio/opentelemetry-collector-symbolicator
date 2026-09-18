@@ -433,17 +433,20 @@ func (sp *symbolicatorProcessor) setMetricKitExceptionAttrs(ctx context.Context,
 }
 
 func (sp *symbolicatorProcessor) symbolicateFrame(ctx context.Context, frame MetricKitCallStackFrame, fetchErrorCache map[string]error) (string, error) {
-	// Check if we have a cached fetch error for this UUID
-	if cachedError, exists := fetchErrorCache[frame.BinaryUUID]; exists {
-		return "", cachedError
-	}
-
 	var offset uint64 = 0
 	if frame.OffsetAddress != nil {
 		offset = *frame.OffsetAddress
 	}
 	if frame.OffsetIntoBinaryTextSegment != nil {
 		offset = *frame.OffsetIntoBinaryTextSegment
+	}
+
+	// Check if we have a cached fetch error for this UUID
+	if cachedError, exists := fetchErrorCache[frame.BinaryUUID]; exists {
+		if errors.Is(cachedError, errFailedToFindDSYM) {
+			return fmt.Sprintf("%s(%s) +%d", frame.BinaryName, frame.BinaryUUID, offset), nil
+		}
+		return "", cachedError
 	}
 
 	locations, err := sp.symbolicator.symbolicateFrame(ctx, frame.BinaryUUID, frame.BinaryName, offset)
