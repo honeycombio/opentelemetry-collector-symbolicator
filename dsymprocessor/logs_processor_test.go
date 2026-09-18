@@ -691,6 +691,73 @@ func TestErrorCaching_MetricKit(t *testing.T) {
 	assert.True(t, failed.Bool())
 }
 
+func TestErrorCaching_MissingDSYMFallback_MetricKit(t *testing.T) {
+	ctx := context.Background()
+	cfg := createDefaultConfig().(*Config)
+
+	tb, attributes, cleanup := createTestTelemetry(t)
+	defer cleanup()
+
+	// Simulate a missing dSYM (e.g. a system framework never uploaded to S3).
+	// The underlying store error wraps errFailedToFindDSYM, just like the real
+	// dsymStore does, and it's surfaced through a FetchError so it gets cached.
+	symbolicator := &testSymbolicatorWithErrors{
+		returnFetchError: true,
+		err:              fmt.Errorf("%w: some/path", errFailedToFindDSYM),
+	}
+
+	processor := newSymbolicatorProcessor(ctx, cfg, processor.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zaptest.NewLogger(t),
+		},
+	}, symbolicator, tb, attributes)
+
+	// Same UUID appears in multiple frames, like a system framework (e.g.
+	// UIKitCore) that shows up repeatedly in a MetricKit crash stack.
+	uuid := "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"
+	metrickitJSON := fmt.Sprintf(`{
+		"callStacks": [
+			{
+				"callStackRootFrames": [
+					{
+						"binaryUUID": "%s",
+						"binaryName": "UIKitCore",
+						"offsetIntoBinaryTextSegment": 1000,
+						"subFrames": [
+							{
+								"binaryUUID": "%s",
+								"binaryName": "UIKitCore",
+								"offsetIntoBinaryTextSegment": 2000
+							}
+						]
+					}
+				]
+			}
+		]
+	}`, uuid, uuid)
+
+	logs := plog.NewLogs()
+	resourceLog := logs.ResourceLogs().AppendEmpty()
+	scopeLog := resourceLog.ScopeLogs().AppendEmpty()
+	log := scopeLog.LogRecords().AppendEmpty()
+	log.Attributes().PutStr(cfg.MetricKitStackTraceAttributeKey, metrickitJSON)
+
+	processor.processMetricKitAttributes(ctx, log.Attributes())
+
+	// Only the first occurrence should hit the symbolicator; the second reuses the cache.
+	assert.Equal(t, 1, symbolicator.callCount)
+
+	// Both frames should fall back gracefully instead of failing the whole record.
+	stackTrace, ok := log.Attributes().Get(cfg.OutputMetricKitStackTraceAttributeKey)
+	assert.True(t, ok)
+	assert.Contains(t, stackTrace.Str(), fmt.Sprintf("UIKitCore(%s) +1000", uuid))
+	assert.Contains(t, stackTrace.Str(), fmt.Sprintf("UIKitCore(%s) +2000", uuid))
+
+	// The record should NOT be marked as a symbolication failure.
+	failed, hasFailure := log.Attributes().Get(cfg.SymbolicatorFailureAttributeKey)
+	assert.False(t, hasFailure && failed.Bool())
+}
+
 func TestDeduplication_GenericStackTrace(t *testing.T) {
 	tests := []struct {
 		name              string

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fix: apply missing-dSYM fallback on cached fetch errors so repeated occurrences of the same binary UUID (e.g. system frameworks) don't fail symbolication of the whole record
+
 ## v1.0.2 - 2026/01/14
 
 - feat: detect MetricKit stacktraces using eventName field for upstream OpenTelemetry compatibility (#145) | @beekhc
